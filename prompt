@@ -1,0 +1,240 @@
+Create a complete, colourful and modern *NutriMatrix AI-powered nutrition and smart grocery website using React.js*.
+
+### Main Requirement
+
+Build the website as a multi-page React.js application with proper navigation and working button events.
+
+The user flow must be exactly:
+
+*Welcome Page → Register Page → Login Page → Home Page*
+
+### 1. Welcome Page
+
+Create an attractive landing/welcome page for NutriMatrix.
+
+Include:
+
+* NutriMatrix logo/name
+* A colourful, fresh and premium food/nutrition theme
+* Main heading: *“Make Every Choice Count.”*
+* Description: *“Your AI-powered nutrition companion for smarter grocery decisions, healthier alternatives and better food choices.”*
+* Attractive images/illustrations of fruits, vegetables and healthy groceries
+* Feature highlights such as:
+
+  * AI Nutrition Analysis
+  * Healthy Alternatives
+  * Digital Pantry
+  * Expiry Reminders
+  * Smart Recommendations
+* A prominent *“Get Started”* button
+
+*Get Started button functionality:*
+When clicked, navigate to the *Register Page*.
+
+### 2. Register Page
+
+Create a colourful registration page.
+
+Fields:
+
+* Full Name
+* Email
+* Password
+* Confirm Password
+
+Include:
+
+* Password visibility eye icon
+* Password validation
+* Confirm password validation
+* Attractive NutriMatrix styling
+* “Create Account” button
+* Link: *“Already have an account? Login”*
+
+*Functionality:*
+When the user successfully creates an account:
+
+1. Validate all fields.
+2. Store the registration information using browser localStorage for demonstration.
+3. Display a success message such as *“Account created successfully!”*
+4. Automatically redirect the user to the *Login Page*.
+
+If the user clicks *Login*, navigate directly to the Login Page.
+
+### 3. Login Page
+
+Create a modern colourful login page matching the Register Page.
+
+Fields:
+
+* Email
+* Password
+* Password visibility eye icon
+
+Include:
+
+* *Login* button
+* “Don't have an account? Register” link
+* Proper validation
+* Friendly error message for incorrect login details
+
+*Functionality:*
+Check the credentials stored during registration.
+
+When login is successful:
+
+1. Display a short success message.
+2. Redirect the user to the *Home Page*.
+
+### 4. Home Page
+
+Create a beautiful NutriMatrix dashboard/home page after successful login.
+
+Include:
+
+* Navigation bar
+* NutriMatrix logo
+* Home
+* About Us
+* Nutrition
+* Pantry
+* Recommendations
+* Profile
+* Logout
+
+Hero section:
+
+* Greeting such as *“Welcome to NutriMatrix”*
+* Short description about making smarter and healthier grocery choices
+* Colourful grocery/food imagery
+
+Create attractive feature cards/sections for:
+
+* *Nutrition Analysis* – Analyze nutritional information of grocery products.
+* *Healthy Alternatives* – Suggest healthier alternatives.
+* *Digital Pantry* – Track grocery items stored by the user.
+* *Expiry Reminders* – Help users keep track of expiry dates.
+* *AI Recommendations* – Provide personalized food and nutrition recommendations.
+
+Important:
+*NutriMatrix is NOT an online shopping/e-commerce website.*
+Do NOT add:
+
+* Payment
+* Checkout
+* Online purchasing
+* Product selling
+* Shopping cart for purchasing
+
+The project is focused on *nutrition analysis, grocery management, healthier choices and AI-based recommendations*.
+
+### Design Requirements
+
+Make the website visually rich and colourful.
+
+Use:
+
+* Fresh green as the primary colour
+* Light green
+* White
+* Yellow/orange accents
+* Soft gradients
+* Rounded cards
+* Modern typography
+* Subtle shadows
+* Glassmorphism where appropriate
+* Smooth hover effects
+* Clean spacing
+* Responsive design for desktop, tablet and mobile
+* Attractive fruit, vegetable and grocery visuals
+
+Do NOT make the website mostly white or blank.
+
+Images should be properly integrated into the design instead of appearing as random pasted images.
+
+### React.js Requirements
+
+Use:
+
+* React.js
+* React Router for page navigation
+* CSS / modern CSS styling
+* JavaScript ES6+
+* Components for reusable UI
+* localStorage for registration/login demonstration
+
+Create separate React components/pages for:
+
+text
+src/
+ ├── components/
+ │    ├── Navbar.jsx
+ │    ├── Footer.jsx
+ │    └── FeatureCard.jsx
+ │
+ ├── pages/
+ │    ├── Welcome.jsx
+ │    ├── Register.jsx
+ │    ├── Login.jsx
+ │    └── Home.jsx
+ │
+ ├── App.jsx
+ ├── main.jsx
+ └── App.css
+
+
+### Navigation Requirements
+
+Use React Router.
+
+Routes should be:
+
+text
+/          → Welcome Page
+/register → Register Page
+/login    → Login Page
+/home     → Home Page
+
+
+The buttons and links MUST actually work.
+
+Required flow:
+
+text
+Welcome
+   ↓
+Get Started
+   ↓
+Register
+   ↓
+Create Account
+   ↓
+Success Message
+   ↓
+Login
+   ↓
+Enter Credentials
+   ↓
+Successful Login
+   ↓
+Home
+
+
+### Logout
+
+Add a working *Logout* button on the Home Page.
+
+When Logout is clicked:
+
+* Remove the logged-in state from localStorage.
+* Redirect the user to the Login Page.
+
+### Important
+
+Do not create a static UI only.
+
+All buttons, navigation links, registration, login, logout, password visibility and redirects must actually work.
+
+Provide the *complete runnable React.js project code*, including all required files, CSS and installation/run instructions.
+
+The final result should look like a polished *NutriMatrix AI nutrition platform*, not a generic template.
