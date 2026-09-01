@@ -1,0 +1,12 @@
+.receipt-page { min-height: 100vh; background: linear-gradient(145deg, #eef9f1, #fff 60%, #fffaf0); color: #183d27; }
+.receipt-content { max-width: 900px; margin: auto; padding: 48px 24px 90px; }
+.receipt-back { display: block; margin-bottom: 54px; padding: 0; background: transparent; color: #267646; font-weight: 800; }
+.receipt-content h1 { margin: 14px 0 10px; color: #16472b; font-size: clamp(2.5rem, 5vw, 4.5rem); letter-spacing: -.06em; }
+.receipt-content h1 em { color: #df8c1d; font-style: normal; }
+.receipt-subtitle { color: #687b6e; font-size: 1.04rem; }
+.receipt-box { max-width: 680px; margin-top: 38px; padding: 58px 30px; border: 1px dashed #b6d4ba; border-radius: 20px; background: rgba(255,255,255,.78); text-align: center; box-shadow: 0 18px 42px rgba(37,89,51,.07); }
+.receipt-icon { font-size: 2.7rem; }
+.receipt-box h2 { margin-top: 18px; color: #28583a; }
+.receipt-box p { margin: 8px 0 23px; color: #7a897f; }
+.receipt-primary { cursor: pointer; }
+.receipt-primary:hover { background: #146d3c; }
