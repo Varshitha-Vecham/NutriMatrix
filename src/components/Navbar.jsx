@@ -39,9 +39,7 @@ function Navbar() {
         <ul className={menuOpen ? 'nav-menu active' : 'nav-menu'}>
           <li><NavLink to="/home" end className={getNavClass} onClick={() => setMenuOpen(false)}>Home</NavLink></li>
           <li><NavLink to="/about" className={getNavClass} onClick={() => setMenuOpen(false)}>About Us</NavLink></li>
-          <li><a href="#nutrition" onClick={() => setMenuOpen(false)}>Nutrition</a></li>
-          <li><a href="#pantry" onClick={() => setMenuOpen(false)}>Pantry</a></li>
-          <li><a href="#recommendations" onClick={() => setMenuOpen(false)}>Recommendations</a></li>
+          <li><NavLink to="/products" className={getNavClass} onClick={() => setMenuOpen(false)}>Product Analysis</NavLink></li>
 
           <li className="nav-profile">
             <NavLink to="/profile" className="profile-chip" onClick={() => setMenuOpen(false)}>

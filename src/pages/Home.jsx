@@ -149,7 +149,7 @@ function Home() {
         <div className="cta-container">
           <h2>Ready to Start Your <span className="accent-light">Healthy Journey</span>?</h2>
           <p>Join thousands of users making smarter nutrition choices every day with NutriMatrix.</p>
-          <button className="btn-primary btn-large">
+          <button className="btn-primary btn-large" onClick={() => navigate('/products')}>
             Get Started Today 🚀
           </button>
         </div>

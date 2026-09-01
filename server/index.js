@@ -104,7 +104,18 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ message: 'Incorrect email or password.' })
     setAuthCookie(res, user)
     res.json({ user: { name: user.name, email: user.email, role: user.role } })
-  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to log in.' }) }
+  } catch (error) {
+    console.error('Login database error:', error.message)
+    res.status(503).json({ message: 'Login is temporarily unavailable. Check the MySQL settings in your .env file.' })
+  }
+})
+
+app.use((error, req, res, next) => {
+  if (error) {
+    console.error('API request failed:', error)
+    return res.status(503).json({ message: 'The database is unavailable. Check your MySQL settings and restart the API.' })
+  }
+  next()
 })
 
 app.post('/api/admin/login', async (req, res) => {
@@ -169,10 +180,9 @@ app.put('/api/profile', requireAuth, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save your nutrition profile.' }) }
 })
 
+app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`))
+
 ensureProfileColumns()
   .then(() => ensureAdminAccess())
-  .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
-  .catch((error) => {
-    console.error('Unable to prepare the nutrition profile table.', error)
-    process.exit(1)
-  })
+  .then(() => console.log('Database setup complete.'))
+  .catch((error) => console.error('Database setup failed. Check your MySQL settings:', error.message))
