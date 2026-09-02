@@ -34,6 +34,21 @@ CREATE TABLE IF NOT EXISTS nutrition_profiles (
   CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS receipt_products (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  receipt_file_name VARCHAR(255) NOT NULL,
+  product_name VARCHAR(150) NOT NULL,
+  brand VARCHAR(150) NULL,
+  barcode VARCHAR(50) NULL,
+  expiry_date DATE NULL,
+  purchased_at DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_receipt_product_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_receipt_products_user_expiry (user_id, expiry_date)
+);
+
 SET @schema_name = DATABASE();
 
 SET @column_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @schema_name AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role');

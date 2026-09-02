@@ -1,0 +1,354 @@
+Update the existing NutriMatrix Scanner page. Do NOT create a separate Receipt Scanner page.
+
+The Scanner page must contain these 4 options:
+1. Receipt Scan
+2. Barcode Scan
+3. Voice Input
+4. Manual Entry
+
+When the user clicks "Receipt Scan", display the Receipt Scanner interface inside the existing Scanner page.
+
+========================================
+RECEIPT SCANNER UI
+========================================
+
+Show:
+
+Heading:
+"Scan Your Grocery Receipt"
+
+Description:
+"Upload or capture your grocery receipt to automatically identify your purchased products, prices and available product codes."
+
+Buttons:
+- Upload Receipt
+- Use Camera
+- Scan Receipt
+
+Also provide a drag-and-drop area for uploading a receipt image.
+
+Show a note:
+"For better results, upload a clear and well-lit receipt image."
+
+Do not navigate to another page.
+
+========================================
+RECEIPT OCR PROCESSING
+========================================
+
+When the user scans/uploads the receipt:
+
+1. Send the receipt image to the Python Flask backend.
+2. Use Tesseract OCR to extract all readable text.
+3. Use Python to process and clean the OCR result.
+4. Identify the following information whenever available:
+
+- Product name
+- Product code / item code / SKU
+- Barcode number / GTIN if printed
+- Brand
+- Category
+- Quantity
+- Unit price
+- Total price
+- Purchase date
+- Store name
+
+Do NOT assume or invent information that is not present on the receipt.
+
+========================================
+PRODUCT IDENTIFICATION
+========================================
+
+If a product code, SKU or barcode number is detected:
+
+1. Use that number to search the MySQL product database.
+2. If an exact match is found, retrieve the corresponding product.
+3. If no code is found, use the product name and brand for matching.
+4. If no matching product is found, mark it as:
+   "Product not found in database"
+
+The system should allow the user to review and correct the detected product name.
+
+========================================
+NUTRITION INFORMATION
+========================================
+
+After identifying each product, retrieve available nutrition information from MySQL.
+
+Display:
+
+- Product Name
+- Brand
+- Category
+- Quantity
+- Price
+- Calories
+- Protein
+- Carbohydrates
+- Fat
+- Fiber
+
+Add a "Nutrition Analysis" button.
+
+When clicked, calculate and display the combined nutrition information of all products detected from the receipt.
+
+========================================
+EXPIRY DATE TRACKING
+========================================
+
+IMPORTANT:
+
+Do NOT assume that the receipt contains an expiry date.
+
+A receipt may contain a product code, SKU or barcode that identifies the product, but the actual expiry date is normally printed on the product/package rather than the billing receipt.
+
+Therefore:
+
+If an expiry date is detected in the receipt:
+- Extract it using Tesseract OCR.
+- Save it for the corresponding product.
+- Display it in the results.
+
+If an expiry date is NOT detected:
+- Display "Expiry date not available".
+- Provide an "Add Expiry Date" button.
+- Allow the user to enter/select the actual expiry date.
+- Save the confirmed expiry date in MySQL.
+
+Never generate or guess an expiry date.
+
+========================================
+EXPIRY TRACKING
+========================================
+
+For every product with a confirmed expiry date:
+
+Calculate:
+
+- Expiry date
+- Days remaining
+- Expiry status
+
+Use these statuses:
+
+Fresh / Safe
+Expiring Soon
+Expired
+
+Example:
+
+Product: Amul Milk
+Purchase Date: 02/09/2026
+Expiry Date: 04/09/2026
+Days Remaining: 2 days
+Status: Expiring Soon
+
+If the product has already expired:
+
+Status: Expired
+
+If it is approaching expiry:
+
+Status: Expiring Soon
+
+========================================
+EXPIRY REMINDERS
+========================================
+
+NutriMatrix should monitor the saved expiry dates.
+
+Show notifications/reminders such as:
+
+"Amul Milk expires tomorrow."
+
+"Britannia Bread expires in 3 days."
+
+"Your product has expired."
+
+Allow the user to update the expiry date if required.
+
+========================================
+RESULT DISPLAY
+========================================
+
+After scanning, show a "Products Detected" section on the SAME Scanner page.
+
+Use a clean table/card layout.
+
+Columns:
+
+Product Name
+Product Code
+Brand
+Category
+Quantity
+Price
+Purchase Date
+Expiry Date
+Days Remaining
+Expiry Status
+Calories
+Protein
+Carbohydrates
+Fat
+Fiber
+
+For products where expiry is unavailable:
+
+Expiry Date:
+"Not Available"
+
+Button:
+"Add Expiry Date"
+
+========================================
+BACKEND TECHNOLOGIES
+========================================
+
+Use ONLY the technologies specified for the NutriMatrix project:
+
+Python
+Flask
+MySQL
+Tesseract OCR
+
+Python:
+- Process OCR text
+- Clean receipt data
+- Extract product information
+- Parse product codes
+- Parse quantities and prices
+- Calculate expiry status
+
+Flask:
+- Create REST APIs
+- Receive receipt images
+- Process receipt scanning requests
+- Return detected product information to React
+
+Tesseract OCR:
+- Extract text from receipt images
+
+MySQL:
+Store:
+
+- Users
+- Products
+- Product codes/barcodes
+- Nutrition information
+- Receipts
+- Receipt products
+- Quantity
+- Price
+- Purchase date
+- Expiry date
+- Expiry status
+
+========================================
+FRONTEND
+========================================
+
+Use:
+
+React.js
+HTML5
+JavaScript ES6+
+Tailwind CSS
+
+The frontend should:
+
+- Upload/capture receipt
+- Send image to Flask
+- Show scanning/loading state
+- Display OCR results
+- Display detected products
+- Allow correction of product information
+- Allow adding missing expiry dates
+- Display nutrition analysis
+- Display expiry status
+- Display expiry reminders
+
+========================================
+OTHER SCANNER OPTIONS
+========================================
+
+Do not remove the other scanner options.
+
+Barcode Scan:
+Use ZXing to scan product barcodes and identify products.
+
+Voice Input:
+Allow the user to provide product information through voice input.
+
+Manual Entry:
+Ask the user for complete product details including:
+
+- Product name
+- Brand name
+- Category
+- Product code/barcode if available
+- Quantity
+- Purchase price
+- Purchase date
+- Expiry date
+- Nutrition information
+
+========================================
+STATES AND MESSAGES
+========================================
+
+While processing:
+
+"Analyzing your receipt..."
+
+After successful scan:
+
+"Receipt scanned successfully!"
+
+If OCR fails:
+
+"Unable to read the receipt. Please upload a clearer image."
+
+If a product cannot be identified:
+
+"Product not found. Please verify the product details."
+
+If expiry is unavailable:
+
+"Expiry date not found. Please add the expiry date manually."
+
+Buttons:
+
+- Scan Another Receipt
+- Add Expiry Date
+- Update Expiry Date
+- Nutrition Analysis
+
+========================================
+DESIGN
+========================================
+
+Use the existing NutriMatrix design.
+
+Theme:
+- Fresh green
+- White
+- Light green
+- Soft gradients
+- Rounded corners
+- Clean cards
+- Subtle shadows
+- Modern typography
+- Premium health/nutrition appearance
+
+Make it responsive for laptop and mobile.
+
+Do NOT add:
+- Shopping
+- Selling
+- Payment
+- Cart
+- E-commerce checkout
+
+Receipt Scan must remain a section/mode inside the existing Scanner page and must NOT become a separate webpage.
