@@ -60,7 +60,9 @@ function ReceiptScanner() {
       setCurrentReceiptSaved(false)
       setScanned(true)
     } catch (uploadError) {
-      setError(uploadError.message)
+      setError(uploadError.name === 'TypeError' && uploadError.message === 'Failed to fetch'
+        ? 'Receipt service is not running. Start Flask on http://localhost:5000, then try again.'
+        : uploadError.message)
     } finally {
       setLoading(false)
     }
@@ -198,7 +200,7 @@ function ReceiptScanner() {
           <div className="receipt-section-heading"><span className="method-kicker">Expiry tracking</span><h2 id="receipt-products-title">Products detected</h2><p>Receipts often do not contain expiry dates. Confirm the date from each product package; dates are never guessed.</p></div>
           <div className="receipt-product-list">
             {products.map((product, index) => <article className="receipt-product" key={product.id}>
-              <div><strong>{product.name}</strong><span>{product.quantity || 'Quantity not detected'}</span></div>
+              <div><strong>{product.name}</strong><span>{product.quantity ? `Qty: ${product.quantity}` : 'Qty: not detected'}</span></div>
               <div><strong>Amount</strong><span>{product.amount == null ? 'Not detected' : `₹${Number(product.amount).toFixed(2)}`}</span></div>
               <label>Expiry date <input type="date" value={product.expiryDate} onChange={(event) => updateExpiry(index, event.target.value)} /></label>
               <div><span className={product.expiryDate ? 'expiry-confirmed' : 'expiry-unavailable'}>{product.expiryDate ? 'Date confirmed' : 'Expiry date not available'}</span><button className="receipt-remove" onClick={() => removeProduct(index)}>Remove product</button></div>

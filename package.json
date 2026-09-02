@@ -5,7 +5,7 @@
   "type": "module",
   "description": "NutriMatrix - AI-powered nutrition and smart grocery companion",
   "scripts": {
-    "dev": "concurrently \"node server/index.js\" \"vite\"",
+    "dev": "concurrently \"node server/index.js\" \"vite\" \".\\.venv\\Scripts\\python.exe flask-backend/app.py\"",
     "build": "vite build",
     "preview": "vite preview"
   },
