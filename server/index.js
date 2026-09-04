@@ -137,9 +137,10 @@ async function ensureReceiptProductsTable() {
 function expiryStatus(expiryDate) {
   if (!expiryDate) return 'Unavailable'
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const expiry = new Date(`${String(expiryDate).slice(0, 10)}T00:00:00`)
-  const daysRemaining = Math.ceil((expiry - today) / 86400000)
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  const [year, month, day] = String(expiryDate).slice(0, 10).split('-').map(Number)
+  const expiryUtc = Date.UTC(year, month - 1, day)
+  const daysRemaining = Math.round((expiryUtc - todayUtc) / 86400000)
   return { daysRemaining, status: daysRemaining < 0 ? 'Expired' : daysRemaining <= 3 ? 'Expiring Soon' : 'Fresh / Safe' }
 }
 
