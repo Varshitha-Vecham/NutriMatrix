@@ -11,16 +11,16 @@ function Home() {
   const navigate = useNavigate()
   const [user, setUser] = useState({ name: 'Friend' })
 
-  // If user is not logged in, send them back to login
   useEffect(() => {
-    apiRequest('/api/auth/me').then(({ user: stored }) => {
-      setUser(stored)
-    }).catch(() => {
-      navigate('/login')
-    })
+    apiRequest('/api/auth/me')
+      .then(({ user: stored }) => {
+        setUser(stored)
+      })
+      .catch(() => {
+        navigate('/login')
+      })
   }, [navigate])
 
-  // All five NutriMatrix features
   const features = [
     {
       icon: '📊',
@@ -59,13 +59,10 @@ function Home() {
     }
   ]
 
-  // Quick stats shown below the hero
-
   return (
     <div className="home-page">
       <Navbar />
 
-      {/* HERO section */}
       <section className="hero">
         <div className="hero-container">
           <div className="hero-text">
@@ -96,7 +93,6 @@ function Home() {
             </div>
           </div>
 
-          {/* Hero image / illustration */}
           <div className="hero-visual">
             <div className="hero-circle">
               <img
@@ -104,25 +100,10 @@ function Home() {
                 alt="Healthy bowl of fresh produce"
               />
             </div>
-
           </div>
         </div>
       </section>
-      
-      {/* STATS section 
-      <section className="stats">
-        <div className="stats-container">
-          {stats.map((s, i) => (
-            <div key={i} className="stat-item">
-              <h3>{s.number}</h3>
-              <p>{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      */}
 
-      {/* FEATURES section */}
       <section className="features" id="features">
         <div className="section-head">
           <span className="section-badge">✨ Our Features</span>
@@ -144,7 +125,6 @@ function Home() {
         </div>
       </section>
 
-      {/* CTA section */}
       <section className="cta">
         <div className="cta-container">
           <h2>Ready to Start Your <span className="accent-light">Healthy Journey</span>?</h2>
