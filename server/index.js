@@ -81,6 +81,17 @@ const sampleProductCatalog = [
     image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=900&q=85',
     nutrition: { calories: 165, protein: 8, carbs: 29, fat: 2, fiber: 5 },
     description: 'Soft whole wheat bread made for balanced sandwiches and daily nutrition.'
+  },
+  {
+    id: 7,
+    name: 'Dark Fantasy Sunfeast Sandwich Cream',
+    brand: 'Sunfeast',
+    category: 'Biscuits and cookies',
+    barcode: '8909081003844',
+    price: 40,
+    image: '',
+    nutrition: { calories: 486, protein: 5.7, carbs: 67, fat: 22, fiber: 1.5 },
+    description: 'Chocolate sandwich biscuits with a cream filling. Package-specific batch and date details are read by NutriMatrix OCR.'
   }
 ]
 
@@ -92,6 +103,42 @@ function matchProducts(query) {
     const haystack = [product.name, product.brand, product.category, product.description].join(' ').toLowerCase()
     return haystack.includes(trimmed)
   })
+}
+
+function productFromCatalog(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    brand: product.brand,
+    category: product.category,
+    barcode: product.barcode,
+    price: product.price,
+    image: product.image,
+    expiryDate: product.expiryDate || null,
+    manufacturingDate: product.manufacturingDate || null,
+    batchNumber: product.batchNumber || null,
+    nutrition: product.nutrition,
+    description: product.description,
+    source: 'local-catalog'
+  }
+}
+
+function unknownBarcodeProduct(barcode) {
+  return {
+    id: barcode,
+    name: 'Product identified by barcode',
+    brand: 'Details unavailable from product database',
+    category: 'Unknown category',
+    barcode,
+    image: '',
+    expiryDate: null,
+    manufacturingDate: null,
+    batchNumber: null,
+    serving: 'Not available',
+    nutrition: { calories: null, protein: null, carbs: null, fat: null, fiber: null },
+    description: 'The barcode was detected. NutriMatrix packaging OCR can provide batch and date details.',
+    source: 'nutrimatrix-barcode'
+  }
 }
 
 function buildReceiptProducts(items = []) {
@@ -193,7 +240,7 @@ async function ensureAdminAccess() {
   ])
 }
 
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }))
+app.use(cors({ origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:5174'], credentials: true }))
 app.use(express.json())
 app.use(cookieParser())
 
@@ -290,6 +337,18 @@ app.post('/api/scanner/search', (req, res) => {
     query: String(query).trim(),
     products: products.length ? products : sampleProductCatalog.slice(0, 3),
     source: 'mock-backend'
+  })
+})
+
+app.get('/api/scanner/barcode/:barcode', async (req, res) => {
+  const barcode = String(req.params.barcode || '').replace(/\D/g, '')
+  if (!/^\d{8,14}$/.test(barcode)) return res.status(400).json({ message: 'Please provide a valid barcode.' })
+
+  const localProduct = sampleProductCatalog.find((product) => product.barcode === barcode)
+  if (localProduct) return res.json({ product: productFromCatalog(localProduct) })
+  res.json({
+    product: unknownBarcodeProduct(barcode),
+    warning: 'Barcode detected. This barcode is not yet in the NutriMatrix product database; packaging OCR will still read its dates and batch number.'
   })
 })
 
