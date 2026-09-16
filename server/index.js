@@ -171,7 +171,12 @@ async function ensureReceiptProductsTable() {
     receipt_file_name VARCHAR(255) NOT NULL,
     product_name VARCHAR(150) NOT NULL,
     brand VARCHAR(150) NULL,
+    category VARCHAR(100) NULL,
     barcode VARCHAR(50) NULL,
+    quantity VARCHAR(50) NULL,
+    unit VARCHAR(30) NULL,
+    manufacturing_date DATE NULL,
+    image VARCHAR(500) NULL,
     expiry_date DATE NULL,
     purchased_at DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -179,6 +184,18 @@ async function ensureReceiptProductsTable() {
     CONSTRAINT fk_receipt_product_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_receipt_products_user_expiry (user_id, expiry_date)
   )`)
+  const [columns] = await pool.query('SHOW COLUMNS FROM receipt_products')
+  const existingColumns = new Set(columns.map((column) => column.Field))
+  const requiredColumns = {
+    category: 'VARCHAR(100) NULL',
+    quantity: 'VARCHAR(50) NULL',
+    unit: 'VARCHAR(30) NULL',
+    manufacturing_date: 'DATE NULL',
+    image: 'VARCHAR(500) NULL'
+  }
+  for (const [columnName, definition] of Object.entries(requiredColumns)) {
+    if (!existingColumns.has(columnName)) await pool.query(`ALTER TABLE receipt_products ADD COLUMN ${columnName} ${definition}`)
+  }
 }
 
 function expiryStatus(expiryDate) {
@@ -367,7 +384,9 @@ app.post('/api/scanner/receipt', (req, res) => {
 app.get('/api/expiry-products', requireAuth, async (req, res) => {
   try {
     const [products] = await pool.execute(`SELECT id, receipt_file_name AS receiptFileName, product_name AS name,
-      brand, barcode, DATE_FORMAT(expiry_date, '%Y-%m-%d') AS expiryDate,
+      brand, category, barcode, quantity, unit, image,
+      DATE_FORMAT(manufacturing_date, '%Y-%m-%d') AS manufacturingDate,
+      DATE_FORMAT(expiry_date, '%Y-%m-%d') AS expiryDate,
       DATE_FORMAT(purchased_at, '%Y-%m-%d') AS purchasedAt
       FROM receipt_products WHERE user_id = ? ORDER BY expiry_date IS NULL, expiry_date ASC, created_at DESC`, [req.user.id])
     res.json({ products: products.map((product) => ({ ...product, ...expiryStatus(product.expiryDate) })) })
@@ -383,8 +402,12 @@ app.post('/api/expiry-products', requireAuth, async (req, res) => {
     for (const product of products) {
       if (!product.name) continue
       await pool.execute(`INSERT INTO receipt_products
-        (user_id, receipt_file_name, product_name, brand, barcode, expiry_date, purchased_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [req.user.id, receiptFileName, product.name, product.brand || null, product.barcode || null, product.expiryDate || null, purchasedAt])
+        (user_id, receipt_file_name, product_name, brand, category, barcode, quantity, unit, manufacturing_date, image, expiry_date, purchased_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        req.user.id, receiptFileName, product.name, product.brand || null, product.category || null, product.barcode || null,
+        product.quantity || null, product.unit || null, product.manufacturingDate || null, product.image || null,
+        product.expiryDate || null, purchasedAt
+      ])
     }
     res.status(201).json({ message: 'Receipt products saved.' })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save receipt products.' }) }

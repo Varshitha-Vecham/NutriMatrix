@@ -300,7 +300,6 @@ function ScannerPage() {
     }
     window.addEventListener('pointerdown', primeAudio, { once: true })
     window.addEventListener('keydown', primeAudio, { once: true })
-    startScanner()
     return () => {
       window.removeEventListener('pointerdown', primeAudio)
       window.removeEventListener('keydown', primeAudio)
