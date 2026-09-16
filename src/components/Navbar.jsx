@@ -40,6 +40,7 @@ function Navbar() {
           <li><NavLink to="/home" end className={getNavClass} onClick={() => setMenuOpen(false)}>Home</NavLink></li>
           <li><NavLink to="/scanner" className={getNavClass} onClick={() => setMenuOpen(false)}>Scanner</NavLink></li>
           <li><NavLink to="/products" className={getNavClass} onClick={() => setMenuOpen(false)}>Product Analysis</NavLink></li>
+          <li><NavLink to="/meal-planner" className={getNavClass} onClick={() => setMenuOpen(false)}>Meal Planner</NavLink></li>
           <li><NavLink to="/about" className={getNavClass} onClick={() => setMenuOpen(false)}>About Us</NavLink></li>
 
           <li className="nav-profile">
