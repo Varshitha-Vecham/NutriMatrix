@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import './MealPlanner.css'
@@ -222,6 +222,20 @@ const defaultProfile = {
   pantry: ['oats', 'berries', 'Greek yogurt', 'spinach', 'eggs', 'quinoa', 'tomato', 'broccoli', 'brown rice', 'lentils', 'banana', 'cinnamon', 'almond milk']
 }
 
+const STORAGE_KEY = 'nutrimatrix-saved-meals'
+
+function enrichMeal(meal, slot) {
+  return {
+    ...meal,
+    slot,
+    image: meal.image || 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80',
+    servingSize: meal.servingSize || '1 serving',
+    quantity: meal.quantity || '1 plate',
+    cookingTime: meal.cookingTime || (meal.prepTime ? meal.prepTime + 10 : 20),
+    description: meal.description || 'Fresh and nutritionally balanced meal suggestion.'
+  }
+}
+
 function normalizeDietary(preference) {
   if (preference === 'Vegan') return ['Vegan', 'Vegetarian']
   if (preference === 'Vegetarian') return ['Vegetarian']
@@ -250,7 +264,7 @@ function buildMealPlan(profile) {
     meals: MEAL_SLOTS.reduce((result, slot) => {
       const options = getFoodOptions(slot, profile)
       const preferredMeal = options[0] ?? mealLibrary[slot][0]
-      result[slot] = { ...preferredMeal, slot }
+      result[slot] = enrichMeal(preferredMeal, slot)
       return result
     }, {})
   }))
@@ -262,16 +276,43 @@ function MealPlanner() {
   const [selectedDay, setSelectedDay] = useState('Sun')
   const [selectedMealSlot, setSelectedMealSlot] = useState('Breakfast')
   const [selectedMeal, setSelectedMeal] = useState(() => buildMealPlan(defaultProfile)[0].meals.Breakfast)
+  const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [detailMode, setDetailMode] = useState('recipe')
   const [swapOptions, setSwapOptions] = useState([])
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false)
+  const [swapModalOpen, setSwapModalOpen] = useState(false)
   const [groceryList, setGroceryList] = useState([])
   const [savedMeals, setSavedMeals] = useState([])
+  const [statusMessage, setStatusMessage] = useState('')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [recommendations, setRecommendations] = useState([
     'Lean protein and fiber-rich breakfasts for steady energy.',
     'Increase hydration and include greens in lunch bowls.',
     'Use pantry ingredients first to reduce waste and improve affordability.'
   ])
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return
+
+    try {
+      const parsed = JSON.parse(saved)
+      setSavedMeals(Array.isArray(parsed) ? parsed : [])
+    } catch (error) {
+      setSavedMeals([])
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedMeals))
+  }, [savedMeals])
+
+  useEffect(() => {
+    if (!statusMessage) return undefined
+
+    const timer = window.setTimeout(() => setStatusMessage(''), 2200)
+    return () => window.clearTimeout(timer)
+  }, [statusMessage])
 
   const totals = useMemo(() => {
     const summary = { calories: 0, protein: 0, carbs: 0, fat: 0 }
@@ -294,6 +335,9 @@ function MealPlanner() {
     setSelectedDay('Sun')
     setSelectedMealSlot('Breakfast')
     setSelectedMeal(nextPlan[0].meals.Breakfast)
+    setSelectedRecipe(nextPlan[0].meals.Breakfast)
+    setRecipeModalOpen(false)
+    setSwapModalOpen(false)
     setWizardOpen(true)
     setRecommendations([
       `Targeting ${profile.goal.toLowerCase()} for a ${profile.calories}-calorie routine.`,
@@ -312,7 +356,7 @@ function MealPlanner() {
   }
 
   const handleSelectMealOption = (food) => {
-    const updatedMeal = { ...food, slot: selectedMealSlot }
+    const updatedMeal = enrichMeal(food, selectedMealSlot)
 
     setPlan((currentPlan) => currentPlan.map((day) => {
       if (day.day !== selectedDay) return day
@@ -327,10 +371,17 @@ function MealPlanner() {
     }))
 
     setSelectedMeal(updatedMeal)
+    setSelectedRecipe(updatedMeal)
     setDetailMode('recipe')
-    setSavedMeals((current) => [...new Set([...current, `${selectedDay}-${selectedMealSlot}`])])
+    setRecipeModalOpen(false)
+    setSwapModalOpen(false)
+    setStatusMessage('Meal selected successfully!')
+    const key = getMealKey(selectedDay, selectedMealSlot, updatedMeal.name)
+    setSavedMeals((current) => (current.includes(key) ? current : [...current, key]))
     setGroceryList((current) => [...new Set([...current, ...updatedMeal.ingredients])])
   }
+
+  const getMealKey = (day, slot, mealName) => `${day}-${slot}-${mealName}`
 
   const handleViewRecipe = (day, slot, meal, event) => {
     if (event) {
@@ -338,10 +389,15 @@ function MealPlanner() {
       event.stopPropagation()
     }
 
+    const recipeDetail = enrichMeal(meal, slot)
+
     setSelectedDay(day)
     setSelectedMealSlot(slot)
-    setSelectedMeal(meal)
+    setSelectedMeal(recipeDetail)
+    setSelectedRecipe(recipeDetail)
     setDetailMode('recipe')
+    setRecipeModalOpen(true)
+    setSwapModalOpen(false)
     setSwapOptions(getFoodOptions(slot, profile).filter((recipe) => recipe.name !== meal.name))
   }
 
@@ -352,11 +408,16 @@ function MealPlanner() {
     }
 
     const options = getFoodOptions(slot, profile).filter((recipe) => recipe.name !== currentMeal.name)
+    const recipeDetail = enrichMeal(currentMeal, slot)
+
     setSelectedDay(day)
     setSelectedMealSlot(slot)
-    setSelectedMeal(currentMeal)
+    setSelectedMeal(recipeDetail)
+    setSelectedRecipe(recipeDetail)
     setDetailMode('swap')
     setSwapOptions(options)
+    setRecipeModalOpen(true)
+    setSwapModalOpen(true)
   }
 
   const handleAddToGroceryList = (meal) => {
@@ -365,11 +426,49 @@ function MealPlanner() {
   }
 
   const handleSaveMeal = (day, slot) => {
-    const key = `${day}-${slot}`
+    const key = getMealKey(day, slot, selectedRecipe?.name || selectedMeal?.name || 'meal')
     setSavedMeals((current) => current.includes(key) ? current : [...current, key])
+    setStatusMessage('Recipe saved successfully ✓')
+  }
+
+  const handleChooseAlternative = (option) => {
+    const updatedMeal = enrichMeal(option, selectedMealSlot)
+
+    setPlan((currentPlan) => currentPlan.map((day) => {
+      if (day.day !== selectedDay) return day
+
+      return {
+        ...day,
+        meals: {
+          ...day.meals,
+          [selectedMealSlot]: updatedMeal
+        }
+      }
+    }))
+
+    setSelectedMeal(updatedMeal)
+    setSelectedRecipe(updatedMeal)
+    setDetailMode('recipe')
+    setSwapOptions([])
+    setSwapModalOpen(false)
+    setRecipeModalOpen(true)
+    setSavedMeals((current) => {
+      const key = getMealKey(selectedDay, selectedMealSlot, updatedMeal.name)
+      return current.includes(key) ? current : [...current, key]
+    })
+    setStatusMessage('Meal swapped successfully ✓')
+  }
+
+  const handleCloseRecipe = () => {
+    setRecipeModalOpen(false)
+    setSwapModalOpen(false)
+    setSelectedRecipe(null)
   }
 
   const foodOptions = getFoodOptions(selectedMealSlot, profile)
+  const isCurrentMealSaved = selectedRecipe
+    ? savedMeals.includes(getMealKey(selectedDay, selectedMealSlot, selectedRecipe.name))
+    : false
 
   return (
     <div className="meal-planner-page">
@@ -548,7 +647,7 @@ function MealPlanner() {
                   <div className="meal-stack">
                     {MEAL_SLOTS.map((slot) => {
                       const meal = dayPlan.meals[slot]
-                      const isSaved = savedMeals.includes(`${dayPlan.day}-${slot}`)
+                      const isSaved = savedMeals.includes(getMealKey(dayPlan.day, slot, meal.name))
 
                       return (
                         <div
@@ -558,6 +657,7 @@ function MealPlanner() {
                             setSelectedDay(dayPlan.day)
                             setSelectedMealSlot(slot)
                             setSelectedMeal(meal)
+                            setSelectedRecipe(meal)
                             setDetailMode('recipe')
                           }}
                         >
@@ -585,55 +685,63 @@ function MealPlanner() {
           </section>
         </section>
 
-        <section className="recipe-detail-card">
-          {selectedMeal ? (
-            <>
+        {selectedRecipe && (recipeModalOpen || swapModalOpen) && (
+          <div className="meal-modal-backdrop" role="presentation" onClick={handleCloseRecipe}>
+            <section className="recipe-detail-card meal-modal" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title" onClick={(event) => event.stopPropagation()}>
+              {statusMessage && (
+                <div className="status-banner">{statusMessage}</div>
+              )}
+
               <div className="recipe-header">
-                <div>
-                  <span className="recipe-badge">{selectedMeal.slot}</span>
-                  <h2>{selectedMeal.name}</h2>
+                <div className="recipe-main-title">
+                  <span className="recipe-badge">{selectedRecipe.slot}</span>
+                  <h2 id="meal-modal-title">{selectedRecipe.name}</h2>
                 </div>
 
                 <div className="recipe-tools">
-                  <button type="button" onClick={() => handleAddToGroceryList(selectedMeal)}>Add to Grocery List</button>
-                  <button type="button" onClick={() => handleSaveMeal(selectedDay, selectedMealSlot)}>Save Meal</button>
+                  <button type="button" onClick={() => handleAddToGroceryList(selectedRecipe)}>Add to Grocery List</button>
+                  <button type="button" onClick={() => handleSaveMeal(selectedDay, selectedMealSlot)}>
+                    {isCurrentMealSaved ? 'Saved ✓' : 'Save Meal'}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={handleCloseRecipe}>Close</button>
                 </div>
               </div>
 
-              {detailMode === 'swap' && swapOptions.length > 0 && (
+              {detailMode === 'swap' && swapModalOpen && swapOptions.length > 0 && (
                 <div className="swap-panel">
                   <h3>Swap Meal Recommendations</h3>
                   <div className="swap-grid">
                     {swapOptions.map((option) => (
                       <div key={option.name} className="swap-option">
+                        <img src={option.image} alt={option.name} />
                         <strong>{option.name}</strong>
                         <span>{option.calories} kcal • {option.protein}g protein</span>
-                        <p>{option.instructions}</p>
-                        <button type="button" onClick={() => {
-                          setSelectedMeal({ ...option, slot: selectedMealSlot })
-                          setDetailMode('recipe')
-                          setSavedMeals((current) => [...new Set([...current, `${selectedDay}-${selectedMealSlot}`])])
-                        }}>Choose This Meal</button>
+                        <p>{option.description}</p>
+                        <button type="button" onClick={() => handleChooseAlternative(option)}>Select Meal</button>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {detailMode === 'recipe' && (
+              {detailMode === 'recipe' && recipeModalOpen && (
                 <>
+                  <div className="recipe-visual">
+                    <img src={selectedRecipe.image} alt={selectedRecipe.name} />
+                  </div>
+
                   <div className="nutrient-grid">
-                    <div><span>Calories</span><strong>{selectedMeal.calories} kcal</strong></div>
-                    <div><span>Protein</span><strong>{selectedMeal.protein} g</strong></div>
-                    <div><span>Carbs</span><strong>{selectedMeal.carbs} g</strong></div>
-                    <div><span>Fat</span><strong>{selectedMeal.fat} g</strong></div>
+                    <div><span>Calories</span><strong>{selectedRecipe.calories} kcal</strong></div>
+                    <div><span>Protein</span><strong>{selectedRecipe.protein} g</strong></div>
+                    <div><span>Carbs</span><strong>{selectedRecipe.carbs} g</strong></div>
+                    <div><span>Fat</span><strong>{selectedRecipe.fat} g</strong></div>
                   </div>
 
                   <div className="recipe-content">
                     <div className="recipe-section">
                       <h3>Ingredients</h3>
                       <ul>
-                        {selectedMeal.ingredients.map((ingredient) => (
+                        {selectedRecipe.ingredients.map((ingredient) => (
                           <li key={ingredient}>{ingredient}</li>
                         ))}
                       </ul>
@@ -641,22 +749,29 @@ function MealPlanner() {
 
                     <div className="recipe-section">
                       <h3>Nutrition Highlights</h3>
-                      <p>{selectedMeal.vitamins}</p>
-                      <p><strong>Prep time:</strong> {selectedMeal.prepTime} minutes</p>
+                      <p>{selectedRecipe.vitamins}</p>
+                      <p><strong>Prep time:</strong> {selectedRecipe.prepTime} minutes</p>
+                      <p><strong>Cooking time:</strong> {selectedRecipe.cookingTime} minutes</p>
+                      <p><strong>Serving size:</strong> {selectedRecipe.servingSize}</p>
+                      <p><strong>Quantity:</strong> {selectedRecipe.quantity}</p>
                     </div>
 
                     <div className="recipe-section wide">
                       <h3>Preparation</h3>
-                      <p>{selectedMeal.instructions}</p>
+                      <ol className="preparation-steps">
+                        {selectedRecipe.instructions
+                          .split(/, then |, and |, add |, top with |, serve |, pour |, fold in |, scramble |, season |, dress with |, roast |, sauté |, simmer |, combine |, spread |, mix |, toss |, cook /i)
+                          .map((step, index) => (
+                            <li key={`${selectedRecipe.name}-step-${index}`}>{step.trim()}</li>
+                          ))}
+                      </ol>
                     </div>
                   </div>
                 </>
               )}
-            </>
-          ) : (
-            <p>Select a meal to preview ingredients and nutrition details.</p>
-          )}
-        </section>
+            </section>
+          </div>
+        )}
       </main>
 
       <Footer />
