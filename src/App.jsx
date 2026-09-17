@@ -12,6 +12,8 @@ import BarcodeScanner from './pages/BarcodeScanner.jsx'
 import ReceiptScanner from './pages/ReceiptScanner.jsx'
 import Products from './pages/Products.jsx'
 import MealPlanner from './pages/MealPlanner.jsx'
+import DigitalPantry from './pages/DigitalPantry.jsx'
+import Notifications from './pages/Notifications.jsx'
 import AdminLogin from './pages/AdminLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import './App.css'
@@ -27,6 +29,8 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/meal-planner" element={<MealPlanner />} />
+        <Route path="/digital-pantry" element={<DigitalPantry />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/scanner" element={<Scanner />} />

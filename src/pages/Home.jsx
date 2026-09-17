@@ -44,6 +44,20 @@ function Home() {
       accent: '#d97706'
     },
     {
+      icon: '🍽️',
+      title: 'Meal Planner',
+      description: 'Plan balanced meals for each day and keep your routine organised.',
+      color: '#3b82f6',
+      accent: '#2563eb'
+    },
+    {
+      icon: '🧑‍🍳',
+      title: 'Recipe Generator',
+      description: 'Create and discover meal ideas that match your nutrition goals and preferences.',
+      color: '#14b8a6',
+      accent: '#0f766e'
+    },
+    {
       icon: '⏰',
       title: 'Expiry Reminders',
       description: 'Never waste food again. Get timely reminders before items expire.',
@@ -129,7 +143,10 @@ function Home() {
         <div className="cta-container">
           <h2>Ready to Start Your <span className="accent-light">Healthy Journey</span>?</h2>
           <p>Join thousands of users making smarter nutrition choices every day with NutriMatrix.</p>
-          <button className="btn-primary btn-large">
+          <button
+            className="btn-primary btn-large"
+            onClick={() => navigate('/scanner')}
+          >
             Get Started Today 🚀
           </button>
         </div>

@@ -11,27 +11,9 @@ A colorful, modern React.js web application that helps users make smarter grocer
 - 📱 **Fully Responsive** - Works on desktop, tablet, and mobile
 - 🤖 **AI-Themed** - 5 feature cards: Nutrition Analysis, Healthy Alternatives, Digital Pantry, Expiry Reminders, AI Recommendations
 
-## 🚀 How to Run
+## 🚀 Installation
 
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Create the database**
-   ```bash
-   mysql -u root -p < server/schema.sql
-   ```
-
-3. **Configure the API**
-   Copy `.env.example` to `.env` and set your MySQL password and a strong `JWT_SECRET`.
-
-4. **Start the dev servers**
-   ```bash
-   npm run dev
-   ```
-
-3. Open `http://localhost:5173` in your browser.
+See [INSTALLATION.md](INSTALLATION.md) for the complete setup commands.
 
 ## 🗂️ Project Structure
 

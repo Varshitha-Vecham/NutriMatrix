@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../api.js'
 
-const emptyForm = { name: '', brand: '', category: '', barcode: '', quantity: '', unit: '', manufacturingDate: '', expiryDate: '', image: '' }
+const emptyForm = { name: '', brand: '', category: '', barcode: '', quantity: '', unit: '', manufacturingDate: '', expiryDate: '' }
 
 function SavedProductDetails({ product }) {
   const details = [
     ['Brand', product.brand], ['Category', product.category], ['Barcode / Product ID', product.barcode],
     ['Quantity', product.quantity && product.unit ? `${product.quantity} ${product.unit}` : product.quantity || product.unit],
-    ['Manufacturing date', product.manufacturingDate], ['Expiry date', product.expiryDate], ['Image', product.image]
+    ['Manufacturing date', product.manufacturingDate], ['Expiry date', product.expiryDate]
   ].filter(([, value]) => value)
   return <section className="manual-saved-product" aria-live="polite"><span className="manual-saved-status">✓ Product saved</span><h3>{product.name}</h3><p>Your manually entered product details have been saved.</p><dl>{details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>
 }
@@ -21,7 +21,7 @@ function ManualHistory({ products, onDelete }) {
     const details = [
       ['Product name', product.name], ['Brand', product.brand], ['Category', product.category], ['Barcode / Product ID', product.barcode],
       ['Quantity', product.quantity && product.unit ? `${product.quantity} ${product.unit}` : product.quantity || product.unit],
-      ['Manufacturing date', product.manufacturingDate], ['Expiry date', product.expiryDate], ['Image', product.image]
+      ['Manufacturing date', product.manufacturingDate], ['Expiry date', product.expiryDate]
     ].map(([label, value]) => [label, value || 'Not entered'])
     return <article className={`manual-history-item ${expanded ? 'expanded' : ''}`} key={product.id}>
       <button className="manual-history-toggle" type="button" onClick={() => setExpandedId(expanded ? null : product.id)} aria-expanded={expanded}>
@@ -47,7 +47,7 @@ function ManualEntry() {
       .catch((requestError) => { if (requestError.message !== 'Not authenticated.') setError(requestError.message) })
   }, [])
 
-  function updateField(event) { const { name, value, files } = event.target; setForm((current) => ({ ...current, [name]: files?.[0]?.name || value })) }
+  function updateField(event) { const { name, value } = event.target; setForm((current) => ({ ...current, [name]: value })) }
   function saveProduct(event) {
     event.preventDefault()
     setError('')
