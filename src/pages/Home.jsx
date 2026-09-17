@@ -126,7 +126,9 @@ function Home() {
         </div>
 
         <div className="features-grid">
-          {features.map((f, i) => (
+          {features
+            .filter(({ title }) => title !== 'Nutrition Analysis' && title !== 'Healthy Alternatives')
+            .map((f, i) => (
             <FeatureCard
               key={i}
               icon={f.icon}
@@ -135,7 +137,7 @@ function Home() {
               color={f.color}
               accent={f.accent}
             />
-          ))}
+            ))}
         </div>
       </section>
 

@@ -6,6 +6,8 @@ import { apiRequest } from '../api.js'
 import { getExpiryMeta, getExpirySummary } from '../utils/expiry.js'
 import './DigitalPantry.css'
 
+const READ_ITEMS_STORAGE_KEY = 'nutrimatrix-digital-pantry-read-items'
+
 const toneClass = {
   danger: 'tone-danger',
   warning: 'tone-warning',
@@ -18,9 +20,39 @@ function DigitalPantry() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [readItems, setReadItems] = useState([])
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [hasRestoredReadItems, setHasRestoredReadItems] = useState(false)
+
+  useEffect(() => {
+    try {
+      const savedReadItems = localStorage.getItem(READ_ITEMS_STORAGE_KEY)
+      if (savedReadItems) {
+        const parsedReadItems = JSON.parse(savedReadItems)
+        if (Array.isArray(parsedReadItems)) {
+          setReadItems(parsedReadItems)
+        }
+      }
+    } catch (storageError) {
+      console.error('Unable to restore pantry read items from storage.', storageError)
+    } finally {
+      setHasRestoredReadItems(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    // Do not replace saved Restore items with the initial empty state before
+    // localStorage has been read on a new page visit.
+    if (!hasRestoredReadItems) return
+
+    try {
+      localStorage.setItem(READ_ITEMS_STORAGE_KEY, JSON.stringify(readItems))
+    } catch (storageError) {
+      console.error('Unable to save pantry read items to storage.', storageError)
+    }
+  }, [hasRestoredReadItems, readItems])
 
   useEffect(() => {
     apiRequest('/api/expiry-products')
@@ -37,7 +69,10 @@ function DigitalPantry() {
       .finally(() => setLoading(false))
   }, [navigate])
 
-  const summary = useMemo(() => getExpirySummary(items), [items])
+  const hiddenItemIds = useMemo(() => new Set(readItems.map((item) => String(item.id))), [readItems])
+  const visibleItems = useMemo(() => items.filter((item) => !hiddenItemIds.has(String(item.id))), [items, hiddenItemIds])
+
+  const summary = useMemo(() => getExpirySummary(visibleItems), [visibleItems])
 
   const summaryGroups = useMemo(() => {
     const groups = {
@@ -48,7 +83,7 @@ function DigitalPantry() {
       seven: []
     }
 
-    items.forEach((item) => {
+    visibleItems.forEach((item) => {
       const meta = getExpiryMeta(item.expiryDate)
       if (meta.statusKey === 'expired') groups.expired.push(item.name)
       if (meta.statusKey === 'today') groups.today.push(item.name)
@@ -58,67 +93,96 @@ function DigitalPantry() {
     })
 
     return groups
-  }, [items])
+  }, [visibleItems])
 
   const notifications = useMemo(() => {
-    return items
+    return visibleItems
       .filter((item) => item.expiryDate && item.daysRemaining !== null && item.daysRemaining <= 7)
       .map((item) => ({ ...item, ...getExpiryMeta(item.expiryDate) }))
       .sort((a, b) => {
         const priority = { expired: 0, today: 1, tomorrow: 2, three: 3, seven: 4 }
         return (priority[a.statusKey] ?? 99) - (priority[b.statusKey] ?? 99)
       })
-  }, [items])
+  }, [visibleItems])
 
   const filteredItems = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
-    if (!query) return items
+    if (!query) return visibleItems
 
-    return items.filter((item) => {
+    return visibleItems.filter((item) => {
       const haystack = [item.name, item.brand, item.category, item.expiryDate, item.quantity].join(' ').toLowerCase()
       return haystack.includes(query)
     })
-  }, [items, searchTerm])
+  }, [visibleItems, searchTerm])
 
   const unreadCount = notifications.filter((item) => item.daysRemaining !== null && item.daysRemaining <= 7).length
 
   const handleMarkRead = (id) => {
     setItems((current) => {
-      const itemToRead = current.find((item) => item.id === id)
-      if (!itemToRead) return current
+      const itemIndex = current.findIndex((item) => String(item.id) === String(id))
+      if (itemIndex === -1) return current
+
+      const itemToRead = { ...current[itemIndex], originalIndex: itemIndex }
 
       setReadItems((previousRead) => {
-        const alreadyStored = previousRead.some((item) => item.id === id)
+        const alreadyStored = previousRead.some((item) => String(item.id) === String(id))
         return alreadyStored ? previousRead : [...previousRead, itemToRead]
       })
 
-      return current.filter((item) => item.id !== id)
+      return current.filter((item) => String(item.id) !== String(id))
     })
   }
 
   const handleRestoreItem = (id) => {
     setReadItems((current) => {
-      const itemToRestore = current.find((item) => item.id === id)
+      const itemToRestore = current.find((item) => String(item.id) === String(id))
       if (!itemToRestore) return current
 
-      setItems((existing) => [itemToRestore, ...existing])
-      return current.filter((item) => item.id !== id)
+      setItems((existing) => {
+        const nextItems = [...existing]
+        const insertIndex = Number.isFinite(itemToRestore.originalIndex) ? Math.min(itemToRestore.originalIndex, nextItems.length) : nextItems.length
+        nextItems.splice(insertIndex, 0, itemToRestore)
+        return nextItems
+      })
+
+      return current.filter((item) => String(item.id) !== String(id))
     })
   }
 
   const handleRestoreAll = () => {
     if (!readItems.length) return
-    setItems((current) => [...readItems, ...current])
+
+    setItems((current) => {
+      const nextItems = [...current]
+      const sortedReadItems = [...readItems].sort((a, b) => {
+        const aIndex = Number.isFinite(a.originalIndex) ? a.originalIndex : Number.MAX_SAFE_INTEGER
+        const bIndex = Number.isFinite(b.originalIndex) ? b.originalIndex : Number.MAX_SAFE_INTEGER
+        return aIndex - bIndex
+      })
+
+      sortedReadItems.forEach((item) => {
+        const insertIndex = Number.isFinite(item.originalIndex) ? Math.min(item.originalIndex, nextItems.length) : nextItems.length
+        nextItems.splice(insertIndex, 0, item)
+      })
+
+      return nextItems
+    })
+
     setReadItems([])
   }
 
   const handleMarkAllRead = () => {
-    setReadItems((current) => [...current, ...items])
-    setItems([])
-  }
-
-  const handleViewProduct = () => {
-    navigate('/products')
+    if (!visibleItems.length) return
+    setReadItems((current) => {
+      const merged = [...current]
+      visibleItems.forEach((item) => {
+        if (!merged.some((existingItem) => String(existingItem.id) === String(item.id))) {
+          merged.push(item)
+        }
+      })
+      return merged
+    })
+    setItems((current) => current.filter((item) => hiddenItemIds.has(String(item.id))))
   }
 
   return (
@@ -172,6 +236,37 @@ function DigitalPantry() {
                   aria-label="Search pantry items"
                 />
               </div>
+              <div className="restore-menu">
+                <button
+                  type="button"
+                  className="restore-menu-btn"
+                  onClick={() => setIsRestoreOpen((isOpen) => !isOpen)}
+                  aria-expanded={isRestoreOpen}
+                >
+                  Restore{readItems.length ? ` (${readItems.length})` : ''}
+                </button>
+
+                {isRestoreOpen && (
+                  <div className="restore-popover">
+                    <div className="read-items-header">
+                      <h4>Marked as read</h4>
+                      {readItems.length > 0 && <button type="button" className="restore-all-btn" onClick={handleRestoreAll}>Restore all</button>}
+                    </div>
+                    {readItems.length > 0 ? (
+                      <ul className="read-items-list">
+                        {readItems.map((item) => (
+                          <li key={item.id}>
+                            <span>{item.name}</span>
+                            <button type="button" onClick={() => handleRestoreItem(item.id)}>Restore</button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="restore-empty">No items marked as read.</p>
+                    )}
+                  </div>
+                )}
+              </div>
               <button type="button" className="primary-btn" onClick={() => navigate('/scanner')}>Add product</button>
             </div>
           </div>
@@ -180,7 +275,7 @@ function DigitalPantry() {
             <p className="loading-state">Loading pantry items...</p>
           ) : error ? (
             <p className="error-state">{error}</p>
-          ) : items.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🥬</div>
               <h3>Your digital pantry is empty</h3>
@@ -209,7 +304,6 @@ function DigitalPantry() {
                       </div>
 
                       <div className="item-actions">
-                        <button type="button" className="secondary-btn" onClick={handleViewProduct}>View Product</button>
                         <button type="button" className="text-btn" onClick={() => handleMarkRead(item.id)}>Mark as read</button>
                       </div>
                     </div>
