@@ -35,7 +35,10 @@ def parse_receipt_text(text):
         name = item.group("name").strip(" .:-")
         if name.lower() in ("item name", "item no", "total", "gross amt", "net amount"):
             continue
-        name = re.sub(r"^\d+\s+", "", name).strip()
+        # Retail receipts often prefix product rows with a line number. OCR can
+        # read that marker as `1.`, `2)`, `3-`, or simply `4 `, so remove only
+        # a short number at the beginning of the item name.
+        name = re.sub(r"^\d{1,3}(?:\s*[.)\-:]\s*|\s+)", "", name).strip()
         if not name:
             continue
         products.append({

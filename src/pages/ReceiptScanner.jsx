@@ -18,6 +18,8 @@ function ReceiptScanner() {
   const [products, setProducts] = useState([])
   const [trackedProducts, setTrackedProducts] = useState([])
   const [currentReceiptSaved, setCurrentReceiptSaved] = useState(false)
+  const [editingProductIndex, setEditingProductIndex] = useState(null)
+  const [editingProductName, setEditingProductName] = useState('')
   const [editingHistoryId, setEditingHistoryId] = useState(null)
   const [editingExpiry, setEditingExpiry] = useState('')
   const [expandedReceipt, setExpandedReceipt] = useState(null)
@@ -30,7 +32,9 @@ function ReceiptScanner() {
     async function loadReceiptHistory() {
       try {
         const result = await apiRequest('/api/expiry-products')
-        setTrackedProducts(result.products)
+        // Manual products have their own history on the Manual Entry page.
+        // Keep this view reserved for uploaded receipts.
+        setTrackedProducts(result.products.filter((product) => product.receiptFileName !== 'Manual entry'))
       } catch (historyError) {
         if (historyError.message !== 'Not authenticated.') setError(historyError.message)
       }
@@ -63,6 +67,8 @@ function ReceiptScanner() {
       }
       if (!response.ok) throw new Error(result.message || 'Unable to analyze receipt.')
       setProducts(result.products.map((product) => ({ ...product, expiryDate: product.expiryDate || '' })))
+      setEditingProductIndex(null)
+      setEditingProductName('')
       setCurrentReceiptSaved(false)
       setScanned(true)
     } catch (uploadError) {
@@ -78,14 +84,32 @@ function ReceiptScanner() {
     setProducts((current) => current.map((product, productIndex) => productIndex === index ? { ...product, expiryDate } : product))
   }
 
+  function updateProductName(index, name) {
+    setProducts((current) => current.map((product, productIndex) => productIndex === index ? { ...product, name } : product))
+  }
+
+  function saveProductName(index) {
+    const name = editingProductName.trim()
+    if (!name) {
+      setError('A product name is required before saving.')
+      return
+    }
+    updateProductName(index, name)
+    setEditingProductIndex(null)
+    setEditingProductName('')
+  }
+
   function removeProduct(index) {
     setProducts((current) => current.filter((_, productIndex) => productIndex !== index))
+    setEditingProductIndex((current) => current === index ? null : current != null && current > index ? current - 1 : current)
   }
 
   function uploadAnotherReceipt() {
     setFileName('')
     setScanned(false)
     setProducts([])
+    setEditingProductIndex(null)
+    setEditingProductName('')
     setCurrentReceiptSaved(false)
     setError('')
     setMessage('')
@@ -102,7 +126,7 @@ function ReceiptScanner() {
         body: JSON.stringify({ receiptFileName: fileName, products })
       })
       const result = await apiRequest('/api/expiry-products')
-      setTrackedProducts(result.products)
+      setTrackedProducts(result.products.filter((product) => product.receiptFileName !== 'Manual entry'))
       setCurrentReceiptSaved(true)
       setScanned(false)
       setProducts([])
@@ -124,7 +148,7 @@ function ReceiptScanner() {
     try {
       await apiRequest(`/api/expiry-products/${productId}`, { method: 'PUT', body: JSON.stringify({ expiryDate: editingExpiry }) })
       const result = await apiRequest('/api/expiry-products')
-      setTrackedProducts(result.products)
+      setTrackedProducts(result.products.filter((product) => product.receiptFileName !== 'Manual entry'))
       setEditingHistoryId(null)
       setMessage('Expiry date updated.')
     } catch (editError) {
@@ -182,9 +206,7 @@ function ReceiptScanner() {
               <button className="receipt-primary" onClick={() => document.querySelector('.receipt-products')?.scrollIntoView({ behavior: 'smooth' })}>
                 Review Expiry Dates →
               </button>
-              {currentReceiptSaved && <button className="receipt-primary" onClick={uploadAnotherReceipt}>
-                Upload Another Receipt
-              </button>}
+              <button className="receipt-cancel" type="button" onClick={uploadAnotherReceipt}>Cancel</button>
             </div>
           ) : (
             <>
@@ -206,11 +228,11 @@ function ReceiptScanner() {
         {scanned && <section className="receipt-products" aria-labelledby="receipt-products-title">
           <div className="receipt-section-heading"><span className="method-kicker">Expiry tracking</span><h2 id="receipt-products-title">Products detected</h2><p>Receipts often do not contain expiry dates. Confirm the date from each product package; dates are never guessed.</p></div>
           <div className="receipt-product-list">
-            {products.map((product, index) => <article className="receipt-product" key={product.id}>
-              <div><strong>{product.name}</strong><span>{product.quantity ? `Qty: ${product.quantity}` : 'Qty: not detected'}</span></div>
+            {products.map((product, index) => <article className="receipt-product" key={product.id || `${product.name}-${index}`}>
+              <div className="receipt-product-name">{editingProductIndex === index ? <><label htmlFor={`receipt-product-name-${index}`}>Product name<input id={`receipt-product-name-${index}`} type="text" value={editingProductName} onChange={(event) => setEditingProductName(event.target.value)} autoFocus /></label><div className="receipt-name-actions"><button type="button" onClick={() => saveProductName(index)}>Save name</button><button type="button" onClick={() => { setEditingProductIndex(null); setEditingProductName('') }}>Cancel</button></div></> : <><strong>{product.name}</strong><span>{product.quantity ? `Qty: ${product.quantity}` : 'Qty: not detected'}</span><button className="receipt-edit-name" type="button" onClick={() => { setError(''); setEditingProductName(product.name); setEditingProductIndex(index) }}>Edit name</button></>}</div>
               <div><strong>Amount</strong><span>{product.amount == null ? 'Not detected' : `₹${Number(product.amount).toFixed(2)}`}</span></div>
               <label>Expiry date <input type="date" value={product.expiryDate} onChange={(event) => updateExpiry(index, event.target.value)} /></label>
-              <div><span className={product.expiryDate ? 'expiry-confirmed' : 'expiry-unavailable'}>{product.expiryDate ? 'Date confirmed' : 'Expiry date not available'}</span><button className="receipt-remove" onClick={() => removeProduct(index)}>Remove product</button></div>
+              <div>{product.expiryDate && <span className="expiry-confirmed">Date confirmed</span>}<button className="receipt-remove" onClick={() => removeProduct(index)}>Remove product</button></div>
             </article>)}
           </div>
           <button className="receipt-primary receipt-save" disabled={saving || products.every((product) => !product.expiryDate)} onClick={saveProducts}>{saving ? 'Saving...' : 'Save Products & Expiry Dates'}</button>
