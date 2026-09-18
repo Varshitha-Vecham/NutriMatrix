@@ -145,10 +145,10 @@
   font-weight: 700;
 }
 
-.tone-danger { background: #fff1f2; }
-.tone-warning { background: #fff7ed; }
-.tone-info { background: #eff6ff; }
-.tone-success { background: #f0fdf4; }
+.tone-danger { background: #f3bbbf; }
+.tone-warning { background: #f5ca97; }
+.tone-info { background: #e6ebf1; }
+.tone-success { background: #c0f6d0; }
 .tone-neutral { background: #f8fafc; }
 
 @media (max-width: 640px) {
