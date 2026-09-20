@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS receipt_products (
   unit VARCHAR(30) NULL,
   manufacturing_date DATE NULL,
   image VARCHAR(500) NULL,
+  source VARCHAR(30) NOT NULL DEFAULT 'receipt',
   expiry_date DATE NULL,
   purchased_at DATE NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
