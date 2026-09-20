@@ -1,0 +1,123 @@
+Create a modern and clean "Scanner" page for my NutriMatrix AI-powered nutrition and smart grocery management website.
+
+The existing NutriMatrix website uses a fresh, healthy and premium design with green, white and very light green colors, modern typography, rounded corners, subtle shadows and clean card-based layouts.
+
+IMPORTANT:
+This Scanner page is NOT the actual scanning interface. It is a selection page where the user chooses one of four methods to identify a grocery product.
+
+PAGE STRUCTURE:
+
+1. HEADER
+- Page title: "Scanner"
+- Subtitle:
+  "Choose how you want to identify your grocery product."
+- Add a "Back to Home" button.
+
+2. FOUR INPUT METHOD CARDS
+
+Create four attractive cards arranged in a responsive 2 × 2 grid.
+
+CARD 1 — RECEIPT SCAN
+Icon: 🧾
+Title: "Receipt Scan"
+Description:
+"Upload or capture a grocery receipt to identify multiple products at once."
+Button: "Scan Receipt →"
+
+When clicked, navigate to the Receipt Scanner page.
+
+CARD 2 — BARCODE SCAN
+Icon: 📷
+Title: "Barcode Scan"
+Description:
+"Use your camera to scan a product barcode and quickly identify the product."
+Button: "Scan Barcode →"
+
+When clicked, navigate to the Barcode/Product Scanner page.
+
+CARD 3 — VOICE INPUT
+Icon: 🎤
+Title: "Voice Input"
+Description:
+"Say the name of a grocery product and let NutriMatrix identify it."
+Button: "Use Voice →"
+
+When clicked, open the Voice Input interface.
+
+The voice interface should contain:
+- Microphone button
+- "Tap to speak"
+- Listening state
+- Recognized product name
+- "Search Product" button
+
+CARD 4 — MANUAL ENTRY
+Icon: ⌨️
+Title: "Manual Entry"
+Description:
+"Type the product name manually to find and analyze it."
+Button: "Enter Product →"
+
+When clicked, open a manual product search/entry interface containing:
+- Product name input field
+- Search button
+- Matching product results
+- Select Product button
+
+3. INFORMATION SECTION
+
+Below the four cards, add a simple section:
+
+"One Platform, Four Ways"
+
+Text:
+"Identify your grocery products using the method that works best for you. Once identified, NutriMatrix can provide product information, nutrition analysis and personalized recommendations."
+
+4. HOW IT WORKS
+
+Show a simple 3-step flow:
+
+Step 1 — Choose a Method
+"Select Receipt, Barcode, Voice or Manual Entry."
+
+Step 2 — Identify Product
+"NutriMatrix identifies the grocery product."
+
+Step 3 — Explore Insights
+"View nutrition information, healthy alternatives and other insights."
+
+5. DESIGN REQUIREMENTS
+
+- Match the existing NutriMatrix website design.
+- Use green as the primary color.
+- Use very light green/white background.
+- Use four visually distinct but consistent cards.
+- Use simple grocery-related icons.
+- Add subtle hover effects.
+- Use rounded corners and soft shadows.
+- Keep plenty of spacing.
+- Do NOT use circular grocery image layouts.
+- Do NOT make it look like an e-commerce/shopping website.
+- Do NOT use unnecessary 3D graphics.
+- Keep the page professional, simple and suitable for a BCA project demonstration.
+- Make it fully responsive.
+
+6. FUNCTIONALITY
+
+All four options must be clickable.
+
+Receipt Scan → Receipt Scanner
+Barcode Scan → Barcode Scanner
+Voice Input → Voice Input interface
+Manual Entry → Manual Product Entry
+
+Use sample/mock product data for now. The interfaces should be structured so they can later be connected to a Python Flask backend and MySQL database.
+
+The final product identification flow should be:
+
+Scanner
+→ Choose Input Method
+→ Identify Product
+→ Product Information
+→ Nutrition Analysis
+→ Healthy Alternatives / Product Comparison

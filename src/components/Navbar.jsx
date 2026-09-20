@@ -1,5 +1,5 @@
 // Navbar - shows on Home page; has logo, links, profile, logout
-import { useNavigate, NavLink, Link } from 'react-router-dom'
+import { useNavigate, NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../api.js'
 import './Navbar.css'
@@ -7,8 +7,8 @@ import './Navbar.css'
 function Navbar() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
-
   const [user, setUser] = useState({})
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   useEffect(() => {
     apiRequest('/api/auth/me')
@@ -17,6 +17,17 @@ function Navbar() {
         if (requestError.message === 'Not authenticated.') navigate('/login')
       })
   }, [navigate])
+
+  useEffect(() => {
+    apiRequest('/api/expiry-products')
+      .then(({ products = [] }) => {
+        const alerts = products.filter((item) => item.expiryDate && item.daysRemaining !== null && item.daysRemaining <= 7)
+        setUnreadNotifications(alerts.length)
+      })
+      .catch(() => {
+        setUnreadNotifications(0)
+      })
+  }, [])
 
   function handleLogout() {
     apiRequest('/api/auth/logout', { method: 'POST' }).finally(() => navigate('/login'))
@@ -38,10 +49,23 @@ function Navbar() {
 
         <ul className={menuOpen ? 'nav-menu active' : 'nav-menu'}>
           <li><NavLink to="/home" end className={getNavClass} onClick={() => setMenuOpen(false)}>Home</NavLink></li>
+          <li><NavLink to="/scanner" className={getNavClass} onClick={() => setMenuOpen(false)}>Scanner</NavLink></li>
+          <li><NavLink to="/digital-pantry" className={getNavClass} onClick={() => setMenuOpen(false)}>Digital Pantry</NavLink></li>
+          <li><NavLink to="/meal-planner" className={getNavClass} onClick={() => setMenuOpen(false)}>Meal Planner</NavLink></li>
+          <li><NavLink to="/products" className={getNavClass} onClick={() => setMenuOpen(false)}>Product Analysis</NavLink></li>
           <li><NavLink to="/about" className={getNavClass} onClick={() => setMenuOpen(false)}>About Us</NavLink></li>
-          <li><a href="#nutrition" onClick={() => setMenuOpen(false)}>Nutrition</a></li>
-          <li><a href="#pantry" onClick={() => setMenuOpen(false)}>Pantry</a></li>
-          <li><a href="#recommendations" onClick={() => setMenuOpen(false)}>Recommendations</a></li>
+
+          <li className="nav-notification">
+            <button
+              type="button"
+              className="notification-trigger"
+              onClick={() => navigate('/notifications')}
+              aria-label="Open expiry notifications"
+            >
+              <span>🔔</span>
+              {unreadNotifications > 0 && <span className="notification-count">{unreadNotifications}</span>}
+            </button>
+          </li>
 
           <li className="nav-profile">
             <NavLink to="/profile" className="profile-chip" onClick={() => setMenuOpen(false)}>

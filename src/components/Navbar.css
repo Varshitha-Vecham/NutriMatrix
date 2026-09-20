@@ -45,14 +45,14 @@
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 18px;
 }
 
 .nav-menu li a,
 .nav-menu li .nav-link {
   color: #374151;
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.Z5rem;
   position: relative;
   padding: 6px 2px;
   transition: color 0.25s ease;
@@ -139,6 +139,39 @@
 .logout-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(239, 68, 68, 0.45);
+}
+
+.nav-notification {
+  display: flex;
+  align-items: center;
+}
+
+.notification-trigger {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ecfdf5, #fef3c7);
+  color: #15803d;
+  font-size: 1.25rem;
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
+.notification-count {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  font-weight: 700;
 }
 
 .nav-toggle {

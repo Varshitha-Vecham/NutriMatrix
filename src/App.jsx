@@ -7,6 +7,13 @@ import ForgotPassword from './pages/ForgotPassword.jsx'
 import Home from './pages/Home.jsx'
 import AboutUs from './pages/AboutUs.jsx'
 import Profile from './pages/Profile.jsx'
+import Scanner from './pages/Scanner.jsx'
+import BarcodeScanner from './pages/BarcodeScanner.jsx'
+import ReceiptScanner from './pages/ReceiptScanner.jsx'
+import Products from './pages/Products.jsx'
+import MealPlanner from './pages/MealPlanner.jsx'
+import DigitalPantry from './pages/DigitalPantry.jsx'
+import Notifications from './pages/Notifications.jsx'
 import AdminLogin from './pages/AdminLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import './App.css'
@@ -20,8 +27,15 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/meal-planner" element={<MealPlanner />} />
+        <Route path="/digital-pantry" element={<DigitalPantry />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/scanner" element={<Scanner />} />
+        <Route path="/barcode-scanner" element={<BarcodeScanner />} />
+        <Route path="/receipt-scanner" element={<ReceiptScanner />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>

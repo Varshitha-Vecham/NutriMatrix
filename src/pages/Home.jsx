@@ -11,16 +11,16 @@ function Home() {
   const navigate = useNavigate()
   const [user, setUser] = useState({ name: 'Friend' })
 
-  // If user is not logged in, send them back to login
   useEffect(() => {
-    apiRequest('/api/auth/me').then(({ user: stored }) => {
-      setUser(stored)
-    }).catch(() => {
-      navigate('/login')
-    })
+    apiRequest('/api/auth/me')
+      .then(({ user: stored }) => {
+        setUser(stored)
+      })
+      .catch(() => {
+        navigate('/login')
+      })
   }, [navigate])
 
-  // All five NutriMatrix features
   const features = [
     {
       icon: '📊',
@@ -44,6 +44,20 @@ function Home() {
       accent: '#d97706'
     },
     {
+      icon: '🍽️',
+      title: 'Meal Planner',
+      description: 'Plan balanced meals for each day and keep your routine organised.',
+      color: '#3b82f6',
+      accent: '#2563eb'
+    },
+    {
+      icon: '🧑‍🍳',
+      title: 'Recipe Generator',
+      description: 'Create and discover meal ideas that match your nutrition goals and preferences.',
+      color: '#14b8a6',
+      accent: '#0f766e'
+    },
+    {
       icon: '⏰',
       title: 'Expiry Reminders',
       description: 'Never waste food again. Get timely reminders before items expire.',
@@ -59,13 +73,10 @@ function Home() {
     }
   ]
 
-  // Quick stats shown below the hero
-
   return (
     <div className="home-page">
       <Navbar />
 
-      {/* HERO section */}
       <section className="hero">
         <div className="hero-container">
           <div className="hero-text">
@@ -96,7 +107,6 @@ function Home() {
             </div>
           </div>
 
-          {/* Hero image / illustration */}
           <div className="hero-visual">
             <div className="hero-circle">
               <img
@@ -104,25 +114,10 @@ function Home() {
                 alt="Healthy bowl of fresh produce"
               />
             </div>
-
           </div>
         </div>
       </section>
-      
-      {/* STATS section 
-      <section className="stats">
-        <div className="stats-container">
-          {stats.map((s, i) => (
-            <div key={i} className="stat-item">
-              <h3>{s.number}</h3>
-              <p>{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      */}
 
-      {/* FEATURES section */}
       <section className="features" id="features">
         <div className="section-head">
           <span className="section-badge">✨ Our Features</span>
@@ -131,7 +126,9 @@ function Home() {
         </div>
 
         <div className="features-grid">
-          {features.map((f, i) => (
+          {features
+            .filter(({ title }) => title !== 'Nutrition Analysis' && title !== 'Healthy Alternatives')
+            .map((f, i) => (
             <FeatureCard
               key={i}
               icon={f.icon}
@@ -140,16 +137,18 @@ function Home() {
               color={f.color}
               accent={f.accent}
             />
-          ))}
+            ))}
         </div>
       </section>
 
-      {/* CTA section */}
       <section className="cta">
         <div className="cta-container">
           <h2>Ready to Start Your <span className="accent-light">Healthy Journey</span>?</h2>
           <p>Join thousands of users making smarter nutrition choices every day with NutriMatrix.</p>
-          <button className="btn-primary btn-large">
+          <button
+            className="btn-primary btn-large"
+            onClick={() => navigate('/scanner')}
+          >
             Get Started Today 🚀
           </button>
         </div>
