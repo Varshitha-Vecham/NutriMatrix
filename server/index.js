@@ -177,6 +177,7 @@ async function ensureReceiptProductsTable() {
     unit VARCHAR(30) NULL,
     manufacturing_date DATE NULL,
     image VARCHAR(500) NULL,
+    source VARCHAR(30) NOT NULL DEFAULT 'receipt',
     expiry_date DATE NULL,
     purchased_at DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -191,7 +192,8 @@ async function ensureReceiptProductsTable() {
     quantity: 'VARCHAR(50) NULL',
     unit: 'VARCHAR(30) NULL',
     manufacturing_date: 'DATE NULL',
-    image: 'VARCHAR(500) NULL'
+    image: 'VARCHAR(500) NULL',
+    source: "VARCHAR(30) NOT NULL DEFAULT 'receipt'"
   }
   for (const [columnName, definition] of Object.entries(requiredColumns)) {
     if (!existingColumns.has(columnName)) await pool.query(`ALTER TABLE receipt_products ADD COLUMN ${columnName} ${definition}`)
@@ -384,7 +386,7 @@ app.post('/api/scanner/receipt', (req, res) => {
 app.get('/api/expiry-products', requireAuth, async (req, res) => {
   try {
     const [products] = await pool.execute(`SELECT id, receipt_file_name AS receiptFileName, product_name AS name,
-      brand, category, barcode, quantity, unit, image,
+      brand, category, barcode, quantity, unit, image, source,
       DATE_FORMAT(manufacturing_date, '%Y-%m-%d') AS manufacturingDate,
       DATE_FORMAT(expiry_date, '%Y-%m-%d') AS expiryDate,
       DATE_FORMAT(purchased_at, '%Y-%m-%d') AS purchasedAt
@@ -402,11 +404,11 @@ app.post('/api/expiry-products', requireAuth, async (req, res) => {
     for (const product of products) {
       if (!product.name) continue
       await pool.execute(`INSERT INTO receipt_products
-        (user_id, receipt_file_name, product_name, brand, category, barcode, quantity, unit, manufacturing_date, image, expiry_date, purchased_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        (user_id, receipt_file_name, product_name, brand, category, barcode, quantity, unit, manufacturing_date, image, source, expiry_date, purchased_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
         req.user.id, receiptFileName, product.name, product.brand || null, product.category || null, product.barcode || null,
         product.quantity || null, product.unit || null, product.manufacturingDate || null, product.image || null,
-        product.expiryDate || null, purchasedAt
+        product.source || req.body.source || (receiptFileName === 'Voice input' ? 'voice' : 'receipt'), product.expiryDate || null, purchasedAt
       ])
     }
     res.status(201).json({ message: 'Receipt products saved.' })
