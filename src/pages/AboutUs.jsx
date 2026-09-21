@@ -22,13 +22,12 @@ function AboutUs() {
             <div className="about-copy">
               <h2>What We Do</h2>
               <p>
-                We combine Artificial Intelligence, nutrition analysis, barcode scanning,
+                We combine Artificial Intelligence, nutrition analysis,
                 and digital pantry management to make it easier to understand the food
                 products you use every day.
               </p>
               <ul>
                 <li>Analyze the nutritional information of food products.</li>
-                <li>Identify products using barcode scanning.</li>
                 <li>Scan receipts to add purchased products to the digital pantry.</li>
                 <li>Track pantry items and their expiry dates.</li>
                 <li>Receive reminders before products expire.</li>

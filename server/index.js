@@ -123,24 +123,6 @@ function productFromCatalog(product) {
   }
 }
 
-function unknownBarcodeProduct(barcode) {
-  return {
-    id: barcode,
-    name: 'Product identified by barcode',
-    brand: 'Details unavailable from product database',
-    category: 'Unknown category',
-    barcode,
-    image: '',
-    expiryDate: null,
-    manufacturingDate: null,
-    batchNumber: null,
-    serving: 'Not available',
-    nutrition: { calories: null, protein: null, carbs: null, fat: null, fiber: null },
-    description: 'The barcode was detected. NutriMatrix packaging OCR can provide batch and date details.',
-    source: 'nutrimatrix-barcode'
-  }
-}
-
 function buildReceiptProducts(items = []) {
   const receiptItems = (items.length ? items : ['Organic Rolled Oats', 'Bananas', 'Greek Yogurt', 'Brown Rice']).map((item) => String(item).trim()).filter(Boolean)
 
@@ -356,18 +338,6 @@ app.post('/api/scanner/search', (req, res) => {
     query: String(query).trim(),
     products: products.length ? products : sampleProductCatalog.slice(0, 3),
     source: 'mock-backend'
-  })
-})
-
-app.get('/api/scanner/barcode/:barcode', async (req, res) => {
-  const barcode = String(req.params.barcode || '').replace(/\D/g, '')
-  if (!/^\d{8,14}$/.test(barcode)) return res.status(400).json({ message: 'Please provide a valid barcode.' })
-
-  const localProduct = sampleProductCatalog.find((product) => product.barcode === barcode)
-  if (localProduct) return res.json({ product: productFromCatalog(localProduct) })
-  res.json({
-    product: unknownBarcodeProduct(barcode),
-    warning: 'Barcode detected. This barcode is not yet in the NutriMatrix product database; packaging OCR will still read its dates and batch number.'
   })
 })
 

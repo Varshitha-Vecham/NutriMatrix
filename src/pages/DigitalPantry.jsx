@@ -279,7 +279,7 @@ function DigitalPantry() {
             <div className="empty-state">
               <div className="empty-icon">🥬</div>
               <h3>Your digital pantry is empty</h3>
-              <p>Add groceries from receipt scans, barcode scanning, or manual entry to start tracking expiry dates.</p>
+              <p>Add groceries from receipt scans or manual entry to start tracking expiry dates.</p>
             </div>
           ) : (
             <div className="pantry-grid" id="pantry-items">
