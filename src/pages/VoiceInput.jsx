@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../api.js'
 
 const numbers = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 }
-const unitWords = 'packets?|litres?|liters?|kg|kgs?|grams?|g|pieces?|bottles?|boxes?|cans?'
+const unitWords = 'packets?|litres?|liters?|kg|kgs?|grams?|g|pieces?|bottles?|boxes?|cans?|ml?|dozens?|packs?|jars?|cartons?|bags?|sachets?'
 const brands = [
   { name: 'Aashirvaad', aliases: ['aashirvaad', 'aashirwad'] }, { name: 'Amul', aliases: ['amul'] },
   { name: 'Tata Sampann', aliases: ['tata sampann'] }, { name: 'Fortune', aliases: ['fortune'] },
