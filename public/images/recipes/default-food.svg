@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">NutriMatrix food placeholder</title>
+  <desc id="desc">A colorful bowl of healthy food used until a recipe photo is added.</desc>
+  <rect width="1200" height="800" fill="#f4eadb"/>
+  <circle cx="980" cy="120" r="180" fill="#e4f0df"/>
+  <circle cx="170" cy="680" r="220" fill="#f7d8b5"/>
+  <ellipse cx="600" cy="515" rx="370" ry="110" fill="#d7a56f"/>
+  <path d="M250 480c22 170 164 250 350 250s328-80 350-250z" fill="#fffaf2" stroke="#be7d4b" stroke-width="14"/>
+  <ellipse cx="600" cy="475" rx="355" ry="125" fill="#6e9f62" stroke="#be7d4b" stroke-width="14"/>
+  <circle cx="460" cy="445" r="68" fill="#e77f63"/>
+  <circle cx="600" cy="420" r="74" fill="#f0c95a"/>
+  <circle cx="735" cy="455" r="66" fill="#e9a54e"/>
+  <circle cx="550" cy="500" r="55" fill="#d96e58"/>
+  <circle cx="680" cy="515" r="48" fill="#f7e3a2"/>
+  <path d="M410 350c35-55 75-72 108-38M740 350c38-48 78-54 108-12" fill="none" stroke="#477c4e" stroke-width="22" stroke-linecap="round"/>
+  <text x="600" y="150" text-anchor="middle" font-family="Georgia,serif" font-size="54" font-weight="700" fill="#244b36">NutriMatrix</text>
+  <text x="600" y="215" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" fill="#55705c">Fresh recipe image coming soon</text>
+</svg>

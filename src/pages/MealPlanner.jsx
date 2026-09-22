@@ -5,6 +5,7 @@ import './MealPlanner.css'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MEAL_SLOTS = ['Breakfast', 'Morning Snack', 'Lunch', 'Evening Snack', 'Dinner']
+const CATEGORY_OPTIONS = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'South Indian', 'North Indian', 'Healthy', 'High Protein', 'Quick Meals', 'Vegetarian', 'Vegan']
 
 const mealLibrary = {
   Breakfast: [
@@ -44,6 +45,19 @@ const mealLibrary = {
       vitamins: 'Vitamin B6, Magnesium, Potassium',
       prepTime: 8,
       instructions: 'Blend all ingredients until smooth, pour into a glass and enjoy immediately.',
+      dietary: ['Vegetarian', 'Vegan'],
+      goal: ['Weight Gain', 'Maintenance', 'Balanced Diet']
+    },
+    {
+      name: 'Peanut Butter Apple Toast',
+      ingredients: ['whole grain bread', 'apple', 'peanut butter', 'cinnamon'],
+      calories: 340,
+      protein: 14,
+      carbs: 42,
+      fat: 14,
+      vitamins: 'Vitamin C, Magnesium, Fiber',
+      prepTime: 7,
+      instructions: 'Toast bread, spread peanut butter, add thin apple slices and cinnamon.',
       dietary: ['Vegetarian', 'Vegan'],
       goal: ['Weight Gain', 'Maintenance', 'Balanced Diet']
     }
@@ -87,6 +101,19 @@ const mealLibrary = {
       instructions: 'Combine cottage cheese with fruit and top with seeds for a filling snack.',
       dietary: ['Vegetarian'],
       goal: ['Weight Gain', 'Maintenance', 'Balanced Diet']
+    },
+    {
+      name: 'Edamame Crunch Cup',
+      ingredients: ['edamame', 'cucumber', 'sesame seeds', 'lemon'],
+      calories: 230,
+      protein: 17,
+      carbs: 20,
+      fat: 9,
+      vitamins: 'Vitamin C, Folate, Iron',
+      prepTime: 8,
+      instructions: 'Steam edamame, toss with cucumber, sesame seeds, and lemon, then chill.',
+      dietary: ['Vegetarian', 'Vegan'],
+      goal: ['Weight Loss', 'Balanced Diet', 'Maintenance']
     }
   ],
   Lunch: [
@@ -126,6 +153,19 @@ const mealLibrary = {
       vitamins: 'Vitamin K, C, B6',
       prepTime: 18,
       instructions: 'Sear tofu, sauté vegetables, and serve over brown rice with soy sauce.',
+      dietary: ['Vegetarian', 'Vegan'],
+      goal: ['Weight Gain', 'Balanced Diet', 'Maintenance']
+    },
+    {
+      name: 'Black Bean Fajita Bowl',
+      ingredients: ['black beans', 'brown rice', 'bell pepper', 'corn', 'avocado'],
+      calories: 590,
+      protein: 24,
+      carbs: 72,
+      fat: 19,
+      vitamins: 'Vitamin C, Folate, Fiber',
+      prepTime: 18,
+      instructions: 'Warm beans and rice, sauté peppers and corn, then assemble with avocado.',
       dietary: ['Vegetarian', 'Vegan'],
       goal: ['Weight Gain', 'Balanced Diet', 'Maintenance']
     }
@@ -169,6 +209,19 @@ const mealLibrary = {
       instructions: 'Mix yogurt with chopped cucumber and mint, then serve with crackers.',
       dietary: ['Vegetarian'],
       goal: ['Weight Loss', 'Balanced Diet', 'Maintenance']
+    },
+    {
+      name: 'Roasted Chickpea Snack',
+      ingredients: ['chickpeas', 'olive oil', 'paprika', 'lemon'],
+      calories: 280,
+      protein: 12,
+      carbs: 34,
+      fat: 10,
+      vitamins: 'Iron, Folate, Fiber',
+      prepTime: 25,
+      instructions: 'Toss chickpeas with oil and paprika, roast until crisp, then finish with lemon.',
+      dietary: ['Vegetarian', 'Vegan'],
+      goal: ['Weight Loss', 'Balanced Diet', 'Maintenance']
     }
   ],
   Dinner: [
@@ -210,9 +263,148 @@ const mealLibrary = {
       instructions: 'Sauté turkey and vegetables, add beans and rice, then stir-fry until fully cooked.',
       dietary: ['Non-vegetarian'],
       goal: ['Weight Gain', 'Maintenance', 'Balanced Diet']
+    },
+    {
+      name: 'Chicken Lentil Stew',
+      ingredients: ['chicken breast', 'lentils', 'carrot', 'tomato', 'spinach'],
+      calories: 670,
+      protein: 46,
+      carbs: 55,
+      fat: 24,
+      vitamins: 'Iron, Vitamin A, Folate',
+      prepTime: 30,
+      instructions: 'Brown chicken, simmer with lentils and carrot, then fold in tomato and spinach.',
+      dietary: ['Non-vegetarian'],
+      goal: ['Weight Gain', 'Maintenance', 'Balanced Diet', 'Weight Loss']
     }
   ]
 }
+
+// Add future recipes here; the planner automatically exposes them in filters and swaps.
+const additionalRecipes = {
+  Breakfast: [
+    {
+      name: 'Masala Paneer Scramble',
+      description: 'A warm Indian-style scramble with paneer, tomato, onion, and fragrant spices.',
+      ingredients: ['paneer', 'eggs', 'tomato', 'onion', 'turmeric'],
+      ingredientQuantities: ['100 g', '2 large', '1 medium', '1/2 medium', '1/4 tsp'],
+      calories: 410, protein: 29, carbs: 16, fat: 25, vitamins: 'Calcium, Vitamin A, B12', prepTime: 10, cookingTime: 12,
+      instructions: 'Cook onion and tomato with spices, crumble in paneer, add eggs, and scramble until set.',
+      steps: ['Dice the onion and tomato, then crumble the paneer.', 'Saute onion and tomato with turmeric until soft.', 'Add paneer and eggs, then stir gently until the eggs are set.', 'Serve hot with whole grain toast.'],
+      dietary: ['Vegetarian'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Breakfast', 'High Protein'],
+      image: '/images/recipes/masala-paneer-scramble.jpg', source: 'Local recipe image'
+    },
+    {
+      name: 'Overnight Mango Chia Oats',
+      description: 'Creamy make-ahead oats layered with mango, chia seeds, and yogurt.',
+      ingredients: ['rolled oats', 'chia seeds', 'mango', 'Greek yogurt', 'milk'],
+      ingredientQuantities: ['1/2 cup', '1 tbsp', '1/2 cup diced', '1/3 cup', '1/2 cup'],
+      calories: 360, protein: 20, carbs: 55, fat: 9, vitamins: 'Vitamin C, Calcium, Fiber', prepTime: 5, cookingTime: 0,
+      instructions: 'Mix oats, chia, milk, and yogurt, chill overnight, and finish with mango.',
+      steps: ['Combine oats, chia seeds, milk, and yogurt in a jar.', 'Stir well, cover, and refrigerate for at least 4 hours.', 'Top with diced mango before serving.', 'Enjoy chilled or warm gently.'],
+      dietary: ['Vegetarian'], goal: ['Weight Loss', 'Balanced Diet', 'Maintenance'], categories: ['Breakfast', 'Healthy', 'Quick Meals'],
+      image: '/images/recipes/overnight-mango-chia-oats.jpg', source: 'Local recipe image'
+    }
+  ],
+  'Morning Snack': [
+    {
+      name: 'Roasted Makhana Chaat',
+      description: 'Crunchy roasted fox nuts tossed with vegetables, lemon, and chaat spices.',
+      ingredients: ['makhana', 'tomato', 'onion', 'lemon juice', 'chaat masala'],
+      ingredientQuantities: ['2 cups', '1 small', '1/2 small', '1 tbsp', '1/2 tsp'],
+      calories: 210, protein: 8, carbs: 32, fat: 7, vitamins: 'Calcium, Magnesium, Fiber', prepTime: 8, cookingTime: 8,
+      instructions: 'Dry roast makhana until crisp, cool, and toss with chopped vegetables and spices.',
+      steps: ['Dry roast makhana in a pan until crisp.', 'Chop tomato and onion finely.', 'Cool the makhana for two minutes.', 'Toss with vegetables, lemon juice, and chaat masala.'],
+      dietary: ['Vegetarian', 'Vegan'], goal: ['Weight Loss', 'Balanced Diet', 'Maintenance'], categories: ['Snacks', 'Healthy', 'North Indian'],
+      image: '/images/recipes/roasted-makhana-chaat.jpg', source: 'Local recipe image'
+    },
+    {
+      name: 'Peanut Sundal',
+      description: 'South Indian spiced peanuts with coconut, curry leaves, and mustard seeds.',
+      ingredients: ['boiled peanuts', 'fresh coconut', 'mustard seeds', 'curry leaves', 'lemon'],
+      ingredientQuantities: ['1 cup', '2 tbsp grated', '1/2 tsp', '8 leaves', '1/2 medium'],
+      calories: 280, protein: 13, carbs: 20, fat: 17, vitamins: 'Magnesium, Folate, Vitamin E', prepTime: 5, cookingTime: 7,
+      instructions: 'Temper mustard seeds and curry leaves, toss in peanuts and coconut, then finish with lemon.',
+      steps: ['Heat oil and crackle mustard seeds.', 'Add curry leaves and stir for 20 seconds.', 'Toss in boiled peanuts and coconut.', 'Season with lemon and serve warm.'],
+      dietary: ['Vegetarian', 'Vegan'], goal: ['Weight Gain', 'Balanced Diet', 'Maintenance'], categories: ['Snacks', 'South Indian', 'High Protein'],
+      image: '/images/recipes/peanut-sundal.jpg', source: 'Local recipe image'
+    }
+  ],
+  Lunch: [
+    {
+      name: 'Paneer Butter Masala',
+      description: 'Tender paneer in a silky tomato and cashew gravy with warming Indian spices.',
+      ingredients: ['paneer', 'tomato puree', 'cashews', 'butter', 'cream', 'garam masala'],
+      ingredientQuantities: ['150 g cubes', '1 cup', '10', '1 tbsp', '2 tbsp', '1 tsp'],
+      calories: 580, protein: 25, carbs: 26, fat: 41, vitamins: 'Calcium, Vitamin A, Lycopene', prepTime: 15, cookingTime: 25,
+      instructions: 'Blend a tomato-cashew base, simmer with spices, and fold in paneer and cream.',
+      steps: ['Soak cashews and blend them with tomato puree.', 'Cook the puree with butter and spices until glossy.', 'Add a splash of water and simmer for 10 minutes.', 'Fold in paneer and cream, then serve with rice or roti.'],
+      dietary: ['Vegetarian'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Lunch', 'North Indian', 'Vegetarian'],
+      image: '/images/recipes/paneer-butter-masala.jpg', source: 'Local recipe image'
+    },
+    {
+      name: 'South Indian Lemon Rice',
+      description: 'Bright, nutty lemon rice with peanuts, curry leaves, and turmeric.',
+      ingredients: ['cooked rice', 'lemon juice', 'peanuts', 'curry leaves', 'turmeric', 'green chilli'],
+      ingredientQuantities: ['2 cups', '2 tbsp', '2 tbsp', '10 leaves', '1/4 tsp', '1 sliced'],
+      calories: 430, protein: 10, carbs: 68, fat: 14, vitamins: 'Vitamin C, Iron, Fiber', prepTime: 10, cookingTime: 8,
+      instructions: 'Temper spices and peanuts, fold in cooked rice, and finish with fresh lemon juice.',
+      steps: ['Warm oil and toast peanuts until golden.', 'Add curry leaves, chilli, and turmeric.', 'Fold in cooked rice and toss gently.', 'Turn off the heat, add lemon juice, and serve.'],
+      dietary: ['Vegetarian', 'Vegan'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Lunch', 'South Indian', 'Quick Meals'],
+      image: '/images/recipes/south-indian-lemon-rice.jpg', source: 'Local recipe image'
+    }
+  ],
+  Dinner: [
+    {
+      name: 'Tandoori Chicken Plate',
+      description: 'Yogurt-marinated chicken roasted with tandoori spices and served with fresh salad.',
+      ingredients: ['chicken thighs', 'Greek yogurt', 'lemon', 'tandoori masala', 'cucumber'],
+      ingredientQuantities: ['200 g', '1/3 cup', '1 tbsp', '1 tbsp', '1/2 medium'],
+      calories: 520, protein: 48, carbs: 18, fat: 27, vitamins: 'Vitamin B6, B12, Zinc', prepTime: 20, cookingTime: 30,
+      instructions: 'Marinate chicken in spiced yogurt, roast until cooked through, and serve with salad.',
+      steps: ['Mix yogurt, lemon, and tandoori masala.', 'Coat the chicken and marinate for at least 30 minutes.', 'Roast at 220°C until browned and cooked through.', 'Rest for five minutes, slice, and serve with cucumber salad.'],
+      dietary: ['Non-vegetarian'], goal: ['Weight Loss', 'Maintenance', 'Balanced Diet', 'Weight Gain'], categories: ['Dinner', 'North Indian', 'High Protein'],
+      image: '/images/recipes/tandoori-chicken-plate.jpg', source: 'Local recipe image'
+    },
+    {
+      name: 'Palak Tofu Curry',
+      description: 'Silky spinach curry with golden tofu, ginger, garlic, and cumin.',
+      ingredients: ['firm tofu', 'spinach', 'onion', 'tomato', 'ginger garlic paste'],
+      ingredientQuantities: ['180 g', '3 cups', '1 medium', '1 medium', '1 tbsp'],
+      calories: 390, protein: 28, carbs: 24, fat: 20, vitamins: 'Iron, Vitamin K, Folate', prepTime: 15, cookingTime: 20,
+      instructions: 'Blanch spinach, blend it smooth, then simmer with aromatics and seared tofu.',
+      steps: ['Blanch spinach for one minute and blend until smooth.', 'Sear tofu cubes until lightly golden.', 'Cook onion, tomato, and ginger garlic paste.', 'Add spinach puree and tofu, then simmer for five minutes.'],
+      dietary: ['Vegetarian', 'Vegan'], goal: ['Weight Loss', 'Balanced Diet', 'Maintenance'], categories: ['Dinner', 'Healthy', 'High Protein'],
+      image: '/images/recipes/palak-tofu-curry.jpg', source: 'Local recipe image'
+    },
+    {
+      name: 'Idli Sambar Plate',
+      description: 'Soft steamed idlis paired with lentil-rich sambar and fresh coconut chutney.',
+      ingredients: ['idli batter', 'toor dal', 'mixed vegetables', 'tamarind', 'coconut chutney'],
+      ingredientQuantities: ['1 cup', '1/2 cup', '1 cup chopped', '1 tbsp', '1/4 cup'],
+      calories: 440, protein: 17, carbs: 70, fat: 10, vitamins: 'Iron, Folate, Calcium', prepTime: 15, cookingTime: 25,
+      instructions: 'Steam idlis and serve them with a vegetable sambar and coconut chutney.',
+      steps: ['Soak and pressure-cook toor dal until soft.', 'Simmer vegetables with tamarind and sambar spices.', 'Steam idli batter in greased moulds for 10 to 12 minutes.', 'Serve hot idlis with sambar and chutney.'],
+      dietary: ['Vegetarian', 'Vegan'], goal: ['Balanced Diet', 'Maintenance', 'Weight Loss'], categories: ['Dinner', 'South Indian', 'Healthy'],
+      image: '/images/recipes/idli-sambar-plate.jpg', source: 'Local recipe image'
+    },
+    {
+      name: 'Rajma Masala Rice',
+      description: 'Slow-simmered kidney beans in tomato masala served with fragrant rice.',
+      ingredients: ['kidney beans', 'basmati rice', 'tomato', 'onion', 'ginger garlic paste'],
+      ingredientQuantities: ['1 cup cooked', '1 cup cooked', '2 medium', '1 medium', '1 tbsp'],
+      calories: 560, protein: 21, carbs: 86, fat: 14, vitamins: 'Iron, Potassium, Folate', prepTime: 15, cookingTime: 35,
+      instructions: 'Build a spiced tomato masala, simmer kidney beans, and serve with rice.',
+      steps: ['Cook onion, tomato, and ginger garlic paste until soft.', 'Add spices and cooked kidney beans.', 'Simmer with water for 20 minutes until thick.', 'Serve with steamed basmati rice.'],
+      dietary: ['Vegetarian', 'Vegan'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Dinner', 'North Indian', 'High Protein'],
+      image: '/images/recipes/rajma-masala-rice.jpg', source: 'Local recipe image'
+    }
+  ]
+}
+
+Object.entries(additionalRecipes).forEach(([slot, recipes]) => {
+  mealLibrary[slot].push(...recipes)
+})
 
 const defaultProfile = {
   age: 29,
@@ -224,16 +416,78 @@ const defaultProfile = {
 
 const STORAGE_KEY = 'nutrimatrix-saved-meals'
 
+const recipeImages = {
+  'Berry Oat Protein Bowl': '/images/recipes/berry-oat-protein-bowl.jpg',
+  'Avocado Spinach Omelet': '/images/recipes/avocado-spinach-omelet.jpg',
+  'Chia Banana Smoothie': '/images/recipes/chia-banana-smoothie.jpg',
+  'Peanut Butter Apple Toast': '/images/recipes/peanut-butter-apple-toast.jpg',
+  'Apple Cinnamon Yogurt': '/images/recipes/apple-cinnamon-yogurt.jpg',
+  'Hummus Veggie Cups': '/images/recipes/hummus-veggie-cups.jpg',
+  'Cottage Cheese Fruit Mix': '/images/recipes/cottage-cheese-fruit-mix.jpg',
+  'Edamame Crunch Cup': '/images/recipes/edamame-crunch-cup.jpg',
+  'Quinoa Chicken Power Bowl': '/images/recipes/quinoa-chicken-power-bowl.jpg',
+  'Chickpea Rainbow Salad': '/images/recipes/chickpea-rainbow-salad.jpg',
+  'Tofu Rice Veggie Bowl': '/images/recipes/tofu-rice-veggie-bowl.jpg',
+  'Black Bean Fajita Bowl': '/images/recipes/black-bean-fajita-bowl.jpg',
+  'Cinnamon Banana Toast': '/images/recipes/cinnamon-banana-toast.jpg',
+  'Trail Mix Crunch': '/images/recipes/trail-mix-crunch.jpg',
+  'Cucumber Yogurt Dip': '/images/recipes/cucumber-yogurt-dip.jpg',
+  'Roasted Chickpea Snack': '/images/recipes/roasted-chickpea-snack.jpg',
+  'Salmon Sweet Potato Plate': '/images/recipes/salmon-sweet-potato-plate.jpg',
+  'Lentil Veggie Curry': '/images/recipes/lentil-veggie-curry.jpg',
+  'Turkey Bean Stir-Fry': '/images/recipes/turkey-bean-stir-fry.jpg',
+  'Chicken Lentil Stew': '/images/recipes/chicken-lentil-stew.jpg'
+}
+
+const DEFAULT_RECIPE_IMAGE = '/images/recipes/default-food.jpg'
+
+Object.values(mealLibrary).flat().forEach((recipe) => {
+  recipe.image = recipe.image || recipeImages[recipe.name] || DEFAULT_RECIPE_IMAGE
+})
+
+const recipeSteps = {
+  'Berry Oat Protein Bowl': ['Cook oats with milk or water until creamy.', 'Fold in chia seeds and Greek yogurt.', 'Top with berries and almonds, then serve warm.'],
+  'Avocado Spinach Omelet': ['Whisk the eggs with a pinch of seasoning.', 'Sauté spinach and tomato in olive oil.', 'Pour in the eggs, fold with avocado, and cook until set.'],
+  'Chia Banana Smoothie': ['Add banana, almond milk, chia, peanut butter, and oats to a blender.', 'Blend until smooth and creamy.', 'Pour into a glass and serve immediately.'],
+  'Apple Cinnamon Yogurt': ['Dice the apple into bite-sized pieces.', 'Spoon Greek yogurt into a bowl.', 'Add apple, cinnamon, and walnuts before serving.'],
+  'Hummus Veggie Cups': ['Wash and slice the carrot, cucumber, and bell pepper.', 'Spoon hummus into small serving cups.', 'Arrange the vegetables and crackers around the hummus.'],
+  'Cottage Cheese Fruit Mix': ['Spoon cottage cheese into a bowl.', 'Add pineapple and berries.', 'Finish with pumpkin seeds and serve chilled.'],
+  'Quinoa Chicken Power Bowl': ['Cook quinoa according to the package directions.', 'Season and cook the chicken until it reaches 165°F internally.', 'Layer quinoa, spinach, tomato, chicken, and avocado in a bowl.'],
+  'Chickpea Rainbow Salad': ['Rinse the chickpeas and cook or warm the quinoa.', 'Chop the spinach, tomato, and cucumber.', 'Toss everything with lemon juice and serve.'],
+  'Tofu Rice Veggie Bowl': ['Cook the brown rice and press the tofu dry.', 'Sear tofu until golden on both sides.', 'Sauté broccoli and carrot, then serve everything with soy sauce.'],
+  'Cinnamon Banana Toast': ['Toast the whole grain bread until crisp.', 'Spread peanut butter over the toast.', 'Add banana slices and cinnamon.'],
+  'Trail Mix Crunch': ['Measure almonds, pumpkin seeds, cranberries, and chocolate.', 'Combine everything in a bowl.', 'Portion into a small serving and store the rest airtight.'],
+  'Cucumber Yogurt Dip': ['Dice the cucumber and chop the mint.', 'Stir cucumber and mint into Greek yogurt.', 'Serve with whole grain crackers.'],
+  'Salmon Sweet Potato Plate': ['Roast the sweet potato until tender.', 'Season and bake the salmon until it flakes easily.', 'Steam broccoli and finish the plate with lemon.'],
+  'Lentil Veggie Curry': ['Sauté tomato and spinach with the lentils.', 'Add coconut milk and simmer until creamy and tender.', 'Serve the curry over warm brown rice.'],
+  'Turkey Bean Stir-Fry': ['Brown the turkey mince with garlic.', 'Add bell pepper and cook until tender.', 'Stir in black beans and brown rice, then heat through.'],
+  'Peanut Butter Apple Toast': ['Toast the whole grain bread until crisp.', 'Spread peanut butter over the toast.', 'Add apple slices and cinnamon.'],
+  'Edamame Crunch Cup': ['Steam the edamame until tender.', 'Slice the cucumber and combine it with the edamame.', 'Finish with sesame seeds and lemon.'],
+  'Black Bean Fajita Bowl': ['Warm the black beans and brown rice.', 'Sauté bell pepper and corn until tender.', 'Assemble the bowl and top with avocado.'],
+  'Roasted Chickpea Snack': ['Toss chickpeas with olive oil and paprika.', 'Roast until crisp and golden.', 'Finish with lemon and cool before serving.'],
+  'Chicken Lentil Stew': ['Brown the chicken breast in a pot.', 'Add lentils and carrot, then simmer until tender.', 'Stir in tomato and spinach before serving.']
+}
+
 function enrichMeal(meal, slot) {
   return {
     ...meal,
     slot,
-    image: meal.image || 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80',
+    image: meal.image || DEFAULT_RECIPE_IMAGE,
+    steps: meal.steps || recipeSteps[meal.name] || [meal.instructions],
+    description: meal.description || 'Fresh and nutritionally balanced meal suggestion.',
+    categories: meal.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(meal.dietary || [])],
+    ingredientQuantities: meal.ingredientQuantities || meal.ingredients.map(() => '1 serving'),
+    source: meal.source || 'Local recipe image',
+    sourceLink: meal.sourceLink || meal.image || DEFAULT_RECIPE_IMAGE,
     servingSize: meal.servingSize || '1 serving',
     quantity: meal.quantity || '1 plate',
     cookingTime: meal.cookingTime || (meal.prepTime ? meal.prepTime + 10 : 20),
-    description: meal.description || 'Fresh and nutritionally balanced meal suggestion.'
   }
+}
+
+function handleRecipeImageError(event) {
+  if (event.currentTarget.src.endsWith(DEFAULT_RECIPE_IMAGE)) return
+  event.currentTarget.src = DEFAULT_RECIPE_IMAGE
 }
 
 function normalizeDietary(preference) {
@@ -242,12 +496,14 @@ function normalizeDietary(preference) {
   return ['Non-vegetarian', 'Vegetarian']
 }
 
-function getFoodOptions(slot, profile) {
+function getFoodOptions(slot, profile, category = 'All') {
   return mealLibrary[slot].filter((recipe) => {
     const allowedDiets = normalizeDietary(profile.dietary)
     const matchesDiet = recipe.dietary.some((diet) => allowedDiets.includes(diet))
     const matchesGoal = recipe.goal.includes(profile.goal)
-    return matchesDiet && matchesGoal
+    const categories = recipe.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(recipe.dietary || [])]
+    const matchesCategory = category === 'All' || categories.includes(category)
+    return matchesDiet && matchesGoal && matchesCategory
   })
 }
 
@@ -275,6 +531,7 @@ function MealPlanner() {
   const [plan, setPlan] = useState(() => buildMealPlan(defaultProfile))
   const [selectedDay, setSelectedDay] = useState('Sun')
   const [selectedMealSlot, setSelectedMealSlot] = useState('Breakfast')
+  const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedMeal, setSelectedMeal] = useState(() => buildMealPlan(defaultProfile)[0].meals.Breakfast)
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [detailMode, setDetailMode] = useState('recipe')
@@ -346,6 +603,24 @@ function MealPlanner() {
     ])
   }
 
+  const handleDayChange = (day) => {
+    const meal = plan.find((dayPlan) => dayPlan.day === day)?.meals[selectedMealSlot]
+    setSelectedDay(day)
+    if (meal) {
+      setSelectedMeal(meal)
+      setSelectedRecipe(meal)
+    }
+  }
+
+  const handleSlotChange = (slot) => {
+    const meal = plan.find((dayPlan) => dayPlan.day === selectedDay)?.meals[slot]
+    setSelectedMealSlot(slot)
+    if (meal) {
+      setSelectedMeal(meal)
+      setSelectedRecipe(meal)
+    }
+  }
+
   const handleGetRecommendations = () => {
     const nextRecommendations = [
       `Prioritize ${profile.goal.toLowerCase()} meals with higher protein and fiber.`,
@@ -398,7 +673,9 @@ function MealPlanner() {
     setDetailMode('recipe')
     setRecipeModalOpen(true)
     setSwapModalOpen(false)
-    setSwapOptions(getFoodOptions(slot, profile).filter((recipe) => recipe.name !== meal.name))
+    setSwapOptions(getFoodOptions(slot, profile, selectedCategory)
+      .filter((recipe) => recipe.name !== meal.name)
+      .map((recipe) => enrichMeal(recipe, slot)))
   }
 
   const handleSwapMeal = (day, slot, currentMeal, event) => {
@@ -407,7 +684,9 @@ function MealPlanner() {
       event.stopPropagation()
     }
 
-    const options = getFoodOptions(slot, profile).filter((recipe) => recipe.name !== currentMeal.name)
+    const options = getFoodOptions(slot, profile, selectedCategory)
+      .filter((recipe) => recipe.name !== currentMeal.name)
+      .map((recipe) => enrichMeal(recipe, slot))
     const recipeDetail = enrichMeal(currentMeal, slot)
 
     setSelectedDay(day)
@@ -465,7 +744,7 @@ function MealPlanner() {
     setSelectedRecipe(null)
   }
 
-  const foodOptions = getFoodOptions(selectedMealSlot, profile)
+  const foodOptions = getFoodOptions(selectedMealSlot, profile, selectedCategory)
   const isCurrentMealSaved = selectedRecipe
     ? savedMeals.includes(getMealKey(selectedDay, selectedMealSlot, selectedRecipe.name))
     : false
@@ -502,7 +781,7 @@ function MealPlanner() {
                 <button
                   key={day}
                   className={selectedDay === day ? 'day-picker-button active' : 'day-picker-button'}
-                  onClick={() => setSelectedDay(day)}
+                  onClick={() => handleDayChange(day)}
                 >
                   {day}
                 </button>
@@ -514,7 +793,7 @@ function MealPlanner() {
                 <button
                   key={slot}
                   className={selectedMealSlot === slot ? 'slot-tab active' : 'slot-tab'}
-                  onClick={() => setSelectedMealSlot(slot)}
+                  onClick={() => handleSlotChange(slot)}
                 >
                   {slot}
                 </button>
@@ -524,7 +803,7 @@ function MealPlanner() {
             <div className="food-picker-block">
               <div className="food-picker-header">
                 <h3>{selectedDay} - {selectedMealSlot}</h3>
-                <span>{foodOptions.length} food options</span>
+                <span>{foodOptions.length} {selectedCategory === 'All' ? 'food options' : `${selectedCategory} options`}</span>
               </div>
 
               <div className="food-picker-grid">
@@ -534,11 +813,13 @@ function MealPlanner() {
                     className={selectedMeal?.name === food.name ? 'food-item active' : 'food-item'}
                     onClick={() => handleSelectMealOption(food)}
                   >
+                    <img src={enrichMeal(food, selectedMealSlot).image} alt="" onError={handleRecipeImageError} />
                     <strong>{food.name}</strong>
                     <span>{food.calories} kcal</span>
                     <small>{food.protein}g protein</small>
                   </button>
                 ))}
+                {!foodOptions.length && <p className="empty-options">No recipes match this category and profile. Try another category or update your profile.</p>}
               </div>
             </div>
           </section>
@@ -590,6 +871,13 @@ function MealPlanner() {
                     value={profile.calories}
                     onChange={(event) => setProfile((current) => ({ ...current, calories: Number(event.target.value) || 0 }))}
                   />
+                </label>
+
+                <label className="profile-filter">
+                  <span>Explore category</span>
+                  <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
+                    {CATEGORY_OPTIONS.map((category) => <option key={category}>{category}</option>)}
+                  </select>
                 </label>
               </div>
             </div>
@@ -659,12 +947,15 @@ function MealPlanner() {
                             setSelectedMeal(meal)
                             setSelectedRecipe(meal)
                             setDetailMode('recipe')
+                            setRecipeModalOpen(true)
+                            setSwapModalOpen(false)
                           }}
                         >
                           <div className="meal-topline">
                             <span className="meal-slot">{slot}</span>
                             {isSaved && <span className="saved-pill">Saved</span>}
                           </div>
+                          <img className="meal-item-image" src={meal.image} alt="" onError={handleRecipeImageError} />
                           <strong>{meal.name}</strong>
                           <div className="meal-meta">
                             <span>{meal.calories} kcal</span>
@@ -696,6 +987,7 @@ function MealPlanner() {
                 <div className="recipe-main-title">
                   <span className="recipe-badge">{selectedRecipe.slot}</span>
                   <h2 id="meal-modal-title">{selectedRecipe.name}</h2>
+                  <p className="recipe-description">{selectedRecipe.description}</p>
                 </div>
 
                 <div className="recipe-tools">
@@ -713,7 +1005,7 @@ function MealPlanner() {
                   <div className="swap-grid">
                     {swapOptions.map((option) => (
                       <div key={option.name} className="swap-option">
-                        <img src={option.image} alt={option.name} />
+                        <img src={option.image} alt={option.name} onError={handleRecipeImageError} />
                         <strong>{option.name}</strong>
                         <span>{option.calories} kcal • {option.protein}g protein</span>
                         <p>{option.description}</p>
@@ -727,7 +1019,8 @@ function MealPlanner() {
               {detailMode === 'recipe' && recipeModalOpen && (
                 <>
                   <div className="recipe-visual">
-                    <img src={selectedRecipe.image} alt={selectedRecipe.name} />
+                    <img src={selectedRecipe.image} alt={selectedRecipe.name} onError={handleRecipeImageError} />
+                    <a className="recipe-source" href={selectedRecipe.sourceLink} target="_blank" rel="noreferrer">Photo source: {selectedRecipe.source}</a>
                   </div>
 
                   <div className="nutrient-grid">
@@ -741,8 +1034,8 @@ function MealPlanner() {
                     <div className="recipe-section">
                       <h3>Ingredients</h3>
                       <ul>
-                        {selectedRecipe.ingredients.map((ingredient) => (
-                          <li key={ingredient}>{ingredient}</li>
+                        {selectedRecipe.ingredients.map((ingredient, index) => (
+                          <li key={ingredient}>{ingredient} <span className="ingredient-quantity">({selectedRecipe.ingredientQuantities[index]})</span></li>
                         ))}
                       </ul>
                     </div>
@@ -759,11 +1052,12 @@ function MealPlanner() {
                     <div className="recipe-section wide">
                       <h3>Preparation</h3>
                       <ol className="preparation-steps">
-                        {selectedRecipe.instructions
-                          .split(/, then |, and |, add |, top with |, serve |, pour |, fold in |, scramble |, season |, dress with |, roast |, sauté |, simmer |, combine |, spread |, mix |, toss |, cook /i)
-                          .map((step, index) => (
-                            <li key={`${selectedRecipe.name}-step-${index}`}>{step.trim()}</li>
-                          ))}
+                        {selectedRecipe.steps.map((step, index) => (
+                          <li key={`${selectedRecipe.name}-step-${index}`}>
+                            <span className="step-number">{String(index + 1).padStart(2, '0')}</span>
+                            {step}
+                          </li>
+                        ))}
                       </ol>
                     </div>
                   </div>
