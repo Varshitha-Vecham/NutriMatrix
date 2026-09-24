@@ -138,3 +138,5 @@ Do not redesign the entire Meal Planner page. Only add/modify the preference fun
 >so many food items and images are repeated  in every week and images not related to dish name  
 >based on user nutrition goal items are displayed same for every one,it should be different
 >example- search chicken cucumber bites in unsplash and add that image in meal planner page do this for all food items non-veg and veg
+
+>i told example "to search chicken cucumber bites in unsplash and add that image in meal planner page do this process for all food items  for non-veg and veg" but you didn't change anything what i told u , ithey are so many food items,i can't send u each pic, do that process which i have told u , or else send me pics one each food item mention food name and image for all in vegetarian 

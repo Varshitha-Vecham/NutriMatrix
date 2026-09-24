@@ -514,6 +514,10 @@ Object.values(mealLibrary).flat().forEach((recipe) => {
   recipe.image = recipe.image || recipeImages[recipe.name] || DEFAULT_RECIPE_IMAGE
 })
 
+const vegetarianPhotoCatalog = [...new Map(Object.values(mealLibrary).flat()
+  .filter((recipe) => recipe.dietary?.some((diet) => diet === 'Vegetarian' || diet === 'Vegan'))
+  .map((recipe) => [recipe.name, recipe])).values()]
+
 const recipeSteps = {
   'Berry Oat Protein Bowl': ['Cook oats with milk or water until creamy.', 'Fold in chia seeds and Greek yogurt.', 'Top with berries and almonds, then serve warm.'],
   'Avocado Spinach Omelet': ['Whisk the eggs with a pinch of seasoning.', 'Saute spinach and tomato in olive oil.', 'Pour in the eggs, fold with avocado, and cook until set.'],
@@ -613,10 +617,16 @@ function getFoodOptions(slot, profile, category = 'All') {
       ? true
       : recipe.dietary.some((diet) => allowedDiets.includes(diet))
     const goal = normalizeGoal(profile.goal)
-    const matchesGoal = goal === 'High Protein' ? recipe.protein >= (slot.includes('Snack') ? 12 : 20)
-      : goal === 'Low Sugar' ? !/honey|sugar|syrup|sweetened/i.test(recipe.ingredients.join(' '))
-        : goal === 'High Fiber' ? /beans|lentils|chickpea|oats|chia|vegetable|spinach/i.test(recipe.ingredients.join(' '))
-        : recipe.goal.includes(goal)
+    const ingredients = recipe.ingredients.join(' ').toLowerCase()
+    const snack = slot.includes('Snack')
+    const matchesGoal = goal === 'High Protein' ? recipe.protein >= (snack ? 12 : 25)
+      : goal === 'Low Sugar' ? !/honey|sugar|syrup|sweetened|dates|cranberr/i.test(ingredients) && recipe.carbs <= (snack ? 22 : 45)
+        : goal === 'High Fiber' ? /beans|lentils|chickpea|oats|chia|vegetable|spinach/i.test(ingredients)
+          : goal === 'Weight Loss' ? recipe.calories <= (snack ? 250 : 520) && recipe.protein >= (snack ? 8 : 15)
+            : goal === 'Weight Gain' ? recipe.calories >= (snack ? 220 : 430)
+              : goal === 'Maintenance' ? recipe.calories >= (snack ? 130 : 320) && recipe.calories <= (snack ? 300 : 650)
+                : goal === 'Balanced Diet' ? recipe.calories >= (snack ? 130 : 300) && recipe.calories <= (snack ? 310 : 680) && recipe.protein >= (snack ? 5 : 10) && recipe.carbs <= (snack ? 42 : 85)
+                  : recipe.goal.includes(goal)
     const categories = recipe.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(recipe.dietary || [])]
     const matchesCategory = category === 'All' || categories.includes(category)
     return matchesDiet && matchesGoal && matchesCategory && !hasAllergen(recipe, profile.allergies) && !hasAllergen(recipe, profile.foodDislikes)
@@ -642,12 +652,16 @@ function getWeeklyFoodOptions(slot, profile) {
   const goal = normalizeGoal(profile.goal)
   const scoreForGoal = (recipe) => {
     const calories = recipe.calories || 0
-    if (goal === 'Weight Loss') return recipe.protein * 2 - calories / 45
-    if (goal === 'Weight Gain') return calories / 20 + recipe.protein / 3
-    if (goal === 'High Protein') return recipe.protein
-    if (goal === 'Low Sugar') return recipe.protein * 1.5 - calories / 100
+    if (goal === 'Weight Loss') return recipe.protein * 2 - calories / 35
+    if (goal === 'Weight Gain') return calories / 16 + recipe.protein / 3
+    if (goal === 'High Protein') return recipe.protein * 2 - calories / 100
+    if (goal === 'Low Sugar') return recipe.protein * 1.5 - recipe.carbs / 2
     if (goal === 'High Fiber') return recipe.protein + (/beans|lentils|chickpea|oats|chia|vegetable|spinach/i.test(recipe.ingredients.join(' ')) ? 12 : 0)
     if (goal === 'Maintenance') return -Math.abs(calories - (slot.includes('Snack') ? 240 : 500)) + recipe.protein
+    if (goal === 'Balanced Diet') {
+      const targetCalories = slot.includes('Snack') ? 220 : 480
+      return recipe.protein - Math.abs(calories - targetCalories) / 24 - Math.abs(recipe.carbs - (slot.includes('Snack') ? 24 : 55)) / 8
+    }
     return recipe.protein - Math.abs(calories - (slot.includes('Snack') ? 240 : 500)) / 30
   }
   const variedOptions = WEEKLY_VARIETY_BY_SLOT[slot]
@@ -664,6 +678,21 @@ function getWeeklyFoodOptions(slot, profile) {
   // smaller catalog. Keep the dietary and allergy filters intact and relax
   // only the goal threshold so the planner can still fill every slot.
   return getFoodOptions(slot, { ...profile, goal: 'Balanced Diet' })
+}
+
+function getSwapFoodOptions(slot, profile, category, currentName) {
+  const goalMatches = getFoodOptions(slot, profile, category)
+  const broadMatches = getFoodOptions(slot, profile, 'All')
+  const balancedMatches = getFoodOptions(slot, { ...profile, goal: 'Balanced Diet' }, 'All')
+  const slotRecipes = slot === 'Morning Snack' || slot === 'Evening Snack'
+    ? [...mealLibrary['Morning Snack'], ...mealLibrary['Evening Snack']]
+    : mealLibrary[slot] || []
+  const allowedDiets = normalizeDietary(profile.dietary)
+  const noDietPreference = String(profile.dietary || '').toLowerCase().includes('no preference')
+  const candidates = [...new Map([...goalMatches, ...broadMatches, ...balancedMatches, ...slotRecipes]
+    .filter((recipe) => recipe.name !== currentName && (noDietPreference || recipe.dietary.some((diet) => allowedDiets.includes(diet))) && !hasAllergen(recipe, profile.allergies) && !hasAllergen(recipe, profile.foodDislikes))
+    .map((recipe) => [recipe.name, recipe])).values()]
+  return candidates.slice(0, 6)
 }
 
 function rotateMeal(slot, profile, currentMeal) {
@@ -851,9 +880,7 @@ function MealPlanner() {
     setDetailMode('recipe')
     setRecipeModalOpen(true)
     setSwapModalOpen(false)
-    setSwapOptions(getFoodOptions(slot, profile, selectedCategory)
-      .filter((recipe) => recipe.name !== meal.name)
-      .slice(0, 6)
+    setSwapOptions(getSwapFoodOptions(slot, profile, selectedCategory, meal.name)
       .map((recipe) => enrichMeal(recipe, slot)))
   }
 
@@ -863,9 +890,7 @@ function MealPlanner() {
       event.stopPropagation()
     }
 
-    const options = getFoodOptions(slot, profile, selectedCategory)
-      .filter((recipe) => recipe.name !== currentMeal.name)
-      .slice(0, 6)
+    const options = getSwapFoodOptions(slot, profile, selectedCategory, currentMeal.name)
       .map((recipe) => enrichMeal(recipe, slot))
     const recipeDetail = enrichMeal(currentMeal, slot)
 
@@ -1010,6 +1035,19 @@ function MealPlanner() {
             </div>
           </section>
         )}
+
+        <details className="vegetarian-photo-catalog">
+          <summary>Vegetarian dish photos ({vegetarianPhotoCatalog.length})</summary>
+          <p>Browse the vegetarian dishes currently available in the meal planner.</p>
+          <div className="vegetarian-photo-grid">
+            {vegetarianPhotoCatalog.map((recipe) => (
+              <a className="vegetarian-photo-card" href={recipe.image} target="_blank" rel="noreferrer" key={recipe.name}>
+                <img src={recipe.image} alt={recipe.name} loading="lazy" onError={handleRecipeImageError} />
+                <strong>{recipe.name}</strong>
+              </a>
+            ))}
+          </div>
+        </details>
 
         <section className="planner-layout">
           <section className="planner-main">

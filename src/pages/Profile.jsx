@@ -5,6 +5,16 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import './Profile.css'
 
+const PROFILE_GOALS = ['No Preference','Balanced Nutrition', 'Maintain Weight','Weight Loss', 'Weight Gain', 'High-Protein', 'Low-Sugar']
+
+function GoalDropdown({ value, onChange, disabled }) {
+  const [open, setOpen] = useState(false)
+  return <div className="goal-dropdown">
+    <button type="button" className="goal-dropdown-trigger" role="combobox" aria-expanded={open} aria-controls="profile-goal-options" disabled={disabled} onClick={() => setOpen((current) => !current)}>{value}<span aria-hidden="true">⌄</span></button>
+    {open && <div className="goal-dropdown-options" id="profile-goal-options" role="listbox">{PROFILE_GOALS.map((goal) => <button type="button" role="option" aria-selected={value === goal} key={goal} onClick={() => { onChange(goal); setOpen(false) }}>{goal}</button>)}</div>}
+  </div>
+}
+
 const initialProfile = {
   name: '',
   phone: '',
@@ -63,7 +73,12 @@ function Profile() {
 
   function updateField(event) {
     const { name, value } = event.target
+    if (name === 'phone' && value.replace(/\D/g, '').length > 15) return
     setProfile((current) => ({ ...current, [name]: value }))
+  }
+
+  function handleFormKeyDown(event) {
+    if (event.key === 'Enter' && event.target.matches('input:not([type="checkbox"]):not([type="submit"])')) event.preventDefault()
   }
 
   function handleSubmit(event) {
@@ -101,7 +116,7 @@ function Profile() {
           {!isEditing && <button type="button" className="profile-edit" onClick={() => { setMessage(''); setError(''); setIsEditing(true) }}>Edit Profile</button>}
         </section>
 
-        <form className="profile-form" onSubmit={handleSubmit}>
+        <form className="profile-form" onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
           {error && <div className="profile-message error">⚠️ {error}</div>}
           {message && <div className="profile-message success">✅ {message}</div>}
 
@@ -109,33 +124,33 @@ function Profile() {
             <div className="section-heading"><span className="step-number">01</span><div><h2>Profile information</h2><p>Keep your account details up to date.</p></div></div>
             <div className="field-grid">
               <label>Full name<input name="name" type="text" value={profile.name} onChange={updateField} disabled={!isEditing} required /></label>
-              <label>Email address <span className="optional">managed by your account</span><input type="email" value={user.email} disabled /></label>
-              <label>Phone number <span className="optional">optional</span><input name="phone" type="tel" value={profile.phone} onChange={updateField} placeholder="e.g. +91 98765 43210" disabled={!isEditing} /></label>
+              <label><span className="field-title">Email address <span className="optional">(managed by your account)</span></span><input type="email" value={user.email} disabled /></label>
+              <label><span className="field-title">Phone number <span className="optional">(optional, max 10 digits)</span></span><input name="phone" type="tel" maxLength={10} value={profile.phone} onChange={updateField} placeholder="e.g. +91 98765 43210" disabled={!isEditing} /></label>
             </div>
           </section>
 
           <section className="profile-section">
             <div className="section-heading"><span className="step-number">02</span><div><h2>Personal details</h2><p>These details help us tailor nutrition context.</p></div></div>
             <div className="field-grid">
-              <label>Age <span className="optional">optional</span><input name="age" type="number" min="13" max="120" value={profile.age} onChange={updateField} placeholder="e.g. 28" disabled={!isEditing} /></label>
+              <label><span className="field-title">Age <span className="optional">(optional)</span></span><input name="age" type="number" min="13" max="120" value={profile.age} onChange={updateField} placeholder="e.g. 28" disabled={!isEditing} /></label>
               <label>Gender<select name="gender" value={profile.gender} onChange={updateField} disabled={!isEditing}><option>prefer not to say</option><option>female</option><option>male</option><option>non-binary</option></select></label>
-              <label>Height <span className="optional">cm</span><input name="heightCm" type="number" min="80" max="250" value={profile.heightCm} onChange={updateField} placeholder="e.g. 170" disabled={!isEditing} /></label>
-              <label>Weight <span className="optional">kg</span><input name="weightKg" type="number" min="20" max="400" step="0.1" value={profile.weightKg} onChange={updateField} placeholder="e.g. 65" disabled={!isEditing} /></label>
+              <label><span className="field-title">Height <span className="optional">(cm)</span></span><input name="heightCm" type="number" min="80" max="250" value={profile.heightCm} onChange={updateField} placeholder="e.g. 170" disabled={!isEditing} /></label>
+              <label><span className="field-title">Weight <span className="optional">(kg)</span></span><input name="weightKg" type="number" min="20" max="400" step="0.1" value={profile.weightKg} onChange={updateField} placeholder="e.g. 65" disabled={!isEditing} /></label>
             </div>
           </section>
 
           <section className="profile-section">
             <div className="section-heading"><span className="step-number">03</span><div><h2>Nutrition preferences</h2><p>We will use these to filter analysis and healthier alternatives.</p></div></div>
             <div className="field-grid">
-              <label>Diet pattern<select name="dietType" value={profile.dietType} onChange={updateField} disabled={!isEditing}><option>no preference(veg&non-veg)</option><option>vegetarian</option><option>non-vegetarian</option><option>vegan</option><option>eggetarian</option></select></label>
-              <label>Preferred cuisines <span className="optional">separate with commas</span><input name="cuisines" value={profile.cuisines} onChange={updateField} placeholder="e.g. Indian, Mediterranean" disabled={!isEditing} /></label>
+              <label>Diet pattern<select name="dietType" value={profile.dietType} onChange={updateField} disabled={!isEditing}><option>no preference(veg&non-veg)</option><option>Vegetarian</option><option>Non-Vegetarian</option></select></label>
+              <label><span className="field-title">Preferred cuisines <span className="optional">(separate with commas)</span></span><input name="cuisines" value={profile.cuisines} onChange={updateField} placeholder="e.g. Indian, Mediterranean" disabled={!isEditing} /></label>
             </div>
-            <div className="field-grid single-row"><label>Food allergies <span className="optional">separate with commas</span><textarea name="allergies" value={profile.allergies} onChange={updateField} placeholder="e.g. peanuts, lactose" disabled={!isEditing} /></label><label>Food dislikes <span className="optional">optional</span><textarea name="foodDislikes" value={profile.foodDislikes} onChange={updateField} placeholder="e.g. mushrooms, very spicy food" disabled={!isEditing} /></label></div>
+            <div className="field-grid single-row"><label><span className="field-title">Food allergies <span className="optional">(separate with commas)</span></span><textarea name="allergies" value={profile.allergies} onChange={updateField} placeholder="e.g. peanuts, lactose" disabled={!isEditing} /></label><label><span className="field-title">Food dislikes <span className="optional">(optional)</span></span><textarea name="foodDislikes" value={profile.foodDislikes} onChange={updateField} placeholder="e.g. mushrooms, very spicy food" disabled={!isEditing} /></label></div>
           </section>
 
           <section className="profile-section">
             <div className="section-heading"><span className="step-number">04</span><div><h2>Health & nutrition goals</h2><p>Choose the main direction for your meal recommendations.</p></div></div>
-            <label>Primary goal<select name="goals" value={profile.goals} onChange={updateField} disabled={!isEditing}><option>no preference</option><option>healthy eating</option><option>balanced nutrition</option><option>maintain weight</option><option>weight management</option><option>weight loss</option><option>weight gain</option><option>high-protein diet</option><option>low-sugar diet</option><option>high fiber</option></select></label>
+            <label><span className="field-title">Primary goal</span><GoalDropdown value={profile.goals} onChange={(goals) => setProfile((current) => ({ ...current, goals }))} disabled={!isEditing} /></label>
           </section>
 
           <section className="profile-section">

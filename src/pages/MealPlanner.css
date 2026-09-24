@@ -407,7 +407,7 @@
 }
 
 .recipe-detail-card.meal-modal {
-  width: min(960px, 100%);
+  width: min(1080px, 100%);
   max-height: calc(100vh - 48px);
   margin: 0;
   padding: 24px;
@@ -483,7 +483,8 @@
 
 .swap-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 14px;
 }
 
@@ -495,6 +496,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+}
+
+.swap-option img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 .swap-option strong {
@@ -513,7 +522,7 @@
 }
 
 .swap-option button {
-  margin-top: 8px;
+  margin-top: auto;
   border: none;
   border-radius: 10px;
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
@@ -579,7 +588,7 @@
 
 .recipe-content {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   margin-top: 18px;
 }
@@ -619,9 +628,7 @@
   font-size: 0.9em;
 }
 
-.recipe-section.wide {
-  grid-column: span 1;
-}
+.recipe-section.wide { grid-column: auto; }
 
 .status-banner {
   margin-bottom: 14px;
@@ -634,10 +641,11 @@
 
 @media (max-width: 980px) {
   .planner-layout,
-  .recipe-content,
   .week-grid {
     grid-template-columns: 1fr;
   }
+
+  .swap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -659,10 +667,13 @@
   }
 
   .profile-grid,
+  .recipe-content,
   .nutrient-grid,
   .summary-strip {
     grid-template-columns: 1fr;
   }
+
+  .swap-grid { grid-template-columns: 1fr; }
 }
 
 .planner-description {
@@ -700,7 +711,7 @@
 .member-count-control select,
 .preference-row select {
   min-height: 42px;
-  padding: 9px 12px;
+  padding: 10px 22px;
   border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 10px;
   background: #f7fff9;
@@ -727,7 +738,7 @@
 
 .preference-panel-heading h2 {
   margin: 0 0 4px;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
 }
 
 .preference-panel-heading p {
@@ -737,7 +748,7 @@
 .preference-row {
   display: flex;
   align-items: end;
-  gap: 14px;
+  gap: 50px;
   flex-wrap: wrap;
 }
 
@@ -755,7 +766,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 260px;
+  max-width: 200px;
   color: #41645a;
   font-size: 0.85rem;
 }
@@ -770,6 +781,48 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.vegetarian-photo-catalog {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid rgba(26, 127, 62, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.vegetarian-photo-catalog summary {
+  color: #166534;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vegetarian-photo-catalog > p {
+  color: #49695c;
+}
+
+.vegetarian-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  max-height: 560px;
+  overflow: auto;
+}
+
+.vegetarian-photo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #173b31;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.vegetarian-photo-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 @media (max-width: 640px) {
