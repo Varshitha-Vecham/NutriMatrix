@@ -65,15 +65,15 @@ const mealLibrary = {
   ],
   'Morning Snack': [
     {
-      name: 'Apple Cinnamon Yogurt',
-      ingredients: ['apple', 'Greek yogurt', 'cinnamon', 'walnuts'],
+      name: 'Strawberry Cinnamon Yogurt',
+      ingredients: ['strawberry', 'Greek yogurt', 'cinnamon', 'walnuts'],
       calories: 220,
       protein: 16,
       carbs: 22,
       fat: 8,
       vitamins: 'Vitamin C, Calcium',
       prepTime: 5,
-      instructions: 'Dice the apple, spoon yogurt into a bowl, and top with cinnamon and chopped walnuts.',
+      instructions: 'Dice the strawberry, spoon yogurt into a bowl, and top with cinnamon and chopped walnuts.',
       dietary: ['Vegetarian'],
       goal: ['Weight Loss', 'Balanced Diet', 'Maintenance']
     },
@@ -304,7 +304,7 @@ const additionalRecipes = {
       instructions: 'Dry roast makhana until crisp, cool, and toss with chopped vegetables and spices.',
       steps: ['Dry roast makhana in a pan until crisp.', 'Chop tomato and onion finely.', 'Cool the makhana for two minutes.', 'Toss with vegetables, lemon juice, and chaat masala.'],
       dietary: ['Vegetarian', 'Vegan'], goal: ['Weight Loss', 'Balanced Diet', 'Maintenance'], categories: ['Snacks', 'Healthy', 'North Indian'],
-      image: '/images/recipes/roasted-makhana-chaat.jpg', source: 'Local recipe image'
+      image: '/images/recipes/roastedmakhanafeat.jpg', source: 'Local recipe image'
     },
     {
       name: 'Peanut Sundal',
@@ -409,11 +409,11 @@ const recipeImages = {
   'Avocado Spinach Omelet': '/images/recipes/avocado-spinach-omelet.jpg',
   'Chia Banana Smoothie': '/images/recipes/chia-banana-smoothie.jpg',
   'Peanut Butter Apple Toast': '/images/recipes/peanut-butter-apple-toast.jpg',
-  'Apple Cinnamon Yogurt': '/images/recipes/apple-cinnamon-yogurt.jpg',
+  'Strawberry Cinnamon Yogurt': 'https://img-global.cpcdn.com/recipes/f6a0afe80125f60c/680x781cq80/bowl-de-yogurt-griego-con-fresas-y-nueces-foto-principal.jpg',
   'Hummus Veggie Cups': '/images/recipes/hummus-veggie-cups.jpg',
   'Edamame Crunch Cup': '/images/recipes/edamame-crunch-cup.jpg',
   'Quinoa Chicken Power Bowl': '/images/recipes/quinoa-chicken-power-bowl.jpg',
-  'Chickpea Rainbow Salad': '/images/recipes/chickpea-rainbow-salad.jpg',
+  'Chickpea Rainbow Salad': 'https://images.unsplash.com/photo-1581570377609-d82072a69569?auto=format&fit=crop&w=900&q=85',
   'Tofu Rice Veggie Bowl': '/images/recipes/tofu-rice-veggie-bowl.jpg',
   'Black Bean Fajita Bowl': '/images/recipes/black-bean-fajita-bowl.jpg',
   'Cinnamon Banana Toast': '/images/recipes/cinnamon-banana-toast.jpg',
@@ -421,38 +421,48 @@ const recipeImages = {
   'Cucumber Yogurt Dip': '/images/recipes/cucumber-yogurt-dip.jpg',
   'Roasted Chickpea Snack': '/images/recipes/roasted-chickpea-snack.jpg',
   'Salmon Sweet Potato Plate': '/images/recipes/salmon-sweet-potato-plate.jpg',
-  'Lentil Veggie Curry': '/images/recipes/lentil-veggie-curry.jpg',
+  'Lentil Veggie Curry': 'https://images.unsplash.com/photo-1756821753226-c0fc88056cf7?auto=format&fit=crop&w=900&q=85',
   'Turkey Bean Stir-Fry': '/images/recipes/turkey-bean-stir-fry.jpg',
   'Chicken Lentil Stew': '/images/recipes/chicken-lentil-stew.jpg',
   'Palak Tofu Curry': '/images/recipes/palak-tofu-curry.jpg',
-  'Roasted Makhana Chaat': '/images/recipes/roasted-makhana-chaat.jpg',
+  'Roasted Makhana Chaat': '/images/recipes/roastedmakhanafeat.jpg',
   'Paneer Butter Masala': '/images/recipes/paneer-butter-masala.jpg',
   'Overnight Mango Chia Oats': '/images/recipes/overnight-mango-chia-oats.jpg',
-  'Curd Rice': 'https://images.unsplash.com/photo-1633383718081-22ac93e3db65?auto=format&fit=crop&w=900&q=85',
-  'Masala Dosa': '/images/recipes/idli-sambar-plate.jpg',
-  'Pulihora (Tamarind Rice)': '/images/recipes/south-indian-lemon-rice.jpg',
-  'Chapati and Dal': '/images/recipes/lentil-veggie-curry.jpg',
-  'Vegetable Upma': '/images/recipes/roasted-makhana-chaat.jpg',
-  'Egg Bhurji with Chapati': '/images/recipes/avocado-spinach-omelet.jpg',
-  'Vegetable Pulav': '/images/recipes/black-bean-fajita-bowl.jpg',
-  'Chicken Biryani': '/images/recipes/tandoori-chicken-plate.jpg',
-  'Fish Curry with Rice': '/images/recipes/salmon-sweet-potato-plate.jpg',
-  'Chicken Sausage Egg Scramble': '/images/recipes/avocado-spinach-omelet.jpg',
-  'Smoked Salmon Breakfast Toast': '/images/recipes/salmon-sweet-potato-plate.jpg',
-  'Chicken Avocado Breakfast Bowl': '/images/recipes/quinoa-chicken-power-bowl.jpg',
-  'Chicken Cucumber Bites': 'https://images.unsplash.com/photo-1782468654011-270157b7107f?auto=format&fit=crop&w=900&q=85',
-  'Tuna Stuffed Pepper Cups': 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=900&q=85',
-  'Turkey Roll-Ups': '/images/recipes/turkey-bean-stir-fry.jpg',
-  'Boiled Egg Chaat': '/images/recipes/avocado-spinach-omelet.jpg',
-  'Tuna Avocado Crackers': '/images/recipes/quinoa-chicken-power-bowl.jpg',
-  'Chicken Pepper Skewers': '/images/recipes/tandoori-chicken-plate.jpg',
-  'Turkey Quinoa Salad': '/images/recipes/quinoa-chicken-power-bowl.jpg',
-  'Grilled Chicken Whole Wheat Wrap': '/images/recipes/tandoori-chicken-plate.jpg',
-  'Chicken Tikka with Brown Rice': '/images/recipes/tandoori-chicken-plate.jpg',
-  'Garlic Prawn Rice Bowl': '/images/recipes/salmon-sweet-potato-plate.jpg'
+  'Curd Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/da14390afafac0ea185fa3670ecc7cf0',
+  'Idli Sambar Plate': '/images/recipes/idli-sambar-plate.jpg',
+  'Rajma Masala Rice': '/images/recipes/rajma-masala-rice.jpg',
+  'Masala Dosa': 'https://images.unsplash.com/photo-1743615467363-250466982515?auto=format&fit=crop&w=900&q=85',
+  'Pulihora (Tamarind Rice)': 'https://i0.wp.com/www.chitrasfoodbook.com/wp-content/uploads/2016/08/chintapandu-pulihora-recipe.jpg?ssl=1&w=1200',
+  'Chapati and Dal': '/images/recipes/chapati-dal.jpg',
+  'Vegetable Upma': 'https://images.herzindagi.info/image/2021/May/upma-recipe-main.jpg',
+  'Egg Bhurji with Chapati': 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto/FOOD_CATALOG/IMAGES/CMS/2025/8/12/4fe33f92-1589-4ec6-bbb8-6c83f52eaba2_c0d130a1-0950-4888-a857-ab9a5091dca3.jpg',
+  'Vegetable Pulav': '/images/recipes/vegetablepulav.jpg',
+  'Chicken Biryani': 'https://images.unsplash.com/photo-1559528896-c5310744cce8?auto=format&fit=crop&w=900&q=85',
+  'Fish Curry with Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/FOOD_CATALOG/IMAGES/CMS/2024/8/24/f2c5f51e-1e40-4e23-8c2c-00d70338d546_4eaedfcc-de2d-40e0-b4f4-721f7330497e.jpg',
+  'Chicken Sausage Fennel Scramble': 'https://sweetjuly.com/cdn/shop/files/Chicken_Sausage_and_Fennel_Scramble_1.jpg?height=2010&v=1741658839',
+  'Smoked Salmon Breakfast Toast': 'https://www.savoryonline.com/app/uploads/recipes/218804/smoked-salmon-breakfast-toasts.jpg',
+  'Chicken Avocado Breakfast Bowl': 'https://hurrydishes.com/wp-content/uploads/2024/12/Chicken-and-Avocado-Breakfast-Bowl.webp',
+  'Chicken Cucumber Bites': 'https://cdn-fastly.foodtalkdaily.com/media/2021/04/19/6556822/greek-chicken-salad-cucumber-bites.jpg?nocrop=1&size=720x845',
+  'Tuna Stuffed Pepper Cups': 'https://cdn.riuparis.fr/content_images/recette-poivron-riuparis-jacqueline-cuisine.png',
+  'Turkey and Cheese Lettuce Roll-Ups': 'https://images.eatthismuch.com/img/262651_cerrato_f3c36dfc-f779-4792-97c0-1b61ab108a57.png',
+  'Boiled Egg Chaat': 'https://restaurantindia.s3.ap-south-1.amazonaws.com/s3fs-public/inline-images/Boiled%20Egg%20Chaat%20for%20a%20Protein%20Boost.jpg',
+  'Tuna Avocado Crackers': 'https://cdn7.kiwilimon.com/recetaimagen/34101/39729.jpg',
+  'Chicken Pepper Skewers': 'https://cdn.stoneline.de/media/g0/b0/81/1772537410/gegrillte-haehnchenspiesse-mit-paprika.jpg?ts=1772537410',
+  'Turkey Quinoa Salad': 'https://food.fnr.sndimg.com/content/dam/images/food/fullset/2013/6/11/2/FNM_070113-Turkey-and-Quinoa-Salad-Recipe_s4x3.jpg.rend.hgtvcom.1280.960.suffix/1389377541999.webp',
+  'Grilled Chicken Whole Wheat Wrap': 'https://res.cloudinary.com/solin-fitness/image/upload/c_scale%2Cw_800%2Cq_auto%2Cf_auto/single-meal-images/axdcea1gjv9ciyaagbwb',
+  'Chicken Tikka Masala with Brown Rice': 'https://teamnutrition.ca/sites/default/files/recipes/Poulet%20tikka%20%28V%29.jpg',
+  'Garlic Prawn Rice Bowl': 'https://fordishes.com/assets/images/1760971261698-TpQHOjDy.webp'
 }
 
-const DEFAULT_RECIPE_IMAGE = '/images/recipes/default-food.jpg'
+const DEFAULT_RECIPE_IMAGE = '/images/recipes/default-food.svg'
+
+const recipePhotoSources = {
+  'Chickpea Rainbow Salad': 'https://unsplash.com/photos/a-colorful-salad-with-grains-vegetables-and-hummus-3X4gYE6STfE',
+  'Lentil Veggie Curry': 'https://unsplash.com/photos/dal-bhat-with-greens-and-lentil-curry-EvxE8j6lfyY',
+  'Idli Sambar Plate': 'https://unsplash.com/photos/idli-and-sambar-with-coffee-an-indian-meal-SoXHSiyWNKQ',
+  'Masala Dosa': 'https://unsplash.com/photos/a-dosa-is-served-with-three-dipping-sauces-4Au4dHNjt7w',
+  'Chicken Biryani': 'https://unsplash.com/photos/food-photography-of-bowl-of-chicken-biryani-OterGMpkdsM'
+}
 
 const indianRecipes = {
   Breakfast: [
@@ -474,14 +484,14 @@ const indianRecipes = {
 
 const extraNonVegetarianRecipes = {
   Breakfast: [
-    ['Chicken Sausage Egg Scramble', ['eggs', 'chicken sausage', 'spinach', 'tomato'], ['2 large', '100 g', '1/2 cup', '1/2 cup'], 390, 32, 18, 21, 'Vitamin B12, Iron, Vitamin A', ['Non-vegetarian'], 10, 10],
+    ['Chicken Sausage Fennel Scramble', ['eggs', 'chicken sausage', 'fennel', 'grape tomatoes'], ['2 large', '100 g', '1/2 cup', '1/2 cup'], 390, 32, 18, 21, 'Vitamin B12, Iron, Vitamin A', ['Non-vegetarian'], 10, 10],
     ['Smoked Salmon Breakfast Toast', ['smoked salmon', 'whole grain bread', 'cream cheese', 'cucumber'], ['90 g', '2 slices', '2 tbsp', '1/2 medium'], 360, 25, 34, 13, 'Vitamin D, B12, Omega-3', ['Non-vegetarian'], 8, 3],
     ['Chicken Avocado Breakfast Bowl', ['chicken breast', 'eggs', 'avocado', 'spinach'], ['100 g', '1 large', '1/2 medium', '1 cup'], 430, 39, 16, 23, 'Vitamin B6, B12, Folate', ['Non-vegetarian'], 12, 15]
   ],
   'Morning Snack': [
     ['Chicken Cucumber Bites', ['chicken breast', 'cucumber', 'Greek yogurt', 'dill'], ['90 g', '1 medium', '2 tbsp', '1 tsp'], 180, 27, 8, 5, 'Vitamin B6, B12, Calcium', ['Non-vegetarian'], 10, 12],
     ['Tuna Stuffed Pepper Cups', ['tuna', 'bell pepper', 'Greek yogurt', 'lemon'], ['90 g', '1 medium', '2 tbsp', '1 tsp'], 190, 25, 12, 4, 'Vitamin D, B12, Selenium', ['Non-vegetarian'], 10, 0],
-    ['Turkey Roll-Ups', ['turkey breast', 'lettuce', 'cucumber', 'mustard'], ['90 g', '4 leaves', '1/2 medium', '1 tsp'], 160, 24, 7, 4, 'Vitamin B6, B12, Zinc', ['Non-vegetarian'], 8, 0]
+    ['Turkey and Cheese Lettuce Roll-Ups', ['turkey breast', 'lettuce', 'cucumber', 'cheese', 'mustard'], ['90 g', '4 leaves', '1/2 medium', '1 slice', '1 tsp'], 220, 28, 8, 10, 'Vitamin B6, B12, Zinc', ['Non-vegetarian'], 8, 0]
   ],
   'Evening Snack': [
     ['Boiled Egg Chaat', ['eggs', 'tomato', 'onion', 'lemon'], ['2 large', '1 small', '1/4 small', '1 tsp'], 190, 14, 11, 10, 'Vitamin B12, Vitamin D, Choline', ['Non-vegetarian'], 8, 10],
@@ -493,7 +503,7 @@ const extraNonVegetarianRecipes = {
     ['Grilled Chicken Whole Wheat Wrap', ['chicken breast', 'whole wheat wrap', 'lettuce', 'tomato'], ['120 g', '1 large', '1 cup', '1/2 medium'], 510, 40, 48, 16, 'Vitamin A, B6, B12', ['Non-vegetarian'], 12, 15]
   ],
   Dinner: [
-    ['Chicken Tikka with Brown Rice', ['chicken breast', 'Greek yogurt', 'brown rice', 'bell pepper'], ['150 g', '1/4 cup', '1 cup cooked', '1/2 medium'], 560, 46, 52, 15, 'Vitamin B6, B12, Selenium', ['Non-vegetarian'], 15, 25],
+    ['Chicken Tikka Masala with Brown Rice', ['chicken breast', 'Greek yogurt', 'brown rice', 'tomato', 'broccoli'], ['150 g', '1/4 cup', '1 cup cooked', '1 medium', '1 cup'], 560, 46, 52, 15, 'Vitamin B6, B12, Selenium', ['Non-vegetarian'], 15, 25],
     ['Garlic Prawn Rice Bowl', ['prawns', 'brown rice', 'broccoli', 'garlic'], ['150 g', '1 cup cooked', '1 cup', '2 cloves'], 520, 38, 58, 11, 'Iodine, Selenium, Vitamin C', ['Non-vegetarian'], 12, 15]
   ]
 }
@@ -511,7 +521,12 @@ Object.entries(extraNonVegetarianRecipes).forEach(([slot, recipes]) => {
 })
 
 Object.values(mealLibrary).flat().forEach((recipe) => {
-  recipe.image = recipe.image || recipeImages[recipe.name] || DEFAULT_RECIPE_IMAGE
+  const mappedImage = recipeImages[recipe.name]
+  if (mappedImage) {
+    recipe.image = mappedImage
+    recipe.source = mappedImage.includes('images.unsplash.com') ? 'Unsplash' : mappedImage.startsWith('/') ? 'NutriMatrix food photo' : 'Recipe photo'
+    recipe.sourceLink = recipePhotoSources[recipe.name] || mappedImage
+  }
 })
 
 const vegetarianPhotoCatalog = [...new Map(Object.values(mealLibrary).flat()
@@ -522,7 +537,7 @@ const recipeSteps = {
   'Berry Oat Protein Bowl': ['Cook oats with milk or water until creamy.', 'Fold in chia seeds and Greek yogurt.', 'Top with berries and almonds, then serve warm.'],
   'Avocado Spinach Omelet': ['Whisk the eggs with a pinch of seasoning.', 'Saute spinach and tomato in olive oil.', 'Pour in the eggs, fold with avocado, and cook until set.'],
   'Chia Banana Smoothie': ['Add banana, almond milk, chia, peanut butter, and oats to a blender.', 'Blend until smooth and creamy.', 'Pour into a glass and serve immediately.'],
-  'Apple Cinnamon Yogurt': ['Dice the apple into bite-sized pieces.', 'Spoon Greek yogurt into a bowl.', 'Add apple, cinnamon, and walnuts before serving.'],
+  'Strawberry Cinnamon Yogurt': ['Dice the strawberry into bite-sized pieces.', 'Spoon Greek yogurt into a bowl.', 'Add strawberry, cinnamon, and walnuts before serving.'],
   'Hummus Veggie Cups': ['Wash and slice the carrot, cucumber, and bell pepper.', 'Spoon hummus into small serving cups.', 'Arrange the vegetables and crackers around the hummus.'],
   'Quinoa Chicken Power Bowl': ['Cook quinoa according to the package directions.', 'Season and cook the chicken until it reaches 165 F internally.', 'Layer quinoa, spinach, tomato, chicken, and avocado in a bowl.'],
   'Chickpea Rainbow Salad': ['Rinse the chickpeas and cook or warm the quinoa.', 'Chop the spinach, tomato, and cucumber.', 'Toss everything with lemon juice and serve.'],
@@ -549,7 +564,7 @@ function enrichMeal(meal, slot) {
     description: meal.description || 'Fresh and nutritionally balanced meal suggestion.',
     categories: meal.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(meal.dietary || [])],
     ingredientQuantities: meal.ingredientQuantities || meal.ingredients.map((ingredient) => ({
-      oats: '1/2 cup', berries: '1/2 cup', 'Greek yogurt': '1/2 cup', 'chia seeds': '1 tbsp', almonds: '1 tbsp', eggs: '2 large', spinach: '1 cup', avocado: '1/2 medium', tomato: '1 medium', 'olive oil': '1 tsp', banana: '1 medium', 'almond milk': '1 cup', 'peanut butter': '1 tbsp', 'whole grain bread': '2 slices', apple: '1 medium', cinnamon: '1/2 tsp', chickpeas: '3/4 cup', quinoa: '1 cup cooked', cucumber: '1/2 medium', tofu: '150 g', 'brown rice': '1 cup cooked', broccoli: '1 cup', carrot: '1 medium', salmon: '150 g', 'sweet potato': '1 medium', lentils: '3/4 cup cooked', 'coconut milk': '1/4 cup', 'turkey mince': '150 g', 'black beans': '3/4 cup', 'chicken breast': '150 g'
+      oats: '1/2 cup', berries: '1/2 cup', 'Greek yogurt': '1/2 cup', 'chia seeds': '1 tbsp', almonds: '1 tbsp', eggs: '2 large', spinach: '1 cup', avocado: '1/2 medium', tomato: '1 medium', 'olive oil': '1 tsp', banana: '1 medium', 'almond milk': '1 cup', 'peanut butter': '1 tbsp', 'whole grain bread': '2 slices', strawberry: '10 pieces', cinnamon: '1/2 tsp', chickpeas: '3/4 cup', quinoa: '1 cup cooked', cucumber: '1/2 medium', tofu: '150 g', 'brown rice': '1 cup cooked', broccoli: '1 cup', carrot: '1 medium', salmon: '150 g', 'sweet potato': '1 medium', lentils: '3/4 cup cooked', 'coconut milk': '1/4 cup', 'turkey mince': '150 g', 'black beans': '3/4 cup', 'chicken breast': '150 g'
     }[ingredient] || '1/2 cup')),
     source: meal.source || 'Local recipe image',
     sourceLink: meal.sourceLink || meal.image || DEFAULT_RECIPE_IMAGE,
@@ -566,8 +581,8 @@ function handleRecipeImageError(event) {
 function normalizeDietary(preference) {
   const normalized = String(preference || '').toLowerCase()
   if (normalized.includes('vegan')) return ['Vegan']
-  if (normalized.includes('eggetarian')) return ['Eggetarian', 'Vegetarian', 'Vegan']
-  if (normalized.includes('non-vegetarian') || normalized.includes('non vegetarian') || normalized.includes('non-veg') || normalized === 'nonveg') return ['Non-vegetarian', 'Eggetarian']
+  if (normalized.includes('eggetarian')) return ['Eggetarian']
+  if (normalized.includes('non-vegetarian') || normalized.includes('non vegetarian') || normalized.includes('non-veg') || normalized === 'nonveg') return ['Non-vegetarian']
   if (normalized.includes('vegetarian') || normalized === 'veg') return ['Vegetarian', 'Vegan']
   return ['Non-vegetarian', 'Vegetarian', 'Vegan']
 }
@@ -637,9 +652,9 @@ function getFoodOptions(slot, profile, category = 'All') {
 // the user's nutrition goal when creating the plan.
 const WEEKLY_VARIETY_BY_SLOT = {
   Breakfast: ['Berry Oat Protein Bowl', 'Avocado Spinach Omelet', 'Chia Banana Smoothie', 'Peanut Butter Apple Toast', 'Masala Paneer Scramble', 'Overnight Mango Chia Oats', 'Masala Dosa', 'Vegetable Upma', 'Egg Bhurji with Chapati'],
-  'Morning Snack': ['Apple Cinnamon Yogurt', 'Hummus Veggie Cups', 'Edamame Crunch Cup', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Cucumber Yogurt Dip', 'Trail Mix Crunch'],
+  'Morning Snack': ['Strawberry Cinnamon Yogurt', 'Hummus Veggie Cups', 'Edamame Crunch Cup', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Cucumber Yogurt Dip', 'Trail Mix Crunch'],
   Lunch: ['Chickpea Rainbow Salad', 'Tofu Rice Veggie Bowl', 'Black Bean Fajita Bowl', 'Paneer Butter Masala', 'South Indian Lemon Rice', 'Rajma Masala Rice', 'Pulihora (Tamarind Rice)', 'Vegetable Pulav', 'Chicken Biryani'],
-  'Evening Snack': ['Cinnamon Banana Toast', 'Trail Mix Crunch', 'Cucumber Yogurt Dip', 'Roasted Chickpea Snack', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Apple Cinnamon Yogurt'],
+  'Evening Snack': ['Cinnamon Banana Toast', 'Trail Mix Crunch', 'Cucumber Yogurt Dip', 'Roasted Chickpea Snack', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Edamame Crunch Cup', 'Strawberry Cinnamon Yogurt'],
   Dinner: ['Lentil Veggie Curry', 'Palak Tofu Curry', 'Idli Sambar Plate', 'Rajma Masala Rice', 'Paneer Butter Masala', 'Curd Rice', 'Chapati and Dal', 'Fish Curry with Rice', 'Chicken Lentil Stew']
 }
 
@@ -764,19 +779,27 @@ function MealPlanner() {
     setPlan(nextPlan)
     setSelectedMeal(nextPlan[0].meals.Breakfast)
     setSelectedRecipe(null)
-    if (saveAsDefault) {
-      try {
-        const result = await apiRequest('/api/profile')
-        const current = result.profile || {}
-        const dietType = draftDiet.toLowerCase() === 'no preference' ? 'no preference(veg&non-veg)' : draftDiet.toLowerCase()
-        const goals = ({ 'Balanced Nutrition': 'balanced nutrition', 'High Protein': 'high-protein diet', 'Low Sugar': 'low-sugar diet', 'Maintain Weight': 'maintain weight', 'Weight Loss': 'weight loss', 'Weight Gain': 'weight gain' })[draftGoal] || draftGoal.toLowerCase()
-        await apiRequest('/api/profile', { method: 'PUT', body: JSON.stringify({ ...current, dietType, goals }) })
-        setSavedProfile(nextProfile)
-      } catch (error) {
-        setStatusMessage(`Plan updated; profile default could not be saved: ${error.message}`)
-        setAdjustOpen(false)
-        return
-      }
+    try {
+      const result = await apiRequest('/api/profile')
+      const current = result.profile || {}
+      const selectedDiet = draftDiet.toLowerCase() === 'no preference' ? 'no preference(veg&non-veg)' : draftDiet.toLowerCase()
+      const dietType = saveAsDefault || !current.dietType ? selectedDiet : current.dietType
+      const goals = ({ 'Balanced Nutrition': 'balanced nutrition', 'High Protein': 'high-protein diet', 'Low Sugar': 'low-sugar diet', 'Maintain Weight': 'maintain weight', 'Weight Loss': 'weight loss', 'Weight Gain': 'weight gain' })[draftGoal] || draftGoal.toLowerCase()
+      await apiRequest('/api/profile', {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...current,
+          name: current.name || 'Friend',
+          gender: current.gender || 'prefer not to say',
+          dietType,
+          goals
+        })
+      })
+      setSavedProfile(nextProfile)
+    } catch (error) {
+      setStatusMessage(`Plan updated; primary goal could not be saved: ${error.message}`)
+      setAdjustOpen(false)
+      return
     }
     setStatusMessage('Your meal plan has been updated based on your preferences.')
     setAdjustOpen(false)
@@ -972,7 +995,7 @@ function MealPlanner() {
           <div className="preference-row">
             <label>Dietary preference<select value={draftDiet} onChange={(event) => setDraftDiet(event.target.value)}><option>no preference</option><option>Vegetarian</option><option>Non-Vegetarian</option></select></label>
             <label>Nutrition goal<select value={draftGoal} onChange={(event) => setDraftGoal(event.target.value)}><option>Balanced Nutrition</option><option>High Protein</option><option>Low Sugar</option><option>Maintain Weight</option><option>Weight Loss</option><option>Weight Gain</option></select></label>
-            <label className="save-default-option"><input type="checkbox" checked={saveAsDefault} onChange={(event) => setSaveAsDefault(event.target.checked)} /> Save these changes as my default preferences</label>
+            <label className="save-default-option"><input type="checkbox" checked={saveAsDefault} onChange={(event) => setSaveAsDefault(event.target.checked)} /> Also save dietary preference as my default</label>
             <button type="button" className="profile-save" onClick={applyPreferences}>Apply &amp; Update Plan</button>
           </div>
         </section>}
@@ -1035,20 +1058,6 @@ function MealPlanner() {
             </div>
           </section>
         )}
-
-        <details className="vegetarian-photo-catalog">
-          <summary>Vegetarian dish photos ({vegetarianPhotoCatalog.length})</summary>
-          <p>Browse the vegetarian dishes currently available in the meal planner.</p>
-          <div className="vegetarian-photo-grid">
-            {vegetarianPhotoCatalog.map((recipe) => (
-              <a className="vegetarian-photo-card" href={recipe.image} target="_blank" rel="noreferrer" key={recipe.name}>
-                <img src={recipe.image} alt={recipe.name} loading="lazy" onError={handleRecipeImageError} />
-                <strong>{recipe.name}</strong>
-              </a>
-            ))}
-          </div>
-        </details>
-
         <section className="planner-layout">
           <section className="planner-main">
             <div className="summary-strip">
