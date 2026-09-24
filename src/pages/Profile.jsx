@@ -127,7 +127,7 @@ function Profile() {
           <section className="profile-section">
             <div className="section-heading"><span className="step-number">03</span><div><h2>Nutrition preferences</h2><p>We will use these to filter analysis and healthier alternatives.</p></div></div>
             <div className="field-grid">
-              <label>Diet pattern<select name="dietType" value={profile.dietType} onChange={updateField} disabled={!isEditing}><option>no preference</option><option>vegetarian</option><option>vegan</option><option>pescatarian</option><option>keto</option><option>halal</option><option>gluten-free</option></select></label>
+              <label>Diet pattern<select name="dietType" value={profile.dietType} onChange={updateField} disabled={!isEditing}><option>no preference(veg&non-veg)</option><option>vegetarian</option><option>non-vegetarian</option><option>vegan</option><option>eggetarian</option></select></label>
               <label>Preferred cuisines <span className="optional">separate with commas</span><input name="cuisines" value={profile.cuisines} onChange={updateField} placeholder="e.g. Indian, Mediterranean" disabled={!isEditing} /></label>
             </div>
             <div className="field-grid single-row"><label>Food allergies <span className="optional">separate with commas</span><textarea name="allergies" value={profile.allergies} onChange={updateField} placeholder="e.g. peanuts, lactose" disabled={!isEditing} /></label><label>Food dislikes <span className="optional">optional</span><textarea name="foodDislikes" value={profile.foodDislikes} onChange={updateField} placeholder="e.g. mushrooms, very spicy food" disabled={!isEditing} /></label></div>
@@ -135,7 +135,7 @@ function Profile() {
 
           <section className="profile-section">
             <div className="section-heading"><span className="step-number">04</span><div><h2>Health & nutrition goals</h2><p>Choose the main direction for your meal recommendations.</p></div></div>
-            <label>Primary goal<select name="goals" value={profile.goals} onChange={updateField} disabled={!isEditing}><option>maintain weight</option><option>weight loss</option><option>weight gain</option><option>healthy eating</option><option>high-protein diet</option><option>low-sugar diet</option></select></label>
+            <label>Primary goal<select name="goals" value={profile.goals} onChange={updateField} disabled={!isEditing}><option>no preference</option><option>healthy eating</option><option>balanced nutrition</option><option>maintain weight</option><option>weight management</option><option>weight loss</option><option>weight gain</option><option>high-protein diet</option><option>low-sugar diet</option><option>high fiber</option></select></label>
           </section>
 
           <section className="profile-section">
