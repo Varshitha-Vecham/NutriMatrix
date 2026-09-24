@@ -1,0 +1,142 @@
+>all items are only for 1 person keep option for how many member? and when user click on 2 or 3 etc... members ,the preparation should be change and the quantity also based on members selected by user
+
+>add unsave option also 
+
+>changes food pictures of mentioned below- the image ahould exact on which is the dish name 
+   Lentil veggie curry,
+   Hummus veggie cups,
+   Trail Mix Crunch,Palak Tofu Curry,
+   Chia Banana Smoothie,
+   Edamame Crunch Cup,
+   Black Bean Fajita Bowl,
+   Cucumber Yogurt Dip,
+   Roasted Makhana Chaat,
+   Paneer Butter Masala,
+   Roasted Chickpea Snack,
+   Overnight Mango Chia Oats,
+   Curd Rice,
+   Masala Dosa,
+   Pulihora ,
+   Chapati and dal
+
+>based on user update their profile like Nutrition preferences and Health & nutrition goals sections based on that only in meal planner page it should make plan 
+Example-
+   >suppose user is allergy to peanuts ,related to peanuts it should not amek plan of peanuts ,it should avoid peanuts 
+   >and when user prefer non veg it should show non-veg items in meal planner page 
+   >if user selects weight gainor loss, maintain,hih-protein etc,, it should show that items in meal plan based on users preference
+   etc... things 
+
+>add more number of food items up to 30 to 40 food items with exact image of food name 
+
+Update the NutriMatrix Meal Planner page by replacing the existing “Get Recommendations” option with a new feature called “Adjust Preferences”.
+
+IMPORTANT:
+The user's Profile page remains the main place for their permanent/default Nutrition Preferences and Health Goals.
+
+However, users should also be able to make a quick preference change directly from the Meal Planner without going back to their Profile.
+
+Add a clearly visible button near the Weekly Meal Plan heading:
+
+“⚙ Adjust Preferences”
+
+When the user clicks “Adjust Preferences”, expand an inline preference section directly below the heading.
+LAYOUT:
+All preference categories and their options should be arranged horizontally in a clean row-based layout.
+
+Do NOT stack every option vertically.
+
+Create the following horizontal sections:
+
+DIETARY PREFERENCE (drop down )
+[ Vegetarian ] [ Non-Vegetarian ]
+NUTRITION GOAL(drop down)
+[Maintain Weight] [Weight Loss] [ Weight Gain ] [ Low Sugar diet ] [ High Protein diet ]
+Subtitle:
+“Make a quick change to your preferences and update this week's meal plan.”
+
+Show the following options:
+
+1. DIETARY PREFERENCE
+
+Display selectable options:
+- Vegetarian
+- Non-Vegetarian
+- Vegan
+- Eggetarian
+
+Preselect the user's current dietary preference from their Profile.
+
+2. NUTRITION GOAL
+
+Display the user's current Nutrition Goal from their Profile.
+
+Allow the user to temporarily change it if needed:
+- Balanced Nutrition
+- High Protein
+- Weight Management
+- Low Sugar
+- High Fiber
+
+
+3. SAVE AS DEFAULT
+
+Add a checkbox:
+
+“Save these changes as my default preferences”
+
+If checked:
+- Update the user's Profile preferences.
+- Use these preferences for future meal plans.
+
+If unchecked:
+- Apply the changes only to the current weekly meal plan.
+- Do not modify the user's saved Profile preferences.
+
+Add two buttons:
+
+“Cancel”
+“Apply & Update Plan”
+
+When the user clicks “Apply & Update Plan”:
+
+1. Read the selected preferences.
+2. Generate/update the current week's meal plan based on those preferences.
+3. Update the meals displayed from Sunday to Saturday.
+4. Do NOT create a second weekly plan.
+5. Keep the existing weekly planner layout.
+6. Keep the existing Swap Meal functionality.
+
+Show a small confirmation message:
+
+“✓ Your meal plan has been updated based on your preferences.”
+
+IMPORTANT FUNCTIONAL DIFFERENCE:
+
+Profile:
+Stores the user's permanent/default Nutrition Preferences and Health Goals.
+
+Adjust Preferences:
+Allows quick changes directly from the Meal Planner.
+
+Swap Meal:
+Changes only one individual meal without changing the overall preferences or weekly plan criteria.
+
+Do NOT add another weekly plan.
+
+Keep the existing NutriMatrix visual design:
+- Premium green and white theme
+- Clean typography
+- Rounded cards
+- Subtle shadows
+- No 3D effects
+- No excessive animations
+- Responsive on desktop, tablet, and mobile
+
+Do not redesign the entire Meal Planner page. Only add/modify the preference functionality and keep the existing weekly plan design intact.
+
+>i told sunday's breakfast to dinner should display horizontal not vertical
+>so many food items and images are repeated  in every week and images not related to dish name  
+>based on user nutrition goal items are displayed same for every one,it should be different
+>example- search chicken cucumber bites in unsplash and add that image in meal planner page do this for all food items non-veg and veg
+
+>i told example "to search chicken cucumber bites in unsplash and add that image in meal planner page do this process for all food items  for non-veg and veg" but you didn't change anything what i told u , ithey are so many food items,i can't send u each pic, do that process which i have told u , or else send me pics one each food item mention food name and image for all in vegetarian 

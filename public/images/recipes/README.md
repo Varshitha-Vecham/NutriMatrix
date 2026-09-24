@@ -8,7 +8,6 @@ Place the real food photos in this folder using the exact filenames below. The M
 - peanut-butter-apple-toast.jpg
 - apple-cinnamon-yogurt.jpg
 - hummus-veggie-cups.jpg
-- cottage-cheese-fruit-mix.jpg
 - edamame-crunch-cup.jpg
 - quinoa-chicken-power-bowl.jpg
 - chickpea-rainbow-salad.jpg
