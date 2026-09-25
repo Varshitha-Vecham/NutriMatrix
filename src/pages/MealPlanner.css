@@ -892,13 +892,34 @@
 .day-card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 9px;
   width: 100%;
   padding: 4px 2px 12px;
+}
+
+.day-select {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #173b31;
   text-align: left;
+  cursor: pointer;
+}
+
+.day-save-button {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .day-number {
@@ -917,13 +938,7 @@
   font-weight: 700;
 }
 
-.day-label {
-  margin-left: auto;
-  color: #6b8578;
-  font-size: 0.76rem;
-}
-
-.day-card-header.active .day-number {
+.day-select.active .day-number {
   background: #16a34a;
   color: #fff;
 }

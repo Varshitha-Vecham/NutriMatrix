@@ -5,6 +5,7 @@ import { apiRequest } from '../api.js'
 import './MealPlanner.css'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const DAY_NAMES = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }
 const MEAL_SLOTS = ['Breakfast', 'Morning Snack', 'Lunch', 'Evening Snack', 'Dinner']
 const CATEGORY_OPTIONS = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'South Indian', 'North Indian', 'Healthy', 'High Protein', 'Quick Meals', 'Vegetarian', 'Vegan']
 
@@ -981,11 +982,12 @@ function MealPlanner() {
     setSwapModalOpen(true)
   }
 
-  const handleSaveMeal = (day, slot) => {
-    const key = getMealKey(day, slot, selectedRecipe?.name || selectedMeal?.name || 'meal')
-    const isSaved = savedMeals.includes(key)
-    setSavedMeals(isSaved ? savedMeals.filter((savedKey) => savedKey !== key) : [...savedMeals, key])
-    setStatusMessage(isSaved ? 'Recipe removed from saved meals.' : 'Recipe saved successfully.')
+  const handleSaveDay = (dayPlan) => {
+    const keys = MEAL_SLOTS.map((slot) => getMealKey(dayPlan.day, slot, dayPlan.meals[slot].name))
+    const allSaved = keys.every((key) => savedMeals.includes(key))
+    setSavedMeals((current) => allSaved
+      ? current.filter((key) => !keys.includes(key))
+      : [...new Set([...current, ...keys])])
   }
 
   const handleChooseAlternative = (option) => {
@@ -1023,10 +1025,6 @@ function MealPlanner() {
   }
 
   const foodOptions = getFoodOptions(selectedMealSlot, profile, selectedCategory)
-  const isCurrentMealSaved = selectedRecipe
-    ? savedMeals.includes(getMealKey(selectedDay, selectedMealSlot, selectedRecipe.name))
-    : false
-
   return (
     <div className="meal-planner-page">
       <Navbar />
@@ -1136,16 +1134,24 @@ function MealPlanner() {
             <div className="week-grid">
               {plan.map((dayPlan, dayIndex) => (
                 <div className="day-card" key={dayPlan.day}>
-                  <button
-                    type="button"
-                    className={selectedDay === dayPlan.day ? 'day-card-header active' : 'day-card-header'}
-                    onClick={() => handleDayChange(dayPlan.day)}
-                    aria-label={`Select ${dayPlan.day}`}
-                  >
-                    <span className="day-number">{String(dayIndex + 1).padStart(2, '0')}</span>
-                    <span className="day-name">{dayPlan.day}</span>
-                    <span className="day-label">Day</span>
-                  </button>
+                  <div className="day-card-header">
+                    <button
+                      type="button"
+                      className={selectedDay === dayPlan.day ? 'day-select active' : 'day-select'}
+                      onClick={() => handleDayChange(dayPlan.day)}
+                      aria-label={`Select ${DAY_NAMES[dayPlan.day]}`}
+                    >
+                      <span className="day-number">{String(dayIndex + 1).padStart(2, '0')}</span>
+                      <span className="day-name">{DAY_NAMES[dayPlan.day]}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="day-save-button"
+                      onClick={() => handleSaveDay(dayPlan)}
+                    >
+                      {MEAL_SLOTS.every((slot) => savedMeals.includes(getMealKey(dayPlan.day, slot, dayPlan.meals[slot].name))) ? 'Unsave' : 'Save'}
+                    </button>
+                  </div>
 
                   <div className="meal-stack">
                     {MEAL_SLOTS.map((slot) => {
@@ -1206,9 +1212,6 @@ function MealPlanner() {
                 </div>
 
                 <div className="recipe-tools">
-                  <button type="button" onClick={() => handleSaveMeal(selectedDay, selectedMealSlot)}>
-                    {isCurrentMealSaved ? 'Unsave Meal' : 'Save Meal'}
-                  </button>
                   <button type="button" className="btn-secondary" onClick={handleCloseRecipe}>Close</button>
                 </div>
               </div>
