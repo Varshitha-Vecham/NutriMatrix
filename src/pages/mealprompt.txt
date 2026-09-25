@@ -140,3 +140,6 @@ Do not redesign the entire Meal Planner page. Only add/modify the preference fun
 >example- search chicken cucumber bites in unsplash and add that image in meal planner page do this for all food items non-veg and veg
 
 >i told example "to search chicken cucumber bites in unsplash and add that image in meal planner page do this process for all food items  for non-veg and veg" but you didn't change anything what i told u , ithey are so many food items,i can't send u each pic, do that process which i have told u , or else send me pics one each food item mention food name and image for all in vegetarian 
+
+leftside there is 'Sun' right side 'day' i don't want that i want 'Sunday' don't cut it, Place Sunday Left side 
+>For every food item save meal option is there, i don't want, For on Day add Add Save and Unsave button right side for every day 

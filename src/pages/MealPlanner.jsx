@@ -431,6 +431,15 @@ const recipeImages = {
   'Curd Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/da14390afafac0ea185fa3670ecc7cf0',
   'Idli Sambar Plate': '/images/recipes/idli-sambar-plate.jpg',
   'Rajma Masala Rice': '/images/recipes/rajma-masala-rice.jpg',
+  'Moong Dal Khichdi': '/images/recipes/Yellow-Moong-Dal-Khichdi-Recipe.jpg',
+  'Vegetable Khichdi': '/images/recipes/vegetable-kichidi.jpg',
+  'Paneer Paratha with Raita': '/images/recipes/paneer-paratha.jpg',
+  'Roti with Chana Masala': '/images/recipes/Roti-with-Chana-Masala.jpg',
+  'Roti with Mixed Vegetable Curry': '/images/recipes/Roti-with-Mixed-Vegetable-Curry.jpg',
+  'Paneer Tikka Bites': '/images/recipes/paneer-tikka-bites.jpg',
+  'Sprouts Sundal': '/images/recipes/sprouts-sundal.jpg',
+  'Masala Corn Chaat': '/images/recipes/masala-corn-chaat.jpg',
+  'Sweet Potato Chaat': '/images/recipes/sweet-potato-chaat.jpg',
   'Masala Dosa': 'https://images.unsplash.com/photo-1743615467363-250466982515?auto=format&fit=crop&w=900&q=85',
   'Pulihora (Tamarind Rice)': 'https://i0.wp.com/www.chitrasfoodbook.com/wp-content/uploads/2016/08/chintapandu-pulihora-recipe.jpg?ssl=1&w=1200',
   'Chapati and Dal': '/images/recipes/chapati-dal.jpg',
@@ -470,17 +479,39 @@ const indianRecipes = {
     ['Vegetable Upma', ['rava', 'mixed vegetables', 'peanuts', 'curry leaves'], ['1 cup', '1/2 cup', '1 tbsp', '6 leaves'], 330, 9, 54, 9, 'Vitamin A, C, Magnesium', ['Vegetarian', 'Vegan'], 10, 15],
     ['Egg Bhurji with Chapati', ['eggs', 'onion', 'tomato', 'whole wheat chapati'], ['2 large', '1/4 cup', '1/2 cup', '2 chapatis'], 430, 23, 46, 17, 'Vitamin B12, Vitamin D, Iron', ['Eggetarian'], 10, 12]
   ],
+  'Morning Snack': [],
+  'Evening Snack': [],
   Lunch: [
     ['Pulihora (Tamarind Rice)', ['cooked rice', 'tamarind', 'peanuts', 'curry leaves'], ['1 1/2 cups', '2 tbsp', '2 tbsp', '8 leaves'], 440, 11, 70, 13, 'Vitamin E, Magnesium, Iron', ['Vegetarian', 'Vegan'], 12, 15],
     ['Vegetable Pulav', ['basmati rice', 'mixed vegetables', 'peas', 'curd'], ['1 cup uncooked', '1 cup', '1/4 cup', '1/2 cup'], 490, 14, 78, 13, 'Vitamin A, C, B12', ['Vegetarian'], 15, 25],
-    ['Chicken Biryani', ['basmati rice', 'chicken', 'yogurt', 'onion', 'spices'], ['1 cup cooked', '150 g', '1/4 cup', '1 medium', '1 tsp'], 590, 38, 66, 18, 'Vitamin B6, B12, Zinc, Iron', ['Non-vegetarian'], 20, 35]
+    ['Chicken Biryani', ['basmati rice', 'chicken', 'yogurt', 'onion', 'spices'], ['1 cup cooked', '150 g', '1/4 cup', '1 medium', '1 tsp'], 590, 38, 66, 18, 'Vitamin B6, B12, Zinc, Iron', ['Non-vegetarian'], 20, 35],
+    ['Chole Bhature', ['chickpeas', 'whole wheat flour', 'tomato', 'onion', 'yogurt'], ['1 cup cooked', '2 bhature', '2 medium', '1 medium', '1/4 cup'], 650, 21, 92, 21, 'Iron, Folate, Fiber', ['Vegetarian'], 20, 35],
+    ['Aloo Paratha with Curd', ['whole wheat flour', 'potato', 'plain curd', 'cumin'], ['2 parathas', '1 medium', '1/2 cup', '1/2 tsp'], 540, 16, 78, 18, 'Potassium, Calcium, Iron', ['Vegetarian'], 20, 25],
+    ['Vegetable Khichdi', ['rice', 'moong dal', 'carrot', 'peas', 'ghee'], ['3/4 cup', '1/2 cup', '1/2 cup', '1/4 cup', '1 tsp'], 430, 17, 68, 10, 'Folate, Vitamin A, Iron', ['Vegetarian'], 10, 25],
+    ['Roti with Mixed Vegetable Curry', ['whole wheat atta', 'mixed vegetables', 'tomato', 'onion', 'curd'], ['2 rotis', '1 1/2 cups', '1 medium', '1/2 medium', '1/4 cup'], 480, 18, 72, 12, 'Vitamin A, C, Fiber', ['Vegetarian'], 15, 25]
   ],
   Dinner: [
     ['Curd Rice', ['cooked rice', 'plain curd', 'milk', 'pomegranate'], ['1 cup', '3/4 cup', '1/4 cup', '2 tbsp'], 360, 12, 58, 8, 'Calcium, Vitamin B12, Potassium', ['Vegetarian'], 10, 10],
     ['Chapati and Dal', ['whole wheat atta', 'toor dal', 'tomato', 'spinach'], ['2 chapatis', '3/4 cup cooked', '1 medium', '1 cup'], 460, 22, 72, 10, 'Iron, Folate, Magnesium', ['Vegetarian', 'Vegan'], 15, 25],
-    ['Fish Curry with Rice', ['fish fillet', 'coconut milk', 'cooked rice', 'tomato'], ['150 g', '1/4 cup', '1 cup', '1 medium'], 520, 34, 58, 16, 'Vitamin B12, Vitamin D, Selenium', ['Non-vegetarian'], 15, 25]
+    ['Fish Curry with Rice', ['fish fillet', 'coconut milk', 'cooked rice', 'tomato'], ['150 g', '1/4 cup', '1 cup', '1 medium'], 520, 34, 58, 16, 'Vitamin B12, Vitamin D, Selenium', ['Non-vegetarian'], 15, 25],
+    ['Moong Dal Khichdi', ['rice', 'moong dal', 'spinach', 'carrot', 'ghee'], ['3/4 cup', '1/2 cup', '1 cup', '1/2 cup', '1 tsp'], 420, 18, 66, 9, 'Iron, Folate, Vitamin A', ['Vegetarian'], 10, 25],
+    ['Paneer Paratha with Raita', ['whole wheat flour', 'paneer', 'plain curd', 'cucumber'], ['2 parathas', '100 g', '1/2 cup', '1/2 medium'], 570, 26, 68, 22, 'Calcium, Vitamin B12', ['Vegetarian'], 20, 25],
+    ['Lemon Rice with Chana Sundal', ['cooked rice', 'lemon juice', 'peanuts', 'chickpeas', 'curry leaves'], ['1 cup', '1 tbsp', '1 tbsp', '1/2 cup', '6 leaves'], 490, 17, 76, 13, 'Vitamin C, Iron, Folate', ['Vegetarian', 'Vegan'], 10, 15],
+    ['Roti with Chana Masala', ['whole wheat atta', 'chickpeas', 'tomato', 'onion', 'ginger'], ['2 rotis', '1 cup', '2 medium', '1 medium', '1 tsp'], 520, 22, 82, 12, 'Iron, Folate, Fiber', ['Vegetarian', 'Vegan'], 15, 25]
   ]
 }
+
+// Extra snack choices let the planner assign a different morning and evening
+// snack on every day of the week, even for a vegetarian profile.
+indianRecipes['Morning Snack'].push(
+  ['Sprouts Sundal', ['moong sprouts', 'coconut', 'mustard seeds', 'curry leaves', 'lemon'], ['1 cup', '2 tbsp', '1/2 tsp', '6 leaves', '1/2 medium'], 190, 13, 25, 5, 'Vitamin C, Folate, Iron', ['Vegetarian', 'Vegan'], 8, 8],
+  ['Masala Corn Chaat', ['sweet corn', 'tomato', 'onion', 'lemon', 'chaat masala'], ['1 cup', '1 small', '1/4 small', '1 tsp', '1/2 tsp'], 180, 6, 36, 3, 'Vitamin C, Folate, Fiber', ['Vegetarian', 'Vegan'], 8, 5],
+  ['Apple Peanut Butter Bites', ['apple', 'peanut butter', 'pumpkin seeds'], ['1 medium', '1 tbsp', '1 tsp'], 210, 6, 29, 9, 'Fiber, Vitamin C, Magnesium', ['Vegetarian', 'Vegan'], 5, 0]
+)
+indianRecipes['Evening Snack'].push(
+  ['Paneer Tikka Bites', ['paneer', 'yogurt', 'bell pepper', 'tandoori masala'], ['80 g', '2 tbsp', '1/2 medium', '1/2 tsp'], 230, 16, 12, 14, 'Calcium, Vitamin C, B12', ['Vegetarian'], 8, 12],
+  ['Sweet Potato Chaat', ['sweet potato', 'lemon', 'coriander', 'chaat masala'], ['1 medium', '1 tsp', '1 tbsp', '1/2 tsp'], 190, 4, 42, 2, 'Vitamin A, C, Fiber', ['Vegetarian', 'Vegan'], 8, 15]
+)
 
 const extraNonVegetarianRecipes = {
   Breakfast: [
@@ -556,11 +587,27 @@ const recipeSteps = {
 }
 
 function enrichMeal(meal, slot) {
+  const initialSteps = meal.steps || recipeSteps[meal.name] || [meal.instructions]
+  const preparationSteps = [...initialSteps]
+  const extraSteps = [
+    `Check the ingredient amounts for ${meal.servingSize || 'one serving'} and gather everything listed.`,
+    'Wash and dry the fresh produce; set out the spices and cooking utensils.',
+    'Measure the ingredients and chop or portion them as needed.',
+    'Prepare the main ingredients by rinsing, draining, peeling, or cutting them as appropriate.',
+    'Warm the pan or pot and add the cooking fat or liquid called for in the recipe.',
+    'Cook the ingredients in stages so each component reaches the right texture.',
+    'Combine the components, add the seasonings, and taste to adjust salt or spice.',
+    'Check that hot ingredients are fully cooked, then plate the meal and serve.'
+  ]
+  for (const step of extraSteps) {
+    if (preparationSteps.length >= 10) break
+    preparationSteps.push(step)
+  }
   return {
     ...meal,
     slot,
     image: meal.image || DEFAULT_RECIPE_IMAGE,
-    steps: meal.steps || recipeSteps[meal.name] || [meal.instructions],
+    steps: preparationSteps.slice(0, 10),
     description: meal.description || 'Fresh and nutritionally balanced meal suggestion.',
     categories: meal.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(meal.dietary || [])],
     ingredientQuantities: meal.ingredientQuantities || meal.ingredients.map((ingredient) => ({
@@ -634,7 +681,7 @@ function getFoodOptions(slot, profile, category = 'All') {
     const goal = normalizeGoal(profile.goal)
     const ingredients = recipe.ingredients.join(' ').toLowerCase()
     const snack = slot.includes('Snack')
-    const matchesGoal = goal === 'High Protein' ? recipe.protein >= (snack ? 12 : 25)
+    const matchesGoal = profile.ignoreGoal ? true : goal === 'High Protein' ? recipe.protein >= (snack ? 12 : 25)
       : goal === 'Low Sugar' ? !/honey|sugar|syrup|sweetened|dates|cranberr/i.test(ingredients) && recipe.carbs <= (snack ? 22 : 45)
         : goal === 'High Fiber' ? /beans|lentils|chickpea|oats|chia|vegetable|spinach/i.test(ingredients)
           : goal === 'Weight Loss' ? recipe.calories <= (snack ? 250 : 520) && recipe.protein >= (snack ? 8 : 15)
@@ -663,7 +710,9 @@ function getWeeklyFoodOptions(slot, profile) {
     recipes[recipe.name] = recipe
     return recipes
   }, {})
-  const matchingRecipes = getFoodOptions(slot, profile)
+  // Keep enough eligible choices to fill the week; the goal score below ranks
+  // dishes toward the selected goal without making the same few meals repeat.
+  const matchingRecipes = getFoodOptions(slot, { ...profile, ignoreGoal: true })
   const goal = normalizeGoal(profile.goal)
   const scoreForGoal = (recipe) => {
     const calories = recipe.calories || 0
@@ -718,12 +767,17 @@ function rotateMeal(slot, profile, currentMeal) {
 }
 
 function buildMealPlan(profile) {
+  const usedSnackNames = new Set()
   return DAYS.map((day, dayIndex) => ({
     day,
     meals: MEAL_SLOTS.reduce((result, slot) => {
       const options = getWeeklyFoodOptions(slot, profile)
-      const preferredMeal = options.length ? options[dayIndex % options.length] : null
+      const isSnack = slot === 'Morning Snack' || slot === 'Evening Snack'
+      const preferredMeal = isSnack
+        ? options.find((meal) => !usedSnackNames.has(meal.name)) || options[dayIndex % Math.max(options.length, 1)]
+        : options.length ? options[dayIndex % options.length] : null
       if (!preferredMeal) return result
+      if (isSnack) usedSnackNames.add(preferredMeal.name)
       result[slot] = enrichMeal(preferredMeal, slot)
       return result
     }, {})
