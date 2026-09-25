@@ -182,6 +182,15 @@ async function ensureReceiptProductsTable() {
   }
 }
 
+async function ensureSavedMealsTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS saved_meals (
+    user_id INT UNSIGNED PRIMARY KEY,
+    meals JSON NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_saved_meals_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`)
+}
+
 function expiryStatus(expiryDate) {
   if (!expiryDate) return 'Unavailable'
   const today = new Date()
@@ -434,8 +443,29 @@ app.put('/api/profile', requireAuth, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save your nutrition profile.' }) }
 })
 
+app.get('/api/saved-meals', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT meals FROM saved_meals WHERE user_id = ?', [req.user.id])
+    const meals = rows.length ? (typeof rows[0].meals === 'string' ? JSON.parse(rows[0].meals) : rows[0].meals) : []
+    res.json({ meals: Array.isArray(meals) ? meals : [] })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load saved meals.' }) }
+})
+
+app.put('/api/saved-meals', requireAuth, async (req, res) => {
+  const meals = req.body?.meals
+  if (!Array.isArray(meals) || meals.length > 500 || meals.some((meal) => typeof meal !== 'string' || meal.length > 500)) {
+    return res.status(400).json({ message: 'Saved meals must be a valid list.' })
+  }
+  try {
+    await pool.execute(`INSERT INTO saved_meals (user_id, meals) VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE meals = VALUES(meals)`, [req.user.id, JSON.stringify([...new Set(meals)])])
+    res.json({ message: 'Saved meals updated.' })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save meals.' }) }
+})
+
 ensureProfileColumns()
   .then(() => ensureReceiptProductsTable())
+  .then(() => ensureSavedMealsTable())
   .then(() => ensureAdminAccess())
   .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
   .catch((error) => {

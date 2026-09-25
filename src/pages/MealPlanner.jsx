@@ -403,8 +403,6 @@ const defaultProfile = {
   pantry: ['oats', 'berries', 'Greek yogurt', 'spinach', 'eggs', 'quinoa', 'tomato', 'broccoli', 'brown rice', 'lentils', 'banana', 'cinnamon', 'almond milk']
 }
 
-const STORAGE_KEY = 'nutrimatrix-saved-meals'
-
 const recipeImages = {
   'Berry Oat Protein Bowl': '/images/recipes/berry-oat-protein-bowl.jpg',
   'Avocado Spinach Omelet': '/images/recipes/avocado-spinach-omelet.jpg',
@@ -442,13 +440,16 @@ const recipeImages = {
   'Masala Corn Chaat': '/images/recipes/masala-corn-chaat.jpg',
   'Sweet Potato Chaat': '/images/recipes/sweet-potato-chaat.jpg',
   'Masala Dosa': 'https://images.unsplash.com/photo-1743615467363-250466982515?auto=format&fit=crop&w=900&q=85',
+  'Tamarind Rice': '/images/recipes/pulihora.jpg',
   'Pulihora (Tamarind Rice)': 'https://i0.wp.com/www.chitrasfoodbook.com/wp-content/uploads/2016/08/chintapandu-pulihora-recipe.jpg?ssl=1&w=1200',
+  'Chole Bhature': '/images/recipes/chole-bature.jpg',
   'Chapati and Dal': '/images/recipes/chapati-dal.jpg',
   'Vegetable Upma': 'https://images.herzindagi.info/image/2021/May/upma-recipe-main.jpg',
   'Egg Bhurji with Chapati': 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto/FOOD_CATALOG/IMAGES/CMS/2025/8/12/4fe33f92-1589-4ec6-bbb8-6c83f52eaba2_c0d130a1-0950-4888-a857-ab9a5091dca3.jpg',
   'Vegetable Pulav': '/images/recipes/vegetablepulav.jpg',
-  'Chicken Biryani': 'https://images.unsplash.com/photo-1559528896-c5310744cce8?auto=format&fit=crop&w=900&q=85',
-  'Fish Curry with Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/FOOD_CATALOG/IMAGES/CMS/2024/8/24/f2c5f51e-1e40-4e23-8c2c-00d70338d546_4eaedfcc-de2d-40e0-b4f4-721f7330497e.jpg',
+  'Aloo Paratha with Curd': '/images/recipes/aloo-paratha-curd.jpg',
+  'Chicken Biryani': '/images/recipes/chicken-biryani.jpg',
+  'Fish Curry with Rice': '/images/recipes/fish-curry.jpg',
   'Chicken Sausage Fennel Scramble': 'https://sweetjuly.com/cdn/shop/files/Chicken_Sausage_and_Fennel_Scramble_1.jpg?height=2010&v=1741658839',
   'Smoked Salmon Breakfast Toast': 'https://www.savoryonline.com/app/uploads/recipes/218804/smoked-salmon-breakfast-toasts.jpg',
   'Chicken Avocado Breakfast Bowl': 'https://hurrydishes.com/wp-content/uploads/2024/12/Chicken-and-Avocado-Breakfast-Bowl.webp',
@@ -461,7 +462,9 @@ const recipeImages = {
   'Turkey Quinoa Salad': 'https://food.fnr.sndimg.com/content/dam/images/food/fullset/2013/6/11/2/FNM_070113-Turkey-and-Quinoa-Salad-Recipe_s4x3.jpg.rend.hgtvcom.1280.960.suffix/1389377541999.webp',
   'Grilled Chicken Whole Wheat Wrap': 'https://res.cloudinary.com/solin-fitness/image/upload/c_scale%2Cw_800%2Cq_auto%2Cf_auto/single-meal-images/axdcea1gjv9ciyaagbwb',
   'Chicken Tikka Masala with Brown Rice': 'https://teamnutrition.ca/sites/default/files/recipes/Poulet%20tikka%20%28V%29.jpg',
-  'Garlic Prawn Rice Bowl': 'https://fordishes.com/assets/images/1760971261698-TpQHOjDy.webp'
+  'Garlic Prawn Rice Bowl': 'https://fordishes.com/assets/images/1760971261698-TpQHOjDy.webp',
+  'Chicken Seekh Kebab': 'https://images.unsplash.com/photo-1633436375795-12b3b339712f?auto=format&fit=crop&w=900&q=85',
+  'Mutton Curry with Rice': 'https://images.unsplash.com/photo-1606843046080-45bf7a23c39f?auto=format&fit=crop&w=900&q=85'
 }
 
 const DEFAULT_RECIPE_IMAGE = '/images/recipes/default-food.svg'
@@ -483,7 +486,7 @@ const indianRecipes = {
   'Morning Snack': [],
   'Evening Snack': [],
   Lunch: [
-    ['Pulihora (Tamarind Rice)', ['cooked rice', 'tamarind', 'peanuts', 'curry leaves'], ['1 1/2 cups', '2 tbsp', '2 tbsp', '8 leaves'], 440, 11, 70, 13, 'Vitamin E, Magnesium, Iron', ['Vegetarian', 'Vegan'], 12, 15],
+    ['Tamarind Rice', ['cooked rice', 'tamarind', 'peanuts', 'curry leaves'], ['1 1/2 cups', '2 tbsp', '2 tbsp', '8 leaves'], 440, 11, 70, 13, 'Vitamin E, Magnesium, Iron', ['Vegetarian', 'Vegan'], 12, 15],
     ['Vegetable Pulav', ['basmati rice', 'mixed vegetables', 'peas', 'curd'], ['1 cup uncooked', '1 cup', '1/4 cup', '1/2 cup'], 490, 14, 78, 13, 'Vitamin A, C, B12', ['Vegetarian'], 15, 25],
     ['Chicken Biryani', ['basmati rice', 'chicken', 'yogurt', 'onion', 'spices'], ['1 cup cooked', '150 g', '1/4 cup', '1 medium', '1 tsp'], 590, 38, 66, 18, 'Vitamin B6, B12, Zinc, Iron', ['Non-vegetarian'], 20, 35],
     ['Chole Bhature', ['chickpeas', 'whole wheat flour', 'tomato', 'onion', 'yogurt'], ['1 cup cooked', '2 bhature', '2 medium', '1 medium', '1/4 cup'], 650, 21, 92, 21, 'Iron, Folate, Fiber', ['Vegetarian'], 20, 35],
@@ -536,7 +539,9 @@ const extraNonVegetarianRecipes = {
   ],
   Dinner: [
     ['Chicken Tikka Masala with Brown Rice', ['chicken breast', 'Greek yogurt', 'brown rice', 'tomato', 'broccoli'], ['150 g', '1/4 cup', '1 cup cooked', '1 medium', '1 cup'], 560, 46, 52, 15, 'Vitamin B6, B12, Selenium', ['Non-vegetarian'], 15, 25],
-    ['Garlic Prawn Rice Bowl', ['prawns', 'brown rice', 'broccoli', 'garlic'], ['150 g', '1 cup cooked', '1 cup', '2 cloves'], 520, 38, 58, 11, 'Iodine, Selenium, Vitamin C', ['Non-vegetarian'], 12, 15]
+    ['Garlic Prawn Rice Bowl', ['prawns', 'brown rice', 'broccoli', 'garlic'], ['150 g', '1 cup cooked', '1 cup', '2 cloves'], 520, 38, 58, 11, 'Iodine, Selenium, Vitamin C', ['Non-vegetarian'], 12, 15],
+    ['Chicken Seekh Kebab', ['chicken mince', 'onion', 'ginger garlic paste', 'coriander', 'garam masala'], ['150 g', '2 tbsp finely chopped', '1 tsp', '1 tbsp', '1/2 tsp'], 360, 36, 12, 18, 'Vitamin B6, B12, Zinc', ['Non-vegetarian'], 15, 20],
+    ['Mutton Curry with Rice', ['mutton', 'basmati rice', 'onion', 'tomato', 'ginger garlic paste'], ['150 g', '1 cup cooked', '1 medium', '1 medium', '1 tbsp'], 640, 34, 62, 27, 'Vitamin B12, Iron, Zinc', ['Non-vegetarian'], 20, 55]
   ]
 }
 
@@ -701,7 +706,7 @@ function getFoodOptions(slot, profile, category = 'All') {
 const WEEKLY_VARIETY_BY_SLOT = {
   Breakfast: ['Berry Oat Protein Bowl', 'Avocado Spinach Omelet', 'Chia Banana Smoothie', 'Peanut Butter Apple Toast', 'Masala Paneer Scramble', 'Overnight Mango Chia Oats', 'Masala Dosa', 'Vegetable Upma', 'Egg Bhurji with Chapati'],
   'Morning Snack': ['Strawberry Cinnamon Yogurt', 'Hummus Veggie Cups', 'Edamame Crunch Cup', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Cucumber Yogurt Dip', 'Trail Mix Crunch'],
-  Lunch: ['Chickpea Rainbow Salad', 'Tofu Rice Veggie Bowl', 'Black Bean Fajita Bowl', 'Paneer Butter Masala', 'South Indian Lemon Rice', 'Rajma Masala Rice', 'Pulihora (Tamarind Rice)', 'Vegetable Pulav', 'Chicken Biryani'],
+  Lunch: ['Chickpea Rainbow Salad', 'Tofu Rice Veggie Bowl', 'Black Bean Fajita Bowl', 'Paneer Butter Masala', 'South Indian Lemon Rice', 'Rajma Masala Rice', 'Tamarind Rice', 'Vegetable Pulav', 'Chicken Biryani'],
   'Evening Snack': ['Cinnamon Banana Toast', 'Trail Mix Crunch', 'Cucumber Yogurt Dip', 'Roasted Chickpea Snack', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Edamame Crunch Cup', 'Strawberry Cinnamon Yogurt'],
   Dinner: ['Lentil Veggie Curry', 'Palak Tofu Curry', 'Idli Sambar Plate', 'Rajma Masala Rice', 'Paneer Butter Masala', 'Curd Rice', 'Chapati and Dal', 'Fish Curry with Rice', 'Chicken Lentil Stew']
 }
@@ -804,6 +809,7 @@ function MealPlanner() {
   const [recipeModalOpen, setRecipeModalOpen] = useState(false)
   const [swapModalOpen, setSwapModalOpen] = useState(false)
   const [savedMeals, setSavedMeals] = useState([])
+  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [wizardOpen, setWizardOpen] = useState(false)
 
@@ -861,20 +867,19 @@ function MealPlanner() {
   }
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return
-
-    try {
-      const parsed = JSON.parse(saved)
-      setSavedMeals(Array.isArray(parsed) ? parsed : [])
-    } catch (error) {
-      setSavedMeals([])
-    }
+    let active = true
+    apiRequest('/api/saved-meals')
+      .then((result) => { if (active) setSavedMeals(Array.isArray(result?.meals) ? result.meals : []) })
+      .catch(() => { if (active) setSavedMeals([]) })
+      .finally(() => { if (active) setSavedMealsLoaded(true) })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedMeals))
-  }, [savedMeals])
+    if (!savedMealsLoaded) return
+    apiRequest('/api/saved-meals', { method: 'PUT', body: JSON.stringify({ meals: savedMeals }) })
+      .catch((error) => setStatusMessage(error.message))
+  }, [savedMeals, savedMealsLoaded])
 
   useEffect(() => {
     if (!statusMessage) return undefined
@@ -1147,6 +1152,7 @@ function MealPlanner() {
                     <button
                       type="button"
                       className="day-save-button"
+                      disabled={!savedMealsLoaded}
                       onClick={() => handleSaveDay(dayPlan)}
                     >
                       {MEAL_SLOTS.every((slot) => savedMeals.includes(getMealKey(dayPlan.day, slot, dayPlan.meals[slot].name))) ? 'Unsave' : 'Save'}

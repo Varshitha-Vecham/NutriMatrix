@@ -143,3 +143,5 @@ Do not redesign the entire Meal Planner page. Only add/modify the preference fun
 
 leftside there is 'Sun' right side 'day' i don't want that i want 'Sunday' don't cut it, Place Sunday Left side 
 >For every food item save meal option is there, i don't want, For on Day add Add Save and Unsave button right side for every day 
+
+>In non-veg ,Add tandoori chicken, kabab ,mutton etc... non-veg dishes with exact imzge of food item matches
