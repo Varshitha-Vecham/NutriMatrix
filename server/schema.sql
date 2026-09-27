@@ -34,6 +34,23 @@ CREATE TABLE IF NOT EXISTS nutrition_profiles (
   CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS products (
+  product_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  product_name VARCHAR(150) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  image VARCHAR(500) NULL,
+  calories DECIMAL(8,2) NOT NULL,
+  protein DECIMAL(8,2) NOT NULL,
+  carbohydrates DECIMAL(8,2) NOT NULL,
+  total_fat DECIMAL(8,2) NOT NULL,
+  saturated_fat DECIMAL(8,2) NOT NULL,
+  fibre DECIMAL(8,2) NOT NULL,
+  sugar DECIMAL(8,2) NOT NULL,
+  sodium DECIMAL(8,2) NOT NULL,
+  description TEXT NULL,
+  UNIQUE KEY unique_product_name (product_name)
+);
+
 SET @schema_name = DATABASE();
 
 SET @column_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @schema_name AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role');
