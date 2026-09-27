@@ -1,0 +1,353 @@
+Create a **Product Analysis page for NutriMatrix**, an AI-powered nutrition and smart grocery platform.
+
+### 1. Product List
+
+Display a clean, modern grid of around **80–100 food products**.
+
+Categories can include:
+1. Grains, Rice & Flours — 15
+Wheat Atta
+Multigrain Atta
+Brown Rice
+White Rice
+Basmati Rice
+Sona Masoori Rice
+Quinoa
+Oats
+Poha
+Ragi Flour
+Jowar Flour
+Bajra Flour
+Maida
+Suji/Rava
+Corn Flour
+🫘 2. Pulses, Dal & Legumes — 12
+Toor Dal
+Moong Dal
+Masoor Dal
+Chana Dal
+Urad Dal
+Moong Whole
+Green Gram
+Rajma
+Kabuli Chana
+Black Chana
+Lobia
+Soybeans
+🥛 3. Dairy & Dairy Alternatives — 10
+Milk
+Toned Milk
+Full Cream Milk
+Curd
+Greek Yogurt
+Buttermilk
+Paneer
+Cheese
+Soy Milk
+Almond Milk
+🥜 4. Nuts & Seeds — 10
+Almonds
+Cashews
+Walnuts
+Pistachios
+Peanuts
+Raisins
+Dates
+Chia Seeds
+Flax Seeds
+Pumpkin Seeds
+🍎 5. Fruits — 12
+Apple
+Banana
+Orange
+Mango
+Pomegranate
+Papaya
+Guava
+Watermelon
+Grapes
+Pineapple
+Pear
+Kiwi
+🥦 6. Vegetables — 12
+Potato
+Tomato
+Onion
+Carrot
+Spinach
+Broccoli
+Cauliflower
+Cabbage
+Beetroot
+Cucumber
+Capsicum
+Green Peas
+🍞 7. Packaged & Breakfast Foods — 15
+Brown Bread
+White Bread
+Multigrain Bread
+Corn Flakes
+Muesli
+Granola
+Peanut Butter
+Almond Butter
+Biscuits
+Digestive Biscuits
+Tomato Ketchup
+Instant Noodles
+Pasta
+Vermicelli
+Ready-to-Eat Poha
+🧃 8. Beverages & Other Foods — 14
+Coconut Water
+Fruit Juice
+Green Tea
+Black Tea
+Coffee
+Health Drink Powder
+Soy Chunks
+Tofu
+Honey
+Jaggery
+Sugar
+Cooking Oil
+Olive Oil
+Coconut Oil
+
+Each product card should contain:
+
+* Product image
+* Product name
+* Category
+* Short nutrition highlight
+* **View Analysis** button
+
+Do not make the page look like an e-commerce shopping website. It should primarily be a **nutrition analysis platform**.
+
+### 2. Selecting a Product
+
+When the user clicks **View Analysis**, display the complete nutrition analysis for that specific product.
+
+Show:
+
+* Product image
+* Product name
+* Category
+* Short product description
+
+### 3. Nutrition Facts
+
+Display:
+
+* Calories
+* Protein
+* Carbohydrates
+* Total Fat
+* Saturated Fat
+* Fibre
+* Sugar
+* Sodium
+
+Use clear nutrition cards, progress bars, or simple visual charts.
+
+Do not display a serving-size field.
+
+### 4. AI Nutrition Summary
+
+Generate a simple, understandable summary based on the actual nutrition values stored for that product.
+
+Example:
+
+> "This product provides a good amount of protein and fibre while containing moderate carbohydrates and sugar."
+
+Do not make unsupported medical claims.
+
+### 5. Nutrition Highlights
+
+Show useful nutrition indicators such as:
+
+* High Protein
+* High Fibre
+* Low Sugar
+* Low Fat
+* Moderate Calories
+
+Only display a highlight when it is supported by the product's actual nutritional data.
+
+### 6. Healthier Alternatives
+
+Display **2–4 similar products** that can be considered as alternatives.
+
+Example:
+
+**Wheat Atta**
+→ Multigrain Atta
+→ Ragi Flour
+→ Jowar Flour
+
+For each alternative show:
+
+* Product image
+* Product name
+* Key nutrition information
+* **View Analysis** button
+
+Clicking an alternative should open its nutrition analysis.
+
+### 7. Add to SmartCart
+
+Include an **Add to SmartCart** button on the product analysis page.
+
+When clicked:
+
+**Product → SmartCart**
+
+The Product Analysis page should NOT display the complete price comparison.
+
+### 8. SmartCart Price Comparison
+
+When the product is added to SmartCart, compare its available price across these platforms:
+
+* **BigBasket**
+* **Blinkit**
+* **Zepto**
+* **Swiggy Instamart**
+* **JioMart**
+* **Amazon Fresh**
+* **Flipkart Minutes**
+
+Display the comparison clearly.
+
+Example:
+
+| Platform         | Price |
+| ---------------- | ----: |
+| BigBasket        |  ₹299 |
+| Blinkit          |  ₹305 |
+| Zepto            |  ₹310 |
+| Swiggy Instamart |  ₹315 |
+| JioMart          |  ₹295 |
+| Amazon Fresh     |  ₹320 |
+| Flipkart Minutes |  ₹300 |
+
+Then show:
+
+### Cheapest Available Option
+
+**JioMart — ₹295**
+
+Include a **View Product** button for the selected platform.
+
+Do not fabricate prices. If live price data is not available, clearly indicate that the price is unavailable rather than generating a fake price.
+
+### 9. Search & Filters
+
+Provide:
+
+**Search**
+
+* Search products by name.
+
+**Category Filter**
+
+* Grains
+* Rice
+* Pulses
+* Dairy
+* Nuts & Seeds
+* Fruits
+* Vegetables
+* Breakfast Foods
+* Packaged Foods
+* Beverages
+
+**Nutrition Filters**
+
+* High Protein
+* High Fibre
+* Low Sugar
+* Low Fat
+* Low Calorie
+
+### 10. Database Structure
+
+Use the existing **MySQL database**.
+
+Each product should have a unique Product ID.
+
+Example:
+
+```text
+product_id
+product_name
+category
+image
+calories
+protein
+carbohydrates
+total_fat
+saturated_fat
+fibre
+sugar
+sodium
+description
+```
+
+Do not store serving size or ingredients.
+
+### 11. User Flow
+
+```text
+Home
+   ↓
+Product Analysis
+   ↓
+Browse/Search Products
+   ↓
+Click Product
+   ↓
+Nutrition Analysis
+   ↓
+Nutrition Highlights
+   ↓
+AI Nutrition Summary
+   ↓
+Healthier Alternatives
+   ↓
+Add to SmartCart
+   ↓
+SmartCart
+   ↓
+Compare Prices
+   ↓
+BigBasket
+Blinkit
+Zepto
+Swiggy Instamart
+JioMart
+Amazon Fresh
+Flipkart Minutes
+   ↓
+Identify Lowest Available Price
+   ↓
+View Product
+```
+
+### 12. UI Design
+
+Use the existing **NutriMatrix premium healthy-food design**:
+
+* Green and white theme
+* Clean modern interface
+* High-quality food/product images
+* Professional product cards
+* Clear typography
+* Good spacing
+* Responsive design
+* Smooth hover effects
+* Minimal animations
+* No unnecessary modal panels
+* No excessive 3D elements
+
+The final page should feel like an **AI-powered nutrition analysis platform**, not a conventional online grocery store.
+i told to do changes don't chnages CSS , add products which i have mentioned in productprompt.txt file (100 products)
