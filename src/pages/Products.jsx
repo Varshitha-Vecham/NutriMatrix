@@ -2,9 +2,19 @@ import { useMemo, useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
 import './Products.css'
 
-// Fixed photo URLs: loremflickr returns a real still food photograph for the
-// supplied exact product tags; the lock makes the image stable per product.
-const productImage = (tags, id) => `https://loremflickr.com/700/500/${encodeURIComponent(tags.replaceAll(' ', ','))}/all?lock=${id}`
+//const productImageFallback = (tags, id) => `https://loremflickr.com/700/500/${encodeURIComponent(tags.replaceAll(' ', ','))}/all?lock=${id}`
+// Map product names to the exact files supplied in public/images/products.
+const productImageFiles = {
+  'Wheat Atta': 'wheat-atta.jpg', 'Multigrain Atta': 'multigrain-atta.jpg', 'Brown Rice': 'brown-rice.jpg', 'White Rice': 'white-rice.jpg', 'Basmati Rice': 'basmati-rice.jpg', 'Sona Masoori Rice': 'sona-masoori-rice.jpg', 'Quinoa': 'quinoa.jpg', 'Oats': 'oats.jpg', 'Poha': 'poha.jpg', 'Ragi Flour': 'ragi-flour.jpg', 'Jowar Flour': 'jowar-flour.jpg', 'Bajra Flour': 'bajra-flour.jpg', 'Maida': 'maida.jpg', 'Suji/Rava': 'suji-rava.jpg', 'Corn Flour': 'corn-flour.jpg',
+  'Toor Dal': 'toor-dal.jpg', 'Moong Dal': 'moong-dal.jpg', 'Masoor Dal': 'masoor-dal.jpg', 'Chana Dal': 'chana-dal.jpg', 'Urad Dal': 'urad-dal.jpg', 'Moong Whole': 'moong-whole.webp', 'Green Gram': 'green-gram.webp', 'Rajma': 'rajma.jpg', 'Kabuli Chana': 'kabuli-chana.jpg', 'Black Chana': 'black-chana.jpg', 'Lobia': 'lobia.jpg', 'Soybeans': 'soybeans.jpg',
+  'Milk': 'milk.jpg', 'Toned Milk': 'toned-milk.jpg', 'Full Cream Milk': 'full-cream-milk.jpg', 'Curd': 'curd.jpg', 'Greek Yogurt': 'greek-yogurt.jpg', 'Buttermilk': 'buttermilk.jpg', 'Paneer': 'paneer.jpg', 'Cheese': 'cheese.jpg', 'Soy Milk': 'soy-milk.jpg', 'Almond Milk': 'almond-milk.jpg',
+  'Almonds': 'almonds.jpg', 'Cashews': 'cashews.jpg', 'Walnuts': 'walnuts.jpg', 'Pistachios': 'pistachios.jpg', 'Peanuts': 'peanuts.jpg', 'Raisins': 'raisins.jpg', 'Dates': 'dates.jpg', 'Chia Seeds': 'chia-seeds.jpg', 'Flax Seeds': 'flax-seeds.jpg', 'Pumpkin Seeds': 'pumpkin-seeds.jpg',
+  'Apple': 'apple.jpg', 'Banana': 'banana.jpg', 'Orange': 'orange.jpg', 'Mango': 'mango.webp', 'Pomegranate': 'pomegranate.jpg', 'Papaya': 'papaya.jpg', 'Guava': 'guava.jpg', 'Watermelon': 'watermelon.png', 'Grapes': 'grapes.jpg', 'Pineapple': 'pineapple.webp', 'Pear': 'pear.webp', 'Kiwi': 'kiwi.webp',
+  'Potato': 'potato.jpg', 'Tomato': 'tomato.jpg', 'Onion': 'onion.png', 'Carrot': 'carrot.webp', 'Spinach': 'spinach.jpg', 'Broccoli': 'broccoli.jpg', 'Cauliflower': 'cauliflower.jpg', 'Cabbage': 'cabbage.jpg', 'Beetroot': 'beetroot.jpg', 'Cucumber': 'cucumber.jpg', 'Capsicum': 'capsicum.jpg', 'Green Peas': 'greenpeas.webp',
+  'Brown Bread': 'brown-bread.jpg', 'White Bread': 'white-bread.jpg', 'Multigrain Bread': 'multigrainbread.jpg', 'Corn Flakes': 'corn-flakes.jpg', 'Muesli': 'muesli.jpg', 'Granola': 'granola.jpg', 'Peanut Butter': 'peanut-butter.jpg', 'Almond Butter': 'almondbutter.jpg', 'Biscuits': 'biscuits.jpg', 'Digestive Biscuits': 'digestive-biscuits.jpg', 'Tomato Ketchup': 'tomatoketchup.jpg', 'Instant Noodles': 'instantnoodles.jpg', 'Pasta': 'pasta.jpg', 'Vermicelli': 'vermicelli.jpg', 'Ready-to-Eat Poha': 'readytoeatpoha.webp',
+  'Coconut Water': 'coconutwater.jpg', 'Fruit Juice': 'fruitjuice.jpg', 'Green Tea': 'greentea.webp', 'Black Tea': 'blacktea.jpg', 'Coffee': 'coffee.jpg', 'Health Drink Powder': 'healthdrinkpowder.jpg', 'Soy Chunks': 'soychunks.jpg', 'Tofu': 'tofu.jpg', 'Honey': 'honey.webp', 'Jaggery': 'jaggery.jpg', 'Sugar': 'sugar.jpg', 'Cooking Oil': 'cookingoil.jpg', 'Olive Oil': 'oliveoil.webp', 'Coconut Oil': 'coconutoil.webp'
+}
+const productImage = (name, tags, id) => productImageFiles[name] ? `/images/products/${productImageFiles[name]}` : productImageFallback(tags, id)
 
 const groups = [
   ['Grains', [['Wheat Atta', 'wheat flour'], ['Multigrain Atta', 'multigrain flour'], ['Brown Rice', 'brown rice'], ['White Rice', 'white rice'], ['Basmati Rice', 'basmati rice'], ['Sona Masoori Rice', 'sona masoori rice'], ['Quinoa', 'quinoa'], ['Oats', 'rolled oats'], ['Poha', 'flattened rice poha'], ['Ragi Flour', 'ragi flour'], ['Jowar Flour', 'jowar flour'], ['Bajra Flour', 'bajra flour'], ['Maida', 'all purpose flour'], ['Suji/Rava', 'semolina rava'], ['Corn Flour', 'corn flour']]],
@@ -24,10 +34,10 @@ const nutritionByCategory = {
 }
 const products = groups.flatMap(([category, items], categoryIndex) => items.map(([name, imageTags], itemIndex) => {
   const id = categoryIndex * 20 + itemIndex + 1
-  return { id, name, category, image: productImage(imageTags, id), brand: 'Nutrition Library', serving: category === 'Beverages' ? '1 cup serving' : '100g reference', ...nutritionByCategory[category], retailers: [{ price: 2.5 + (id % 7) * 0.4 }] }
+  return { id, name, category, image: productImage(name, imageTags, id), brand: 'Nutrition Library', serving: category === 'Beverages' ? '1 cup serving' : '100g ', ...nutritionByCategory[category], retailers: [{ price: 2.5 + (id % 7) * 0.4 }] }
 }))
 const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages']
-const retailerNames = ['BigBasket', 'Blinkit', 'Zepto', 'Swiggy Instamart', 'JioMart', 'Amazon Fresh']
+const retailerNames = ['BigBasket', 'Blinkit', 'Zepto', 'Swiggy Instamart', 'JioMart', 'Amazon Fresh','Filpkart Minutes']
 const retailerMultipliers = [1, 1.06, 0.97, 1.03, 1.08, 1.02]
 const catalog = products.map((product) => ({ ...product, retailers: retailerNames.map((name, index) => ({ name, price: Math.round(product.retailers[0].price * 85 * retailerMultipliers[index]) })) }))
 const formatINR = (value) => `₹${value.toLocaleString('en-IN')}`
