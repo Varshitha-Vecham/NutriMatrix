@@ -34,25 +34,21 @@ CREATE TABLE IF NOT EXISTS nutrition_profiles (
   CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS receipt_products (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id INT UNSIGNED NOT NULL,
-  receipt_file_name VARCHAR(255) NOT NULL,
+CREATE TABLE IF NOT EXISTS products (
+  product_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   product_name VARCHAR(150) NOT NULL,
-  brand VARCHAR(150) NULL,
-  category VARCHAR(100) NULL,
-  barcode VARCHAR(50) NULL,
-  quantity VARCHAR(50) NULL,
-  unit VARCHAR(30) NULL,
-  manufacturing_date DATE NULL,
+  category VARCHAR(100) NOT NULL,
   image VARCHAR(500) NULL,
-  source VARCHAR(30) NOT NULL DEFAULT 'receipt',
-  expiry_date DATE NULL,
-  purchased_at DATE NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_receipt_product_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_receipt_products_user_expiry (user_id, expiry_date)
+  calories DECIMAL(8,2) NOT NULL,
+  protein DECIMAL(8,2) NOT NULL,
+  carbohydrates DECIMAL(8,2) NOT NULL,
+  total_fat DECIMAL(8,2) NOT NULL,
+  saturated_fat DECIMAL(8,2) NOT NULL,
+  fibre DECIMAL(8,2) NOT NULL,
+  sugar DECIMAL(8,2) NOT NULL,
+  sodium DECIMAL(8,2) NOT NULL,
+  description TEXT NULL,
+  UNIQUE KEY unique_product_name (product_name)
 );
 
 SET @schema_name = DATABASE();
