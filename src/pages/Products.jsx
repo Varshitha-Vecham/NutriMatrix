@@ -72,6 +72,14 @@ const cartItemKey = (id, packageId) => `${id}-${packageId}`
 const priceForPackage = (product, retailer, packageId) => retailer.price * packageFor(product, packageId).factor
 const totalPackageLabel = (product, packageId, quantity) => { const option = packageFor(product, packageId); const amount = option.amount * quantity; return `${amount} ${amount === 1 ? option.unit : option.pluralUnit || option.unit}` }
 
+function QuantityStepper({ product, packageId, quantity, onChange, className = 'quantity' }) {
+  return <div className={className} aria-label={`${product.name} quantity`}>
+    <button type="button" onClick={() => onChange(product.id, packageId, -1)} aria-label={`Remove one ${product.name}`}>−</button>
+    <span aria-live="polite">{quantity}</span>
+    <button type="button" onClick={() => onChange(product.id, packageId, 1)} aria-label={`Add one ${product.name}`}>+</button>
+  </div>
+}
+
 function PackageSelect({ product, value, onChange }) {
   const [open, setOpen] = useState(false)
   const selected = packageFor(product, value)
@@ -117,7 +125,7 @@ function ProductAnalysis({ product, alternatives, onBack, onAdd, onChangeQuantit
   <section className="analysis-hero"><img src={product.image} alt={product.name} /><div><p className="eyebrow">{product.category}</p><h1>{product.name}</h1><p>{product.description || `${product.name} from the NutriMatrix nutrition library.`}</p>
   <label className="analysis-package-label">Pack size<PackageSelect product={product} value={packageId} onChange={(nextPackageId) => onChangePackage(product, nextPackageId)} /></label>{quantity ? <div className="analysis-quantity" aria-label={`${product.name} quantity`}>
     <button onClick={() => onChangeQuantity(product.id, packageId, -1)} aria-label={`Remove one ${product.name}`}>−</button><span>{quantity} ({totalPackageLabel(product, packageId, quantity)})</span><button onClick={() => onChangeQuantity(product.id, packageId, 1)} aria-label={`Add one ${product.name}`}>+</button></div> : <button className="add-button" onClick={() => onAdd(product, packageId)}>Add to SmartCart</button>}</div></section>
-    <section className="analysis-block"><h2>Nutrition facts</h2><div className="analysis-facts">{Object.entries(facts).map(([key, value]) => <div key={key}><span>{key.replace(/([A-Z])/g, ' $1')}</span><strong>{value}{key === 'calories' ? ' kcal' : key === 'sodium' ? ' mg' : ' g'}</strong><i><b style={{ width: `${Math.min(Number(value) / (key === 'calories' ? 600 : key === 'sodium' ? 500 : 40) * 100, 100)}%` }} /></i></div>)}</div></section><section className="analysis-block"><h2>AI nutrition summary</h2><p className="ai-summary">{summary}</p></section><section className="analysis-block"><h2>Nutrition highlights</h2>
+    <section className="analysis-block"><h2>Nutrition facts</h2><p className="nutrition-basis">Values shown per 100 g (per 100 ml for drinks); each product has its own food-composition entry.</p><div className="analysis-facts">{Object.entries(facts).map(([key, value]) => <div key={key}><span>{key.replace(/([A-Z])/g, ' $1')}</span><strong>{value}{key === 'calories' ? ' kcal' : key === 'sodium' ? ' mg' : ' g'}</strong><i><b style={{ width: `${Math.min(Number(value) / (key === 'calories' ? 600 : key === 'sodium' ? 500 : 40) * 100, 100)}%` }} /></i></div>)}</div></section><section className="analysis-block"><h2>AI nutrition summary</h2><p className="ai-summary">{summary}</p></section><section className="analysis-block"><h2>Nutrition highlights</h2>
   <div className="highlight-list">{highlights.length ? highlights.map((item) => <span key={item}>{item}</span>) : <p>No qualifying highlights for the listed values.</p>}</div></section><section className="analysis-block"><h2>Healthier alternatives</h2><div className="alternative-list">{alternatives.map((item) => <article key={item.id}>
     <img src={item.image} alt={item.name} /><div><strong>{item.name}</strong><small>{item.calories} kcal - {item.protein}g protein - {item.fiber}g fibre</small>
     <button onClick={() => onSelect(item)}>View Analysis</button></div></article>)}</div></section></main></div>
@@ -159,18 +167,22 @@ function Products() {
           <div className="catalog-toolbar">
             <div className="category-tabs">{categories.map((item) => <button key={item} className={category === item ? 'selected' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
             <label className="search-box"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products" /></label></div>
-            <div className="product-grid">{visibleProducts.map((product) => <article className="product-card" key={product.id}>
+            <div className="product-grid">{visibleProducts.map((product) => {
+              const selectedPackageId = packageSelections[product.id] || product.packageOptions[0].id
+              const quantity = cart.find((item) => item.id === product.id && item.packageId === selectedPackageId)?.quantity || 0
+              return <article className="product-card" key={product.id}>
               <div className="product-art"><img src={product.image} alt={product.name} loading="lazy" /><small>{product.category}</small></div>
               <div className="product-body"><p className="product-brand">{product.brand}</p>
               <div className="product-name-row"><h2>{product.name}</h2>
-              <strong className="product-price">{formatINR(priceForPackage(product, product.retailers[0], packageSelections[product.id]))}</strong></div>
-              <div className="serving"><PackageSelect product={product} value={packageSelections[product.id] || product.packageOptions[0].id} onChange={(nextPackageId) => changePackage(product, nextPackageId)} /></div>
-              <div className="product-bottom"><button className="add-button" onClick={() => setSelectedProduct(product)}>View Analysis</button><button className="add-button" onClick={() => addToCart(product, packageSelections[product.id] || product.packageOptions[0].id)}>Add to Cart</button></div></div></article>)}</div></section>
+              <strong className="product-price">{formatINR(priceForPackage(product, product.retailers[0], selectedPackageId))}</strong></div>
+              <div className="serving"><PackageSelect product={product} value={selectedPackageId} onChange={(nextPackageId) => changePackage(product, nextPackageId)} /></div>
+              <div className="product-bottom"><button className="add-button" onClick={() => setSelectedProduct(product)}>View Analysis</button>{quantity > 0 ? <div className="card-quantity" aria-label={`${product.name} quantity`}><button type="button" onClick={() => changeQuantity(product.id, selectedPackageId, -1)} aria-label={`Remove one ${product.name}`}>−</button><span>{quantity}</span><button type="button" onClick={() => changeQuantity(product.id, selectedPackageId, 1)} aria-label={`Add one ${product.name}`}>+</button></div> : <button className="add-button" onClick={() => addToCart(product, selectedPackageId)}>Add to Cart</button>}</div></div></article>
+            })}</div></section>
                 <aside className="basket-panel"><div className="panel-heading"><div>
                   <p className="eyebrow">YOUR BASKET</p><h2>Nutrition & value</h2></div>{cart.length > 0 && <button className="clear-button" onClick={() => setCart([])}>Clear</button>}</div>{cartProducts.length === 0 ? <div className="empty-basket"><span>Empty</span><h3>Your analysis list is empty</h3>
                   <p>Add products to see a live nutrition summary and compare estimated prices across Indian retailers.</p></div> : <><div className="basket-items">{cartProducts.map((product) => <div className="basket-item" key={cartItemKey(product.id, product.packageId)}>
                     <img className="mini-art" src={product.image} alt="" /><div className="basket-item-info"><strong>{product.name}</strong><small>{product.quantity} qty · {totalPackageLabel(product, product.packageId, product.quantity)}</small><span className="basket-item-price">{product.quantity === 1 ? formatINR(priceForPackage(product, product.retailers[0], product.packageId)) : `${formatINR(priceForPackage(product, product.retailers[0], product.packageId))} each · ${formatINR(priceForPackage(product, product.retailers[0], product.packageId) * product.quantity)}`}</span></div>
-                    <div className="quantity"><button onClick={() => changeQuantity(product.id, product.packageId, -1)} aria-label={`Remove one ${product.name} ${product.packageId}`}>Remove</button>                    <span>{product.quantity}</span><button onClick={() => changeQuantity(product.id, product.packageId, 1)} aria-label={`Add one ${product.name} ${product.packageId}`}>+</button></div></div>)}</div>
+                    <QuantityStepper product={product} packageId={product.packageId} quantity={product.quantity} onChange={changeQuantity} /></div>)}</div>
                     <div className="nutrition-box"><div className="summary-title"><h3>Basket nutrition</h3><span>total serving size</span></div>
                     <div className="calorie-row"><strong>{Number(nutrition.calories).toFixed(2)}</strong><span>kcal</span>
                     <div className="calorie-bar"><i style={{ width: `${Math.min(nutrition.calories / 20, 100)}%` }} /></div></div>
