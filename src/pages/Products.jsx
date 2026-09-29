@@ -168,15 +168,19 @@ function Products() {
             <div className="category-tabs">{categories.map((item) => <button key={item} className={category === item ? 'selected' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
             <label className="search-box"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products" /></label></div>
             <div className="product-grid">{visibleProducts.map((product) => {
-              const selectedPackageId = packageSelections[product.id] || product.packageOptions[0].id
-              const quantity = cart.find((item) => item.id === product.id && item.packageId === selectedPackageId)?.quantity || 0
+              // A product can be in the cart in any pack size. Prefer that pack
+              // on first render so its card always shows quantity controls.
+              const cartItem = cart.find((item) => item.id === product.id)
+              const selectedPackageId = packageSelections[product.id] || cartItem?.packageId || product.packageOptions[0].id
+              const activeCartItem = cart.find((item) => item.id === product.id && item.packageId === selectedPackageId) || cartItem
+              const quantity = activeCartItem?.quantity || 0
               return <article className="product-card" key={product.id}>
               <div className="product-art"><img src={product.image} alt={product.name} loading="lazy" /><small>{product.category}</small></div>
               <div className="product-body"><p className="product-brand">{product.brand}</p>
               <div className="product-name-row"><h2>{product.name}</h2>
               <strong className="product-price">{formatINR(priceForPackage(product, product.retailers[0], selectedPackageId))}</strong></div>
               <div className="serving"><PackageSelect product={product} value={selectedPackageId} onChange={(nextPackageId) => changePackage(product, nextPackageId)} /></div>
-              <div className="product-bottom"><button className="add-button" onClick={() => setSelectedProduct(product)}>View Analysis</button>{quantity > 0 ? <QuantityStepper product={product} packageId={selectedPackageId} quantity={quantity} onChange={changeQuantity} className="card-quantity" /> : <button className="add-button" onClick={() => addToCart(product, selectedPackageId)}>Add to Cart</button>}</div></div></article>
+              <div className="product-bottom"><button className="add-button" onClick={() => setSelectedProduct(product)}>View Analysis</button>{quantity > 0 ? <QuantityStepper product={product} packageId={activeCartItem.packageId} quantity={quantity} onChange={changeQuantity} className="card-quantity" /> : <button className="add-button" onClick={() => addToCart(product, selectedPackageId)}>Add to Cart</button>}</div></div></article>
             })}</div></section>
                 <aside className="basket-panel"><div className="panel-heading"><div>
                   <p className="eyebrow">YOUR BASKET</p><h2>Nutrition & value</h2></div>{cart.length > 0 && <button className="clear-button" onClick={() => setCart([])}>Clear</button>}</div>{cartProducts.length === 0 ? <div className="empty-basket"><span>Empty</span><h3>Your analysis list is empty</h3>
