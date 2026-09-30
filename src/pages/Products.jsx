@@ -55,9 +55,17 @@ const products = groups.flatMap(([category, items], categoryIndex) => items.map(
 const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages']
 const retailerNames = ['BigBasket', 'Blinkit', 'Zepto', 'Swiggy Instamart', 'JioMart', 'Amazon Fresh', 'Flipkart Minutes']
 const retailerMultipliers = [1, 1.06, 0.97, 1.03, 1.08, 1.02, 1.04]
+// Spread retailer promotions by product name instead of catalog position. This
+// prevents a run of products (or a user's usual staples) from repeatedly
+// favouring one marketplace simply because of their numeric IDs.
+const promotedRetailerIndex = (product) => {
+  let hash = 0
+  for (const character of `${product.category}:${product.name}`) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  return hash % retailerNames.length
+}
 const catalog = products.map((product) => {
   const basePrice = product.category === 'Nuts & Seeds' ? 24 + (product.id % 5) * 7 : product.category === 'Fruits' || product.category === 'Vegetables' ? 5 + (product.id % 5) * 2 : product.category === 'Dairy' || product.category === 'Beverages' ? 12 + (product.id % 5) * 4 : 12 + (product.id % 6) * 4
-  const recommendedIndex = (product.id + 1) % retailerNames.length
+  const recommendedIndex = promotedRetailerIndex(product)
   return { ...product, retailers: retailerNames.map((name, index) => {
     const estimatedPrice = /\bOil\b/.test(product.name)
       ? basePrice * (index === recommendedIndex ? 0.92 : retailerMultipliers[index])
