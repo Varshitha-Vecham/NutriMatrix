@@ -41,21 +41,40 @@ function Home() {
       title: 'Digital Pantry',
       description: 'Track and manage all your grocery items in one smart digital pantry.',
       color: '#f59e0b',
-      accent: '#d97706'
+      accent: '#d97706',
+      path: '/digital-pantry'
+    },
+    {
+      icon: '🍽️',
+      title: 'Meal Planner',
+      description: 'Plan balanced meals for each day and keep your routine organised.',
+      color: '#3b82f6',
+      accent: '#2563eb',
+      path: '/meal-planner'
+    },
+    {
+      icon: '🧑‍🍳',
+      title: 'Recipe Generator',
+      description: 'Create and discover meal ideas that match your nutrition goals and preferences.',
+      color: '#14b8a6',
+      accent: '#0f766e',
+      path: '/meal-planner'
     },
     {
       icon: '⏰',
       title: 'Expiry Reminders',
       description: 'Never waste food again. Get timely reminders before items expire.',
       color: '#ef4444',
-      accent: '#dc2626'
+      accent: '#dc2626',
+      path: '/notifications'
     },
     {
       icon: '🤖',
       title: 'AI Recommendations',
       description: 'Personalized food and nutrition tips powered by artificial intelligence.',
       color: '#8b5cf6',
-      accent: '#7c3aed'
+      accent: '#7c3aed',
+      path: '/products'
     }
   ]
 
@@ -112,7 +131,9 @@ function Home() {
         </div>
 
         <div className="features-grid">
-          {features.map((f, i) => (
+          {features
+            .filter(({ title }) => title !== 'Nutrition Analysis' && title !== 'Healthy Alternatives')
+            .map((f, i) => (
             <FeatureCard
               key={i}
               icon={f.icon}
@@ -120,8 +141,9 @@ function Home() {
               description={f.description}
               color={f.color}
               accent={f.accent}
+              onExplore={() => navigate(f.path)}
             />
-          ))}
+            ))}
         </div>
       </section>
 
@@ -129,7 +151,10 @@ function Home() {
         <div className="cta-container">
           <h2>Ready to Start Your <span className="accent-light">Healthy Journey</span>?</h2>
           <p>Join thousands of users making smarter nutrition choices every day with NutriMatrix.</p>
-          <button className="btn-primary btn-large">
+          <button
+            className="btn-primary btn-large"
+            onClick={() => navigate('/scanner')}
+          >
             Get Started Today 🚀
           </button>
         </div>

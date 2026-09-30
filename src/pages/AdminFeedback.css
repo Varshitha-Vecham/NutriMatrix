@@ -1,0 +1,10 @@
+.admin-feedback-content { max-width: 1440px; }
+.admin-feedback-filters { display: flex; align-items: end; gap: 14px; margin: 0 0 18px; padding: 16px; border: 1px solid #dbe8de; background: #fff; }
+.admin-feedback-filters label { display: grid; gap: 6px; color: #52665a; font-size: .78rem; font-weight: 700; }
+.admin-feedback-filters select { min-width: 190px; padding: 10px 12px; border: 1px solid #d5e2d7; border-radius: 8px; background: #fbfdfb; color: #294735; font: inherit; }
+.admin-feedback-filters > span { margin-left: auto; padding: 10px 0; color: #718078; font-size: .82rem; }
+.admin-feedback-table { min-width: 1000px; }
+.admin-feedback-table td { max-width: 330px; }.admin-feedback-table td small { display: block; margin-top: 5px; color: #859189; }
+.admin-feedback-message { min-width: 290px; white-space: pre-wrap; overflow-wrap: anywhere; color: #52665a; line-height: 1.5; }
+.admin-feedback-stars { white-space: nowrap; color: #e8a929; font-size: 1rem; letter-spacing: 1px; }.admin-feedback-stars span { color: #dce4dd; }
+@media (max-width: 650px) { .admin-feedback-filters { align-items: stretch; flex-direction: column; }.admin-feedback-filters select { width: 100%; }.admin-feedback-filters > span { margin-left: 0; padding-bottom: 0; } }

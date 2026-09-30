@@ -5,6 +5,7 @@ import { apiRequest } from '../api.js'
 import './MealPlanner.css'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const DAY_NAMES = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }
 const MEAL_SLOTS = ['Breakfast', 'Morning Snack', 'Lunch', 'Evening Snack', 'Dinner']
 const CATEGORY_OPTIONS = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'South Indian', 'North Indian', 'Healthy', 'High Protein', 'Quick Meals', 'Vegetarian', 'Vegan']
 
@@ -330,17 +331,6 @@ const additionalRecipes = {
       dietary: ['Vegetarian'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Lunch', 'North Indian', 'Vegetarian'],
       image: '/images/recipes/paneer-butter-masala.jpg', source: 'Local recipe image'
     },
-    {
-      name: 'South Indian Lemon Rice',
-      description: 'Bright, nutty lemon rice with peanuts, curry leaves, and turmeric.',
-      ingredients: ['cooked rice', 'lemon juice', 'peanuts', 'curry leaves', 'turmeric', 'green chilli'],
-      ingredientQuantities: ['2 cups', '2 tbsp', '2 tbsp', '10 leaves', '1/4 tsp', '1 sliced'],
-      calories: 430, protein: 10, carbs: 68, fat: 14, vitamins: 'Vitamin C, Iron, Fiber', prepTime: 10, cookingTime: 8,
-      instructions: 'Temper spices and peanuts, fold in cooked rice, and finish with fresh lemon juice.',
-      steps: ['Warm oil and toast peanuts until golden.', 'Add curry leaves, chilli, and turmeric.', 'Fold in cooked rice and toss gently.', 'Turn off the heat, add lemon juice, and serve.'],
-      dietary: ['Vegetarian', 'Vegan'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Lunch', 'South Indian', 'Quick Meals'],
-      image: '/images/recipes/south-indian-lemon-rice.jpg', source: 'Local recipe image'
-    }
   ],
   Dinner: [
     {
@@ -402,8 +392,6 @@ const defaultProfile = {
   pantry: ['oats', 'berries', 'Greek yogurt', 'spinach', 'eggs', 'quinoa', 'tomato', 'broccoli', 'brown rice', 'lentils', 'banana', 'cinnamon', 'almond milk']
 }
 
-const STORAGE_KEY = 'nutrimatrix-saved-meals'
-
 const recipeImages = {
   'Berry Oat Protein Bowl': '/images/recipes/berry-oat-protein-bowl.jpg',
   'Avocado Spinach Omelet': '/images/recipes/avocado-spinach-omelet.jpg',
@@ -431,14 +419,26 @@ const recipeImages = {
   'Curd Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/da14390afafac0ea185fa3670ecc7cf0',
   'Idli Sambar Plate': '/images/recipes/idli-sambar-plate.jpg',
   'Rajma Masala Rice': '/images/recipes/rajma-masala-rice.jpg',
+  'Moong Dal Khichdi': '/images/recipes/Yellow-Moong-Dal-Khichdi-Recipe.jpg',
+  'Vegetable Khichdi': '/images/recipes/vegetable-kichidi.jpg',
+  'Paneer Paratha with Raita': '/images/recipes/paneer-paratha.jpg',
+  'Roti with Chana Masala': '/images/recipes/Roti-with-Chana-Masala.jpg',
+  'Roti with Mixed Vegetable Curry': '/images/recipes/Roti-with-Mixed-Vegetable-Curry.jpg',
+  'Paneer Tikka Bites': '/images/recipes/paneer-tikka-bites.jpg',
+  'Sprouts Sundal': '/images/recipes/sprouts-sundal.jpg',
+  'Masala Corn Chaat': '/images/recipes/masala-corn-chaat.jpg',
+  'Sweet Potato Chaat': '/images/recipes/sweet-potato-chaat.jpg',
   'Masala Dosa': 'https://images.unsplash.com/photo-1743615467363-250466982515?auto=format&fit=crop&w=900&q=85',
+  'Tamarind Rice': '/images/recipes/pulihora.jpg',
   'Pulihora (Tamarind Rice)': 'https://i0.wp.com/www.chitrasfoodbook.com/wp-content/uploads/2016/08/chintapandu-pulihora-recipe.jpg?ssl=1&w=1200',
+  'Chole Bhature': '/images/recipes/chole-bature.jpg',
   'Chapati and Dal': '/images/recipes/chapati-dal.jpg',
   'Vegetable Upma': 'https://images.herzindagi.info/image/2021/May/upma-recipe-main.jpg',
   'Egg Bhurji with Chapati': 'https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto/FOOD_CATALOG/IMAGES/CMS/2025/8/12/4fe33f92-1589-4ec6-bbb8-6c83f52eaba2_c0d130a1-0950-4888-a857-ab9a5091dca3.jpg',
   'Vegetable Pulav': '/images/recipes/vegetablepulav.jpg',
-  'Chicken Biryani': 'https://images.unsplash.com/photo-1559528896-c5310744cce8?auto=format&fit=crop&w=900&q=85',
-  'Fish Curry with Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/FOOD_CATALOG/IMAGES/CMS/2024/8/24/f2c5f51e-1e40-4e23-8c2c-00d70338d546_4eaedfcc-de2d-40e0-b4f4-721f7330497e.jpg',
+  'Aloo Paratha with Curd': '/images/recipes/aloo-paratha-curd.jpg',
+  'Chicken Biryani': '/images/recipes/chicken-biryani.jpg',
+  'Fish Curry with Rice': '/images/recipes/fish-curry.jpg',
   'Chicken Sausage Fennel Scramble': 'https://sweetjuly.com/cdn/shop/files/Chicken_Sausage_and_Fennel_Scramble_1.jpg?height=2010&v=1741658839',
   'Smoked Salmon Breakfast Toast': 'https://www.savoryonline.com/app/uploads/recipes/218804/smoked-salmon-breakfast-toasts.jpg',
   'Chicken Avocado Breakfast Bowl': 'https://hurrydishes.com/wp-content/uploads/2024/12/Chicken-and-Avocado-Breakfast-Bowl.webp',
@@ -451,7 +451,9 @@ const recipeImages = {
   'Turkey Quinoa Salad': 'https://food.fnr.sndimg.com/content/dam/images/food/fullset/2013/6/11/2/FNM_070113-Turkey-and-Quinoa-Salad-Recipe_s4x3.jpg.rend.hgtvcom.1280.960.suffix/1389377541999.webp',
   'Grilled Chicken Whole Wheat Wrap': 'https://res.cloudinary.com/solin-fitness/image/upload/c_scale%2Cw_800%2Cq_auto%2Cf_auto/single-meal-images/axdcea1gjv9ciyaagbwb',
   'Chicken Tikka Masala with Brown Rice': 'https://teamnutrition.ca/sites/default/files/recipes/Poulet%20tikka%20%28V%29.jpg',
-  'Garlic Prawn Rice Bowl': 'https://fordishes.com/assets/images/1760971261698-TpQHOjDy.webp'
+  'Garlic Prawn Rice Bowl': 'https://fordishes.com/assets/images/1760971261698-TpQHOjDy.webp',
+  'Chicken Seekh Kebab': 'https://images.unsplash.com/photo-1633436375795-12b3b339712f?auto=format&fit=crop&w=900&q=85',
+  'Mutton Curry with Rice': 'https://images.unsplash.com/photo-1606843046080-45bf7a23c39f?auto=format&fit=crop&w=900&q=85'
 }
 
 const DEFAULT_RECIPE_IMAGE = '/images/recipes/default-food.svg'
@@ -470,17 +472,37 @@ const indianRecipes = {
     ['Vegetable Upma', ['rava', 'mixed vegetables', 'peanuts', 'curry leaves'], ['1 cup', '1/2 cup', '1 tbsp', '6 leaves'], 330, 9, 54, 9, 'Vitamin A, C, Magnesium', ['Vegetarian', 'Vegan'], 10, 15],
     ['Egg Bhurji with Chapati', ['eggs', 'onion', 'tomato', 'whole wheat chapati'], ['2 large', '1/4 cup', '1/2 cup', '2 chapatis'], 430, 23, 46, 17, 'Vitamin B12, Vitamin D, Iron', ['Eggetarian'], 10, 12]
   ],
+  'Morning Snack': [],
+  'Evening Snack': [],
   Lunch: [
-    ['Pulihora (Tamarind Rice)', ['cooked rice', 'tamarind', 'peanuts', 'curry leaves'], ['1 1/2 cups', '2 tbsp', '2 tbsp', '8 leaves'], 440, 11, 70, 13, 'Vitamin E, Magnesium, Iron', ['Vegetarian', 'Vegan'], 12, 15],
+    ['Tamarind Rice', ['cooked rice', 'tamarind', 'peanuts', 'curry leaves'], ['1 1/2 cups', '2 tbsp', '2 tbsp', '8 leaves'], 440, 11, 70, 13, 'Vitamin E, Magnesium, Iron', ['Vegetarian', 'Vegan'], 12, 15],
     ['Vegetable Pulav', ['basmati rice', 'mixed vegetables', 'peas', 'curd'], ['1 cup uncooked', '1 cup', '1/4 cup', '1/2 cup'], 490, 14, 78, 13, 'Vitamin A, C, B12', ['Vegetarian'], 15, 25],
-    ['Chicken Biryani', ['basmati rice', 'chicken', 'yogurt', 'onion', 'spices'], ['1 cup cooked', '150 g', '1/4 cup', '1 medium', '1 tsp'], 590, 38, 66, 18, 'Vitamin B6, B12, Zinc, Iron', ['Non-vegetarian'], 20, 35]
+    ['Chicken Biryani', ['basmati rice', 'chicken', 'yogurt', 'onion', 'spices'], ['1 cup cooked', '150 g', '1/4 cup', '1 medium', '1 tsp'], 590, 38, 66, 18, 'Vitamin B6, B12, Zinc, Iron', ['Non-vegetarian'], 20, 35],
+    ['Chole Bhature', ['chickpeas', 'whole wheat flour', 'tomato', 'onion', 'yogurt'], ['1 cup cooked', '2 bhature', '2 medium', '1 medium', '1/4 cup'], 650, 21, 92, 21, 'Iron, Folate, Fiber', ['Vegetarian'], 20, 35],
+    ['Aloo Paratha with Curd', ['whole wheat flour', 'potato', 'plain curd', 'cumin'], ['2 parathas', '1 medium', '1/2 cup', '1/2 tsp'], 540, 16, 78, 18, 'Potassium, Calcium, Iron', ['Vegetarian'], 20, 25],
+    ['Vegetable Khichdi', ['rice', 'moong dal', 'carrot', 'peas', 'ghee'], ['3/4 cup', '1/2 cup', '1/2 cup', '1/4 cup', '1 tsp'], 430, 17, 68, 10, 'Folate, Vitamin A, Iron', ['Vegetarian'], 10, 25],
+    ['Roti with Mixed Vegetable Curry', ['whole wheat atta', 'mixed vegetables', 'tomato', 'onion', 'curd'], ['2 rotis', '1 1/2 cups', '1 medium', '1/2 medium', '1/4 cup'], 480, 18, 72, 12, 'Vitamin A, C, Fiber', ['Vegetarian'], 15, 25]
   ],
   Dinner: [
     ['Curd Rice', ['cooked rice', 'plain curd', 'milk', 'pomegranate'], ['1 cup', '3/4 cup', '1/4 cup', '2 tbsp'], 360, 12, 58, 8, 'Calcium, Vitamin B12, Potassium', ['Vegetarian'], 10, 10],
     ['Chapati and Dal', ['whole wheat atta', 'toor dal', 'tomato', 'spinach'], ['2 chapatis', '3/4 cup cooked', '1 medium', '1 cup'], 460, 22, 72, 10, 'Iron, Folate, Magnesium', ['Vegetarian', 'Vegan'], 15, 25],
-    ['Fish Curry with Rice', ['fish fillet', 'coconut milk', 'cooked rice', 'tomato'], ['150 g', '1/4 cup', '1 cup', '1 medium'], 520, 34, 58, 16, 'Vitamin B12, Vitamin D, Selenium', ['Non-vegetarian'], 15, 25]
+    ['Fish Curry with Rice', ['fish fillet', 'coconut milk', 'cooked rice', 'tomato'], ['150 g', '1/4 cup', '1 cup', '1 medium'], 520, 34, 58, 16, 'Vitamin B12, Vitamin D, Selenium', ['Non-vegetarian'], 15, 25],
+    ['Moong Dal Khichdi', ['rice', 'moong dal', 'spinach', 'carrot', 'ghee'], ['3/4 cup', '1/2 cup', '1 cup', '1/2 cup', '1 tsp'], 420, 18, 66, 9, 'Iron, Folate, Vitamin A', ['Vegetarian'], 10, 25],
+    ['Paneer Paratha with Raita', ['whole wheat flour', 'paneer', 'plain curd', 'cucumber'], ['2 parathas', '100 g', '1/2 cup', '1/2 medium'], 570, 26, 68, 22, 'Calcium, Vitamin B12', ['Vegetarian'], 20, 25],
+    ['Roti with Chana Masala', ['whole wheat atta', 'chickpeas', 'tomato', 'onion', 'ginger'], ['2 rotis', '1 cup', '2 medium', '1 medium', '1 tsp'], 520, 22, 82, 12, 'Iron, Folate, Fiber', ['Vegetarian', 'Vegan'], 15, 25]
   ]
 }
+
+// Extra snack choices let the planner assign a different morning and evening
+// snack on every day of the week, even for a vegetarian profile.
+indianRecipes['Morning Snack'].push(
+  ['Sprouts Sundal', ['moong sprouts', 'coconut', 'mustard seeds', 'curry leaves', 'lemon'], ['1 cup', '2 tbsp', '1/2 tsp', '6 leaves', '1/2 medium'], 190, 13, 25, 5, 'Vitamin C, Folate, Iron', ['Vegetarian', 'Vegan'], 8, 8],
+  ['Masala Corn Chaat', ['sweet corn', 'tomato', 'onion', 'lemon', 'chaat masala'], ['1 cup', '1 small', '1/4 small', '1 tsp', '1/2 tsp'], 180, 6, 36, 3, 'Vitamin C, Folate, Fiber', ['Vegetarian', 'Vegan'], 8, 5],
+)
+indianRecipes['Evening Snack'].push(
+  ['Paneer Tikka Bites', ['paneer', 'yogurt', 'bell pepper', 'tandoori masala'], ['80 g', '2 tbsp', '1/2 medium', '1/2 tsp'], 230, 16, 12, 14, 'Calcium, Vitamin C, B12', ['Vegetarian'], 8, 12],
+  ['Sweet Potato Chaat', ['sweet potato', 'lemon', 'coriander', 'chaat masala'], ['1 medium', '1 tsp', '1 tbsp', '1/2 tsp'], 190, 4, 42, 2, 'Vitamin A, C, Fiber', ['Vegetarian', 'Vegan'], 8, 15]
+)
 
 const extraNonVegetarianRecipes = {
   Breakfast: [
@@ -504,7 +526,9 @@ const extraNonVegetarianRecipes = {
   ],
   Dinner: [
     ['Chicken Tikka Masala with Brown Rice', ['chicken breast', 'Greek yogurt', 'brown rice', 'tomato', 'broccoli'], ['150 g', '1/4 cup', '1 cup cooked', '1 medium', '1 cup'], 560, 46, 52, 15, 'Vitamin B6, B12, Selenium', ['Non-vegetarian'], 15, 25],
-    ['Garlic Prawn Rice Bowl', ['prawns', 'brown rice', 'broccoli', 'garlic'], ['150 g', '1 cup cooked', '1 cup', '2 cloves'], 520, 38, 58, 11, 'Iodine, Selenium, Vitamin C', ['Non-vegetarian'], 12, 15]
+    ['Garlic Prawn Rice Bowl', ['prawns', 'brown rice', 'broccoli', 'garlic'], ['150 g', '1 cup cooked', '1 cup', '2 cloves'], 520, 38, 58, 11, 'Iodine, Selenium, Vitamin C', ['Non-vegetarian'], 12, 15],
+    ['Chicken Seekh Kebab', ['chicken mince', 'onion', 'ginger garlic paste', 'coriander', 'garam masala'], ['150 g', '2 tbsp finely chopped', '1 tsp', '1 tbsp', '1/2 tsp'], 360, 36, 12, 18, 'Vitamin B6, B12, Zinc', ['Non-vegetarian'], 15, 20],
+    ['Mutton Curry with Rice', ['mutton', 'basmati rice', 'onion', 'tomato', 'ginger garlic paste'], ['150 g', '1 cup cooked', '1 medium', '1 medium', '1 tbsp'], 640, 34, 62, 27, 'Vitamin B12, Iron, Zinc', ['Non-vegetarian'], 20, 55]
   ]
 }
 
@@ -556,11 +580,27 @@ const recipeSteps = {
 }
 
 function enrichMeal(meal, slot) {
+  const initialSteps = meal.steps || recipeSteps[meal.name] || [meal.instructions]
+  const preparationSteps = [...initialSteps]
+  const extraSteps = [
+    `Check the ingredient amounts for ${meal.servingSize || 'one serving'} and gather everything listed.`,
+    'Wash and dry the fresh produce; set out the spices and cooking utensils.',
+    'Measure the ingredients and chop or portion them as needed.',
+    'Prepare the main ingredients by rinsing, draining, peeling, or cutting them as appropriate.',
+    'Warm the pan or pot and add the cooking fat or liquid called for in the recipe.',
+    'Cook the ingredients in stages so each component reaches the right texture.',
+    'Combine the components, add the seasonings, and taste to adjust salt or spice.',
+    'Check that hot ingredients are fully cooked, then plate the meal and serve.'
+  ]
+  for (const step of extraSteps) {
+    if (preparationSteps.length >= 10) break
+    preparationSteps.push(step)
+  }
   return {
     ...meal,
     slot,
     image: meal.image || DEFAULT_RECIPE_IMAGE,
-    steps: meal.steps || recipeSteps[meal.name] || [meal.instructions],
+    steps: preparationSteps.slice(0, 10),
     description: meal.description || 'Fresh and nutritionally balanced meal suggestion.',
     categories: meal.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(meal.dietary || [])],
     ingredientQuantities: meal.ingredientQuantities || meal.ingredients.map((ingredient) => ({
@@ -634,7 +674,7 @@ function getFoodOptions(slot, profile, category = 'All') {
     const goal = normalizeGoal(profile.goal)
     const ingredients = recipe.ingredients.join(' ').toLowerCase()
     const snack = slot.includes('Snack')
-    const matchesGoal = goal === 'High Protein' ? recipe.protein >= (snack ? 12 : 25)
+    const matchesGoal = profile.ignoreGoal ? true : goal === 'High Protein' ? recipe.protein >= (snack ? 12 : 25)
       : goal === 'Low Sugar' ? !/honey|sugar|syrup|sweetened|dates|cranberr/i.test(ingredients) && recipe.carbs <= (snack ? 22 : 45)
         : goal === 'High Fiber' ? /beans|lentils|chickpea|oats|chia|vegetable|spinach/i.test(ingredients)
           : goal === 'Weight Loss' ? recipe.calories <= (snack ? 250 : 520) && recipe.protein >= (snack ? 8 : 15)
@@ -653,7 +693,7 @@ function getFoodOptions(slot, profile, category = 'All') {
 const WEEKLY_VARIETY_BY_SLOT = {
   Breakfast: ['Berry Oat Protein Bowl', 'Avocado Spinach Omelet', 'Chia Banana Smoothie', 'Peanut Butter Apple Toast', 'Masala Paneer Scramble', 'Overnight Mango Chia Oats', 'Masala Dosa', 'Vegetable Upma', 'Egg Bhurji with Chapati'],
   'Morning Snack': ['Strawberry Cinnamon Yogurt', 'Hummus Veggie Cups', 'Edamame Crunch Cup', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Cucumber Yogurt Dip', 'Trail Mix Crunch'],
-  Lunch: ['Chickpea Rainbow Salad', 'Tofu Rice Veggie Bowl', 'Black Bean Fajita Bowl', 'Paneer Butter Masala', 'South Indian Lemon Rice', 'Rajma Masala Rice', 'Pulihora (Tamarind Rice)', 'Vegetable Pulav', 'Chicken Biryani'],
+  Lunch: ['Chickpea Rainbow Salad', 'Tofu Rice Veggie Bowl', 'Black Bean Fajita Bowl', 'Paneer Butter Masala', 'Rajma Masala Rice', 'Tamarind Rice', 'Vegetable Pulav', 'Chicken Biryani'],
   'Evening Snack': ['Cinnamon Banana Toast', 'Trail Mix Crunch', 'Cucumber Yogurt Dip', 'Roasted Chickpea Snack', 'Roasted Makhana Chaat', 'Peanut Sundal', 'Edamame Crunch Cup', 'Strawberry Cinnamon Yogurt'],
   Dinner: ['Lentil Veggie Curry', 'Palak Tofu Curry', 'Idli Sambar Plate', 'Rajma Masala Rice', 'Paneer Butter Masala', 'Curd Rice', 'Chapati and Dal', 'Fish Curry with Rice', 'Chicken Lentil Stew']
 }
@@ -663,7 +703,9 @@ function getWeeklyFoodOptions(slot, profile) {
     recipes[recipe.name] = recipe
     return recipes
   }, {})
-  const matchingRecipes = getFoodOptions(slot, profile)
+  // Keep enough eligible choices to fill the week; the goal score below ranks
+  // dishes toward the selected goal without making the same few meals repeat.
+  const matchingRecipes = getFoodOptions(slot, { ...profile, ignoreGoal: true })
   const goal = normalizeGoal(profile.goal)
   const scoreForGoal = (recipe) => {
     const calories = recipe.calories || 0
@@ -718,12 +760,17 @@ function rotateMeal(slot, profile, currentMeal) {
 }
 
 function buildMealPlan(profile) {
+  const usedSnackNames = new Set()
   return DAYS.map((day, dayIndex) => ({
     day,
     meals: MEAL_SLOTS.reduce((result, slot) => {
       const options = getWeeklyFoodOptions(slot, profile)
-      const preferredMeal = options.length ? options[dayIndex % options.length] : null
+      const isSnack = slot === 'Morning Snack' || slot === 'Evening Snack'
+      const preferredMeal = isSnack
+        ? options.find((meal) => !usedSnackNames.has(meal.name)) || options[dayIndex % Math.max(options.length, 1)]
+        : options.length ? options[dayIndex % options.length] : null
       if (!preferredMeal) return result
+      if (isSnack) usedSnackNames.add(preferredMeal.name)
       result[slot] = enrichMeal(preferredMeal, slot)
       return result
     }, {})
@@ -749,6 +796,7 @@ function MealPlanner() {
   const [recipeModalOpen, setRecipeModalOpen] = useState(false)
   const [swapModalOpen, setSwapModalOpen] = useState(false)
   const [savedMeals, setSavedMeals] = useState([])
+  const [savedMealsLoaded, setSavedMealsLoaded] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [wizardOpen, setWizardOpen] = useState(false)
 
@@ -806,20 +854,19 @@ function MealPlanner() {
   }
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return
-
-    try {
-      const parsed = JSON.parse(saved)
-      setSavedMeals(Array.isArray(parsed) ? parsed : [])
-    } catch (error) {
-      setSavedMeals([])
-    }
+    let active = true
+    apiRequest('/api/saved-meals')
+      .then((result) => { if (active) setSavedMeals(Array.isArray(result?.meals) ? result.meals : []) })
+      .catch(() => { if (active) setSavedMeals([]) })
+      .finally(() => { if (active) setSavedMealsLoaded(true) })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(savedMeals))
-  }, [savedMeals])
+    if (!savedMealsLoaded) return
+    apiRequest('/api/saved-meals', { method: 'PUT', body: JSON.stringify({ meals: savedMeals }) })
+      .catch((error) => setStatusMessage(error.message))
+  }, [savedMeals, savedMealsLoaded])
 
   useEffect(() => {
     if (!statusMessage) return undefined
@@ -927,11 +974,12 @@ function MealPlanner() {
     setSwapModalOpen(true)
   }
 
-  const handleSaveMeal = (day, slot) => {
-    const key = getMealKey(day, slot, selectedRecipe?.name || selectedMeal?.name || 'meal')
-    const isSaved = savedMeals.includes(key)
-    setSavedMeals(isSaved ? savedMeals.filter((savedKey) => savedKey !== key) : [...savedMeals, key])
-    setStatusMessage(isSaved ? 'Recipe removed from saved meals.' : 'Recipe saved successfully.')
+  const handleSaveDay = (dayPlan) => {
+    const keys = MEAL_SLOTS.map((slot) => getMealKey(dayPlan.day, slot, dayPlan.meals[slot].name))
+    const allSaved = keys.every((key) => savedMeals.includes(key))
+    setSavedMeals((current) => allSaved
+      ? current.filter((key) => !keys.includes(key))
+      : [...new Set([...current, ...keys])])
   }
 
   const handleChooseAlternative = (option) => {
@@ -969,10 +1017,6 @@ function MealPlanner() {
   }
 
   const foodOptions = getFoodOptions(selectedMealSlot, profile, selectedCategory)
-  const isCurrentMealSaved = selectedRecipe
-    ? savedMeals.includes(getMealKey(selectedDay, selectedMealSlot, selectedRecipe.name))
-    : false
-
   return (
     <div className="meal-planner-page">
       <Navbar />
@@ -1082,16 +1126,25 @@ function MealPlanner() {
             <div className="week-grid">
               {plan.map((dayPlan, dayIndex) => (
                 <div className="day-card" key={dayPlan.day}>
-                  <button
-                    type="button"
-                    className={selectedDay === dayPlan.day ? 'day-card-header active' : 'day-card-header'}
-                    onClick={() => handleDayChange(dayPlan.day)}
-                    aria-label={`Select ${dayPlan.day}`}
-                  >
-                    <span className="day-number">{String(dayIndex + 1).padStart(2, '0')}</span>
-                    <span className="day-name">{dayPlan.day}</span>
-                    <span className="day-label">Day</span>
-                  </button>
+                  <div className="day-card-header">
+                    <button
+                      type="button"
+                      className={selectedDay === dayPlan.day ? 'day-select active' : 'day-select'}
+                      onClick={() => handleDayChange(dayPlan.day)}
+                      aria-label={`Select ${DAY_NAMES[dayPlan.day]}`}
+                    >
+                      <span className="day-number">{String(dayIndex + 1).padStart(2, '0')}</span>
+                      <span className="day-name">{DAY_NAMES[dayPlan.day]}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="day-save-button"
+                      disabled={!savedMealsLoaded}
+                      onClick={() => handleSaveDay(dayPlan)}
+                    >
+                      {MEAL_SLOTS.every((slot) => savedMeals.includes(getMealKey(dayPlan.day, slot, dayPlan.meals[slot].name))) ? 'Unsave' : 'Save'}
+                    </button>
+                  </div>
 
                   <div className="meal-stack">
                     {MEAL_SLOTS.map((slot) => {
@@ -1152,9 +1205,6 @@ function MealPlanner() {
                 </div>
 
                 <div className="recipe-tools">
-                  <button type="button" onClick={() => handleSaveMeal(selectedDay, selectedMealSlot)}>
-                    {isCurrentMealSaved ? 'Unsave Meal' : 'Save Meal'}
-                  </button>
                   <button type="button" className="btn-secondary" onClick={handleCloseRecipe}>Close</button>
                 </div>
               </div>

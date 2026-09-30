@@ -123,24 +123,6 @@ function productFromCatalog(product) {
   }
 }
 
-function unknownBarcodeProduct(barcode) {
-  return {
-    id: barcode,
-    name: 'Product identified by barcode',
-    brand: 'Details unavailable from product database',
-    category: 'Unknown category',
-    barcode,
-    image: '',
-    expiryDate: null,
-    manufacturingDate: null,
-    batchNumber: null,
-    serving: 'Not available',
-    nutrition: { calories: null, protein: null, carbs: null, fat: null, fiber: null },
-    description: 'The barcode was detected. NutriMatrix packaging OCR can provide batch and date details.',
-    source: 'nutrimatrix-barcode'
-  }
-}
-
 function buildReceiptProducts(items = []) {
   const receiptItems = (items.length ? items : ['Organic Rolled Oats', 'Bananas', 'Greek Yogurt', 'Brown Rice']).map((item) => String(item).trim()).filter(Boolean)
 
@@ -171,13 +153,57 @@ async function ensureReceiptProductsTable() {
     receipt_file_name VARCHAR(255) NOT NULL,
     product_name VARCHAR(150) NOT NULL,
     brand VARCHAR(150) NULL,
+    category VARCHAR(100) NULL,
     barcode VARCHAR(50) NULL,
+    quantity VARCHAR(50) NULL,
+    unit VARCHAR(30) NULL,
+    manufacturing_date DATE NULL,
+    image VARCHAR(500) NULL,
+    source VARCHAR(30) NOT NULL DEFAULT 'receipt',
     expiry_date DATE NULL,
     purchased_at DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_receipt_product_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_receipt_products_user_expiry (user_id, expiry_date)
+  )`)
+  const [columns] = await pool.query('SHOW COLUMNS FROM receipt_products')
+  const existingColumns = new Set(columns.map((column) => column.Field))
+  const requiredColumns = {
+    category: 'VARCHAR(100) NULL',
+    quantity: 'VARCHAR(50) NULL',
+    unit: 'VARCHAR(30) NULL',
+    manufacturing_date: 'DATE NULL',
+    image: 'VARCHAR(500) NULL',
+    source: "VARCHAR(30) NOT NULL DEFAULT 'receipt'"
+  }
+  for (const [columnName, definition] of Object.entries(requiredColumns)) {
+    if (!existingColumns.has(columnName)) await pool.query(`ALTER TABLE receipt_products ADD COLUMN ${columnName} ${definition}`)
+  }
+}
+
+async function ensureFeedbackTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS feedback (
+    feedback_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    rating TINYINT UNSIGNED NOT NULL,
+    category VARCHAR(60) NOT NULL,
+    experience VARCHAR(30) NULL,
+    message TEXT NOT NULL,
+    email VARCHAR(255) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_feedback_category_rating (category, rating),
+    INDEX idx_feedback_created_at (created_at)
+  )`)
+}
+
+async function ensureSavedMealsTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS saved_meals (
+    user_id INT UNSIGNED PRIMARY KEY,
+    meals JSON NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_saved_meals_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`)
 }
 
@@ -316,6 +342,35 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load users.' }) }
 })
 
+const feedbackCategories = ['Product Analysis', 'Barcode Scanner', 'Digital Pantry', 'Meal Planner', 'Recipe Recommendations', 'Nutrition Information', 'Website Design', 'Other']
+const feedbackExperiences = ['Very Good', 'Good', 'Average', 'Poor']
+
+app.post('/api/feedback', requireAuth, async (req, res) => {
+  const rating = Number(req.body?.rating)
+  const category = String(req.body?.category || '').trim()
+  const experience = String(req.body?.experience || '').trim()
+  const message = String(req.body?.message || '').trim()
+  const email = String(req.body?.email || '').trim()
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ message: 'Please choose a rating from 1 to 5 stars.' })
+  if (!feedbackCategories.includes(category)) return res.status(400).json({ message: 'Please select a feedback category.' })
+  if (experience && !feedbackExperiences.includes(experience)) return res.status(400).json({ message: 'Please select a valid experience rating.' })
+  if (!message || message.length > 5000) return res.status(400).json({ message: 'Please write a message under 5,000 characters.' })
+  if (email.length > 255 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ message: 'Please enter a valid email address or leave it blank.' })
+  try {
+    await pool.execute('INSERT INTO feedback (user_id, rating, category, experience, message, email) VALUES (?, ?, ?, ?, ?, ?)', [req.user.id, rating, category, experience || null, message, email || null])
+    res.status(201).json({ message: 'Feedback submitted successfully.' })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save your feedback right now.' }) }
+})
+
+app.get('/api/admin/feedback', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [feedback] = await pool.execute(`SELECT f.feedback_id AS feedbackId, f.user_id AS userId, u.name AS userName,
+      f.rating, f.category, f.experience, f.message, f.email, f.created_at AS createdAt
+      FROM feedback f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.created_at DESC`)
+    res.json({ feedback })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load feedback.' }) }
+})
+
 app.post('/api/auth/reset-password', async (req, res) => {
   const { email, password } = req.body
   try {
@@ -340,18 +395,6 @@ app.post('/api/scanner/search', (req, res) => {
   })
 })
 
-app.get('/api/scanner/barcode/:barcode', async (req, res) => {
-  const barcode = String(req.params.barcode || '').replace(/\D/g, '')
-  if (!/^\d{8,14}$/.test(barcode)) return res.status(400).json({ message: 'Please provide a valid barcode.' })
-
-  const localProduct = sampleProductCatalog.find((product) => product.barcode === barcode)
-  if (localProduct) return res.json({ product: productFromCatalog(localProduct) })
-  res.json({
-    product: unknownBarcodeProduct(barcode),
-    warning: 'Barcode detected. This barcode is not yet in the NutriMatrix product database; packaging OCR will still read its dates and batch number.'
-  })
-})
-
 app.post('/api/scanner/receipt', (req, res) => {
   const { receiptFileName, items = [] } = req.body || {}
 
@@ -367,7 +410,9 @@ app.post('/api/scanner/receipt', (req, res) => {
 app.get('/api/expiry-products', requireAuth, async (req, res) => {
   try {
     const [products] = await pool.execute(`SELECT id, receipt_file_name AS receiptFileName, product_name AS name,
-      brand, barcode, DATE_FORMAT(expiry_date, '%Y-%m-%d') AS expiryDate,
+      brand, category, barcode, quantity, unit, image, source,
+      DATE_FORMAT(manufacturing_date, '%Y-%m-%d') AS manufacturingDate,
+      DATE_FORMAT(expiry_date, '%Y-%m-%d') AS expiryDate,
       DATE_FORMAT(purchased_at, '%Y-%m-%d') AS purchasedAt
       FROM receipt_products WHERE user_id = ? ORDER BY expiry_date IS NULL, expiry_date ASC, created_at DESC`, [req.user.id])
     res.json({ products: products.map((product) => ({ ...product, ...expiryStatus(product.expiryDate) })) })
@@ -383,8 +428,12 @@ app.post('/api/expiry-products', requireAuth, async (req, res) => {
     for (const product of products) {
       if (!product.name) continue
       await pool.execute(`INSERT INTO receipt_products
-        (user_id, receipt_file_name, product_name, brand, barcode, expiry_date, purchased_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [req.user.id, receiptFileName, product.name, product.brand || null, product.barcode || null, product.expiryDate || null, purchasedAt])
+        (user_id, receipt_file_name, product_name, brand, category, barcode, quantity, unit, manufacturing_date, image, source, expiry_date, purchased_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        req.user.id, receiptFileName, product.name, product.brand || null, product.category || null, product.barcode || null,
+        product.quantity || null, product.unit || null, product.manufacturingDate || null, product.image || null,
+        product.source || req.body.source || (receiptFileName === 'Voice input' ? 'voice' : 'receipt'), product.expiryDate || null, purchasedAt
+      ])
     }
     res.status(201).json({ message: 'Receipt products saved.' })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save receipt products.' }) }
@@ -439,8 +488,30 @@ app.put('/api/profile', requireAuth, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save your nutrition profile.' }) }
 })
 
+app.get('/api/saved-meals', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT meals FROM saved_meals WHERE user_id = ?', [req.user.id])
+    const meals = rows.length ? (typeof rows[0].meals === 'string' ? JSON.parse(rows[0].meals) : rows[0].meals) : []
+    res.json({ meals: Array.isArray(meals) ? meals : [] })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load saved meals.' }) }
+})
+
+app.put('/api/saved-meals', requireAuth, async (req, res) => {
+  const meals = req.body?.meals
+  if (!Array.isArray(meals) || meals.length > 500 || meals.some((meal) => typeof meal !== 'string' || meal.length > 500)) {
+    return res.status(400).json({ message: 'Saved meals must be a valid list.' })
+  }
+  try {
+    await pool.execute(`INSERT INTO saved_meals (user_id, meals) VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE meals = VALUES(meals)`, [req.user.id, JSON.stringify([...new Set(meals)])])
+    res.json({ message: 'Saved meals updated.' })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save meals.' }) }
+})
+
 ensureProfileColumns()
   .then(() => ensureReceiptProductsTable())
+  .then(() => ensureFeedbackTable())
+  .then(() => ensureSavedMealsTable())
   .then(() => ensureAdminAccess())
   .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
   .catch((error) => {

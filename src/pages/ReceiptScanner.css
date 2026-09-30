@@ -11,6 +11,9 @@
 .receipt-primary { cursor: pointer; }
 .receipt-primary:hover { background: #146d3c; }
 .receipt-primary:disabled { cursor: wait; opacity: .55; }
+.receipt-cancel { padding: 13px 18px; border-radius: 10px; font: inherit; font-weight: 800; cursor: pointer; }
+.receipt-cancel { border: 1px solid #e7b7ae; background: #fff8f6; color: #a43d2b; }
+.receipt-cancel:hover { background: #ffe9e3; }
 .receipt-error, .receipt-message { max-width: 680px; margin: 18px 0; padding: 14px 16px; border-radius: 10px; font-weight: 700; }
 .receipt-error { background: #fff0ed; color: #a43d2b; }
 .receipt-message { background: #e9f7ed; color: #21683a; }
@@ -24,6 +27,10 @@
 .receipt-product span { margin-top: 5px; color: #7a897f; font-size: .9rem; }
 .receipt-product label { color: #687b6e; font-size: .82rem; font-weight: 800; }
 .receipt-product input { display: block; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #c8ddcc; border-radius: 7px; color: #28583a; font: inherit; }
+.receipt-product-name label { display: block; }
+.receipt-edit-name, .receipt-name-actions button { margin-top: 9px; padding: 6px 9px; border: 1px solid #c8ddcc; border-radius: 7px; background: #fff; color: #267646; font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; }
+.receipt-edit-name:hover, .receipt-name-actions button:hover { background: #e9f7ed; }
+.receipt-name-actions { display: flex; gap: 8px; }
 .expiry-confirmed { color: #267646 !important; font-weight: 800; }
 .expiry-unavailable { color: #9a6b1d !important; font-weight: 700; }
 .receipt-save { margin-top: 22px; }

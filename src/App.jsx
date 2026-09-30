@@ -12,8 +12,12 @@ import BarcodeScanner from './pages/BarcodeScanner.jsx'
 import ReceiptScanner from './pages/ReceiptScanner.jsx'
 import Products from './pages/Products.jsx'
 import MealPlanner from './pages/MealPlanner.jsx'
+import DigitalPantry from './pages/DigitalPantry.jsx'
+import Notifications from './pages/Notifications.jsx'
 import AdminLogin from './pages/AdminLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
+import Feedback from './pages/Feedback.jsx'
+import AdminFeedback from './pages/AdminFeedback.jsx'
 import './App.css'
 
 function App() {
@@ -27,6 +31,8 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/meal-planner" element={<MealPlanner />} />
+        <Route path="/digital-pantry" element={<DigitalPantry />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/scanner" element={<Scanner />} />
@@ -34,6 +40,8 @@ function App() {
         <Route path="/receipt-scanner" element={<ReceiptScanner />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/feedback" element={<Feedback />} />
+        <Route path="/admin/feedback" element={<AdminFeedback />} />
       </Routes>
     </div>
   )
