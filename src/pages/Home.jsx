@@ -23,23 +23,23 @@ function Home() {
 
   const features = [
     {
-      icon: '📊',
-      title: 'Nutrition Analysis',
-      description: 'Analyze the nutritional information of grocery products and understand what you eat.',
+      icon: '📷',
+      title: 'Scanner',
+      description: 'Scan grocery products to quickly view their nutrition information.',
       color: '#22c55e',
       accent: '#16a34a'
     },
     {
       icon: '🥦',
-      title: 'Healthy Alternatives',
-      description: 'Get smart suggestions for healthier alternatives to your favourite foods.',
+      title: 'Digital Pantry',
+      description: 'Track and manage all your grocery items in one smart digital pantry.',
       color: '#10b981',
       accent: '#059669'
     },
     {
       icon: '🛒',
-      title: 'Digital Pantry',
-      description: 'Track and manage all your grocery items in one smart digital pantry.',
+      title: 'Expiry Reminders',
+      description: 'Never waste food again. Get timely reminders before items expire.',
       color: '#f59e0b',
       accent: '#d97706'
     },
@@ -56,20 +56,6 @@ function Home() {
       description: 'Create and discover meal ideas that match your nutrition goals and preferences.',
       color: '#14b8a6',
       accent: '#0f766e'
-    },
-    {
-      icon: '⏰',
-      title: 'Expiry Reminders',
-      description: 'Never waste food again. Get timely reminders before items expire.',
-      color: '#ef4444',
-      accent: '#dc2626'
-    },
-    {
-      icon: '🤖',
-      title: 'AI Recommendations',
-      description: 'Personalized food and nutrition tips powered by artificial intelligence.',
-      color: '#8b5cf6',
-      accent: '#7c3aed'
     }
   ]
 
@@ -126,9 +112,7 @@ function Home() {
         </div>
 
         <div className="features-grid">
-          {features
-            .filter(({ title }) => title !== 'Nutrition Analysis' && title !== 'Healthy Alternatives')
-            .map((f, i) => (
+          {features.map((f, i) => (
             <FeatureCard
               key={i}
               icon={f.icon}
