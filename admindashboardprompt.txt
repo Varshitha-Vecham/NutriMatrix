@@ -1,0 +1,778 @@
+Create a complete, modern, responsive Admin Dashboard for my project "NutriMatrix".
+
+PROJECT:
+NutriMatrix is an AI-powered nutrition and smart grocery platform. It helps users analyze food products, compare estimated prices across grocery platforms, manage their digital pantry, receive expiry notifications, and plan meals.
+
+TECHNOLOGY:
+- Frontend: HTML5, CSS3, JavaScript (ES6+)
+- Backend: Python Flask
+- Database: MySQL
+- Do not use MongoDB.
+- Do not require React or Node.js for this dashboard.
+- The dashboard should be designed so it can later connect directly to my Flask + MySQL backend.
+
+DESIGN:
+Create a premium, clean, professional health-tech/grocery dashboard.
+Use the existing NutriMatrix visual identity:
+- Green as the primary color
+- Orange/yellow as a secondary accent
+- White/light background
+- Dark green/black text
+- Rounded corners
+- Subtle shadows
+- Clean typography
+- Minimal animations
+- No excessive gradients
+- No 3D cards
+- No unnecessary decorative elements
+- Responsive on desktop, tablet and mobile
+
+ADMIN DASHBOARD STRUCTURE:
+
+Create a sidebar on the left.
+
+Sidebar:
+
+NutriMatrix logo/name at the top.
+
+Navigation:
+1. Dashboard
+2. Product Management
+3. User Management
+4. Price Management
+5. Reports & Analytics
+6. Admin Profile
+7. Logout
+
+The currently selected page should be highlighted in green.
+
+At the bottom of the sidebar display:
+"Admin"
+"Administrator"
+
+MAIN DASHBOARD:
+
+At the top:
+
+"Welcome, Admin"
+"Manage NutriMatrix products, users, nutrition data and price information from one place."
+
+Add a notification icon and admin profile section in the top-right.
+
+--------------------------------------------------
+1. DASHBOARD OVERVIEW
+--------------------------------------------------
+
+Display summary cards:
+
+- Total Products
+- Total Users
+- Pantry Items
+- Expiry Alerts
+
+Example:
+
+Total Products
+100
+
+Total Users
+245
+
+Pantry Items
+387
+
+Expiry Alerts
+18
+
+Do not hard-code these values in the final backend implementation. These values should eventually come from MySQL.
+
+Below the cards, display:
+
+RECENT ACTIVITY
+
+Show a table/list containing:
+
+- Activity
+- User/Admin
+- Date
+- Status
+
+Example:
+
+Product Added       Brown Rice       Admin       Today
+Product Updated     Milk             Admin       Today
+New User Registered User123           System      Today
+
+--------------------------------------------------
+2. PRODUCT MANAGEMENT
+--------------------------------------------------
+
+This is the most important section.
+
+Create a Product Management page.
+
+At the top:
+
+"Product Management"
+
+Subtitle:
+"Add, update and manage the products available in Product Analysis."
+
+Buttons:
+
+[ + Add New Product ]
+
+[ Search Products ]
+
+[ Filter ]
+
+Display products in a table.
+
+Columns:
+
+- Product Image
+- Product Name
+- Category
+- Calories
+- Protein
+- Carbohydrates
+- Fat
+- Status
+- Actions
+
+Actions:
+
+[ View ]
+[ Edit ]
+[ Delete ]
+
+Do not display unnecessary brand information in the normal Product Analysis product listing.
+
+PRODUCT CATEGORIES:
+
+- Grains
+- Pulses
+- Dairy
+- Nuts & Seeds
+- Fruits
+- Vegetables
+- Breakfast Foods
+- Beverages
+
+--------------------------------------------------
+3. ADD NEW PRODUCT
+--------------------------------------------------
+
+When admin clicks:
+
+"+ Add New Product"
+
+Open a dedicated Add Product page or clean form section.
+
+Fields:
+
+PRODUCT INFORMATION
+
+Product Name
+[________________________]
+
+Category
+[ Select Category ▼ ]
+
+Product Image
+[ Choose Image ]
+
+Allow the admin to upload JPG, JPEG, PNG or WEBP images.
+
+After selecting the image:
+- Show an image preview.
+- Show the selected filename.
+- Provide a Remove Image option.
+- Validate the file type.
+- Validate maximum file size.
+
+The uploaded image should be handled by Flask.
+
+For the local college/demo version:
+- Save the image inside:
+  uploads/products/
+
+- Store only the image path/filename in MySQL.
+
+Do NOT store the image binary directly inside MySQL unless specifically required.
+
+Example database value:
+
+uploads/products/brown_rice.jpg
+
+NUTRITION INFORMATION
+
+Add fields:
+
+Calories
+[________] kcal
+
+Protein
+[________] g
+
+Carbohydrates
+[________] g
+
+Fat
+[________] g
+
+Fiber
+[________] g
+
+Sugar
+[________] g
+
+Sodium
+[________] mg
+
+Do NOT include a "Serving Size" field because NutriMatrix Product Analysis does not use a serving-size field.
+
+Do NOT include an "Ingredients" section in the Product Analysis nutrition output.
+
+HEALTH INFORMATION
+
+Health Benefits
+[ multiline text area ]
+
+Healthier Alternatives
+[ multiline text area ]
+
+Example:
+
+Health Benefits:
+"Good source of complex carbohydrates and provides dietary fiber."
+
+Healthier Alternatives:
+"Brown rice, quinoa, oats"
+
+PRICE COMPARISON INFORMATION
+
+Add a section called:
+
+"Retailer Prices"
+
+Allow the admin to enter estimated prices for:
+
+- BigBasket
+- Blinkit
+- Zepto
+- Swiggy Instamart
+- JioMart
+- Amazon Fresh
+- Flipkart Minutes
+
+Each retailer should have:
+
+Retailer Name
+Price
+Last Updated
+
+Example:
+
+BigBasket       ₹85
+Blinkit         ₹88
+Zepto           ₹86
+Swiggy Instamart ₹90
+JioMart         ₹84
+Amazon Fresh    ₹87
+Flipkart Minutes ₹89
+
+The system should later use these values to compare prices and identify the lowest available price.
+
+Buttons:
+
+[ Cancel ]
+[ Add Product ]
+
+After successful submission:
+
+Show:
+
+"Product added successfully."
+
+Then redirect to Product Management.
+
+The newly added product must automatically become available on the Product Analysis page.
+
+--------------------------------------------------
+4. EDIT PRODUCT
+--------------------------------------------------
+
+When admin clicks Edit:
+
+Open the same product form with existing information populated.
+
+Allow admin to modify:
+
+- Product name
+- Category
+- Image
+- Calories
+- Protein
+- Carbohydrates
+- Fat
+- Fiber
+- Sugar
+- Sodium
+- Health benefits
+- Healthier alternatives
+- Retailer prices
+
+Buttons:
+
+[ Save Changes ]
+[ Cancel ]
+
+Show:
+
+"Product updated successfully."
+
+--------------------------------------------------
+5. DELETE PRODUCT
+--------------------------------------------------
+
+When admin clicks Delete:
+
+Do NOT immediately delete the product.
+
+Display confirmation:
+
+"Are you sure you want to delete this product?"
+
+Buttons:
+
+[ Cancel ]
+[ Delete Product ]
+
+After deletion:
+
+"Product deleted successfully."
+
+Remove the product from Product Analysis as well.
+
+--------------------------------------------------
+6. PRODUCT VIEW
+--------------------------------------------------
+
+When admin clicks View:
+
+Display a detailed product page containing:
+
+- Product image
+- Product name
+- Category
+- Nutrition information
+- Health benefits
+- Healthier alternatives
+- Retailer prices
+- Lowest available retailer price
+- Last updated date
+
+Do not show unnecessary fields.
+
+--------------------------------------------------
+7. USER MANAGEMENT
+--------------------------------------------------
+
+Create a User Management page.
+
+Display:
+
+- User ID
+- Name
+- Email
+- Registration Date
+- Status
+- Actions
+
+Actions:
+
+[ View ]
+[ Activate/Deactivate ]
+[ Delete ]
+
+Add a search field.
+
+Add filters:
+
+- All
+- Active
+- Inactive
+
+Do not display users' passwords anywhere.
+
+--------------------------------------------------
+8. PRICE MANAGEMENT
+--------------------------------------------------
+
+Create a separate Price Management section.
+
+Allow admin to:
+
+- Search products
+- Select a product
+- View retailer prices
+- Update prices
+
+Retailers:
+
+BigBasket
+Blinkit
+Zepto
+Swiggy Instamart
+JioMart
+Amazon Fresh
+Flipkart Minutes
+
+Display:
+
+Product | Retailer | Price | Last Updated | Action
+
+Action:
+
+[ Edit Price ]
+
+When the admin changes a price, update the MySQL database.
+
+The Product Analysis page should use the updated price automatically.
+
+IMPORTANT:
+These prices are estimated/demo comparison data for the college project. Do not claim that they are live prices unless a real-time data source/API is connected.
+
+--------------------------------------------------
+9. REPORTS & ANALYTICS
+--------------------------------------------------
+
+Create an Analytics page.
+
+Display simple charts/statistics for:
+
+- Number of registered users
+- Number of products
+- Products by category
+- Most viewed products
+- Most added products
+- Price comparison activity
+
+Use clean charts.
+
+Do not overcrowd the page.
+
+--------------------------------------------------
+10. ADMIN PROFILE
+--------------------------------------------------
+
+Create an Admin Profile page.
+
+Display:
+
+- Admin name
+- Email
+- Profile image
+- Account role
+- Last login
+
+Buttons:
+
+[ Edit Profile ]
+[ Change Password ]
+
+Never display the current password.
+
+--------------------------------------------------
+11. LOGOUT
+--------------------------------------------------
+
+When admin clicks Logout:
+
+Show a confirmation if appropriate:
+
+"Are you sure you want to logout?"
+
+After logout:
+
+Redirect to Admin Login.
+
+The admin dashboard must not be accessible without authentication.
+
+--------------------------------------------------
+12. SECURITY / ACCESS CONTROL
+--------------------------------------------------
+
+Only authenticated administrators should be able to access:
+
+/admin/dashboard
+/admin/products
+/admin/products/add
+/admin/products/edit
+/admin/users
+/admin/prices
+/admin/reports
+/admin/profile
+
+Normal users must NOT be able to access admin pages.
+
+Implement the backend using Flask sessions/authentication.
+
+Check the admin role before allowing access to admin routes.
+
+Do not rely only on hiding buttons in the frontend.
+
+--------------------------------------------------
+13. MYSQL DATABASE
+--------------------------------------------------
+
+Design the database so products and prices are stored separately.
+
+Products table:
+
+products
+- id
+- product_name
+- category
+- image
+- description
+- calories
+- protein
+- carbohydrates
+- fat
+- fiber
+- sugar
+- sodium
+- health_benefits
+- healthier_alternatives
+- created_at
+- updated_at
+
+Product prices table:
+
+product_prices
+- id
+- product_id
+- retailer
+- price
+- updated_at
+
+Users table:
+
+users
+- id
+- name
+- email
+- password_hash
+- role
+- status
+- created_at
+
+Use a foreign key from product_prices.product_id to products.id.
+
+Passwords must be securely hashed. Never store plain-text passwords.
+
+--------------------------------------------------
+14. PRODUCT ANALYSIS CONNECTION
+--------------------------------------------------
+
+The Product Analysis page already exists in NutriMatrix.
+
+Do not redesign the existing Product Analysis page unnecessarily.
+
+Connect it to the products table.
+
+When admin adds:
+
+"Brown Rice"
+
+the Product Analysis page should automatically display:
+
+Brown Rice
+Category: Grains
+Image
+Nutrition information
+
+When the user clicks the product, show its nutrition analysis.
+
+When the user adds the product to the basket/cart, use the product_prices table to compare retailer prices.
+
+The system should identify the lowest available price.
+
+Example:
+
+Brown Rice
+
+BigBasket          ₹85
+Blinkit            ₹88
+Zepto              ₹86
+Swiggy Instamart   ₹90
+JioMart            ₹84
+Amazon Fresh       ₹87
+Flipkart Minutes   ₹89
+
+Lowest price:
+JioMart — ₹84
+
+--------------------------------------------------
+15. SEARCH AND FILTER
+--------------------------------------------------
+
+Product Management must have:
+
+Search by product name.
+
+Filter by:
+
+- Category
+- Status
+
+Sorting:
+
+- Product name
+- Category
+- Recently added
+
+Search should update the product list without reloading the entire page where practical.
+
+--------------------------------------------------
+16. VALIDATION
+--------------------------------------------------
+
+Add frontend and backend validation.
+
+Product name:
+- Required
+
+Category:
+- Required
+
+Image:
+- Optional or required according to implementation
+- Only JPG/JPEG/PNG/WEBP
+- Validate file size
+
+Nutrition fields:
+- Must accept numeric values
+- Do not accept negative values
+
+Price:
+- Must be numeric
+- Cannot be negative
+
+Show clear validation messages.
+
+Example:
+
+"Product name is required."
+
+"Please upload a valid image."
+
+"Price cannot be negative."
+
+--------------------------------------------------
+17. UI REQUIREMENTS
+--------------------------------------------------
+
+Use a professional admin dashboard layout.
+
+Desktop:
+
+Left sidebar
+Main content area
+Top header
+
+Mobile:
+
+Collapsible sidebar
+Responsive tables
+Responsive cards
+Responsive forms
+
+Use icons where useful, but don't overcrowd the interface.
+
+Keep spacing consistent.
+
+Use clear section headings.
+
+Use green for primary actions such as:
+
+Add Product
+Save Changes
+Update
+
+Use red only for destructive actions such as:
+
+Delete
+Deactivate
+
+--------------------------------------------------
+18. IMPORTANT NUTRIMATRIX RULES
+--------------------------------------------------
+
+Do not add a shopping/e-commerce checkout system.
+
+NutriMatrix is NOT an online grocery store.
+
+The Product Analysis page only provides:
+- Product information
+- Nutrition analysis
+- Healthier alternatives
+- Estimated price comparison
+
+Do not add:
+- Payment
+- Checkout
+- Order placement
+- Delivery tracking
+
+The basket/cart is only for product analysis and price comparison.
+
+--------------------------------------------------
+19. FINAL USER FLOW
+--------------------------------------------------
+
+ADMIN:
+
+Admin Login
+    ↓
+Admin Dashboard
+    ↓
+Product Management
+    ↓
+Add New Product
+    ↓
+Upload Product Image
+    ↓
+Enter Nutrition Information
+    ↓
+Enter Health Information
+    ↓
+Enter Retailer Prices
+    ↓
+Save Product
+    ↓
+Store data in MySQL
+    ↓
+Product appears automatically in Product Analysis
+
+USER:
+
+Login
+    ↓
+Product Analysis
+    ↓
+Browse Product
+    ↓
+Click Product
+    ↓
+View Nutrition Analysis
+    ↓
+Add to Basket
+    ↓
+Compare Estimated Retailer Prices
+    ↓
+Show lowest available price
+
+Generate the complete frontend UI, Flask routes, MySQL database structure, form handling, image upload handling, CRUD operations, authentication/authorization, validation, and Product Analysis integration.

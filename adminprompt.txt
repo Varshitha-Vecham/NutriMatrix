@@ -1,0 +1,11 @@
+>In Admin Dashboard , In Dashboard page, it is not displayed anything all should display real,how many products are there, users,pantry items,expiry alerts it should be real
+    recent activity should also work 
+>In Product Management , remove search button and dropdown 'ALL' and in retailer price option remove Last updated option
+    when admin click on add product button, that section will be opened , and can't come back so keep back button option
+    add product button is not working when admin add product that should be added in product analysis page 
+    if admin upload pdf format product 'error message occurs',after uploading correct format also error message should not display
+>In User Management page, there is nothing about user data it should display real data of users 
+>In price management page, all products should dislpay and editing the existing price of eact product option should be there 
+>Remove Reports&Analytics page
+>In Admin Profile page, edit profile and change password buttons are not working, it should work 
+>On top right side remove notifications options 
