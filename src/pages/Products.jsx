@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
+import { apiRequest } from '../api.js'
 import './Products.css'
 
 const products = [
@@ -37,8 +38,18 @@ function Products() {
   const [category, setCategory] = useState('All items')
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState([])
-  const cartProducts = cart.map((item) => ({ ...catalog.find((product) => product.id === item.id), quantity: item.quantity }))
-  const visibleProducts = catalog.filter((product) => {
+  const [adminProducts, setAdminProducts] = useState([])
+  useEffect(() => { apiRequest('/api/products').then(({ products }) => setAdminProducts(products)).catch(() => {}) }, [])
+  const publishedCatalog = adminProducts.map((product) => ({
+    id: `admin-${product.id}`, name: product.productName, brand: 'NutriMatrix catalogue', category: product.category,
+    image: product.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=700&q=85', serving: '1 serving',
+    calories: Number(product.calories) || 0, protein: Number(product.protein) || 0, carbs: Number(product.carbohydrates) || 0,
+    fat: Number(product.fat) || 0, fiber: Number(product.fiber) || 0,
+    retailers: retailerNames.map((name) => ({ name, price: Number(product.prices?.find((entry) => entry.retailer === name)?.price) || 0 }))
+  }))
+  const allCatalog = publishedCatalog.length ? publishedCatalog : catalog
+  const cartProducts = cart.map((item) => ({ ...allCatalog.find((product) => product.id === item.id), quantity: item.quantity })).filter((product) => product.name)
+  const visibleProducts = allCatalog.filter((product) => {
     const matchesCategory = category === 'All items' || product.category === category
     const term = search.trim().toLowerCase()
     return matchesCategory && (!term || `${product.name} ${product.brand}`.toLowerCase().includes(term))
@@ -70,7 +81,7 @@ function Products() {
       <Navbar />
       <main className="products-main">
         <section className="products-intro">
-          <div><p className="eyebrow">PRODUCT ANALYSIS LIBRARY <span>•</span> 16 PRODUCTS</p><h1>Understand your basket.</h1><p className="intro-copy">Browse real grocery products, add items for nutrition analysis, and compare their estimated prices across Indian retailers.</p></div>
+          <div><p className="eyebrow">PRODUCT ANALYSIS LIBRARY <span>•</span> {allCatalog.length} PRODUCTS</p><h1>Understand your basket.</h1><p className="intro-copy">Browse real grocery products, add items for nutrition analysis, and compare their estimated prices across Indian retailers.</p></div>
           <div className="basket-note"><span className="basket-icon">🛒</span><strong>{cart.reduce((sum, item) => sum + item.quantity, 0)}</strong><small>items in basket</small></div>
         </section>
         <div className="shop-layout">

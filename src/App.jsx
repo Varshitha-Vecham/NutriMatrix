@@ -32,6 +32,13 @@ function App() {
         <Route path="/receipt-scanner" element={<ReceiptScanner />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/products" element={<AdminDashboard />} />
+        <Route path="/admin/products/add" element={<AdminDashboard />} />
+        <Route path="/admin/products/edit" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminDashboard />} />
+        <Route path="/admin/prices" element={<AdminDashboard />} />
+        <Route path="/admin/profile" element={<AdminDashboard />} />
       </Routes>
     </div>
   )

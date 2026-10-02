@@ -64,6 +64,11 @@ async function ensureAdminAccess() {
   ])
 }
 
+async function ensureProductTables() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS products (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_name VARCHAR(255) NOT NULL, category VARCHAR(100) NOT NULL, image LONGTEXT NULL, calories DECIMAL(10,2) NULL, protein DECIMAL(10,2) NULL, carbohydrates DECIMAL(10,2) NULL, fat DECIMAL(10,2) NULL, fiber DECIMAL(10,2) NULL, sugar DECIMAL(10,2) NULL, sodium DECIMAL(10,2) NULL, health_benefits TEXT NULL, healthier_alternatives TEXT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS product_prices (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_id INT UNSIGNED NOT NULL, retailer VARCHAR(100) NOT NULL, price DECIMAL(10,2) NOT NULL, updated_at DATE NULL, CONSTRAINT fk_product_price FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`)
+}
+
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }))
 app.use(express.json())
 app.use(cookieParser())
@@ -140,6 +145,68 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load users.' }) }
 })
 
+app.put('/api/admin/profile', requireAuth, requireAdmin, async (req, res) => {
+  const { name, email } = req.body
+  if (!name?.trim() || !email?.trim()) return res.status(400).json({ message: 'Name and email are required.' })
+  try {
+    const [existing] = await pool.execute('SELECT id FROM users WHERE email = ? AND id != ?', [email.trim(), req.user.id])
+    if (existing.length) return res.status(409).json({ message: 'That email address is already in use.' })
+    await pool.execute('UPDATE users SET name = ?, email = ? WHERE id = ?', [name.trim(), email.trim(), req.user.id])
+    const user = { id: req.user.id, name: name.trim(), email: email.trim(), role: 'admin' }
+    setAuthCookie(res, user)
+    res.json({ message: 'Admin profile updated.', user: { name: user.name, email: user.email, role: user.role } })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to update admin profile.' }) }
+})
+
+app.put('/api/admin/password', requireAuth, requireAdmin, async (req, res) => {
+  const { currentPassword, newPassword } = req.body
+  if (!currentPassword || !newPassword || newPassword.length < 8) return res.status(400).json({ message: 'Enter your current password and a new password of at least 8 characters.' })
+  try {
+    const [rows] = await pool.execute('SELECT password_hash FROM users WHERE id = ?', [req.user.id])
+    if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash))) return res.status(401).json({ message: 'Your current password is incorrect.' })
+    await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [await bcrypt.hash(newPassword, 12), req.user.id])
+    res.json({ message: 'Password changed successfully.' })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to change password.' }) }
+})
+
+function validateProduct(body) {
+  if (!body.productName?.trim() || !body.category) throw new Error('Product name and category are required.')
+  const nutrition = ['calories','protein','carbohydrates','fat','fiber','sugar','sodium'].map((key) => {
+    if (body[key] !== '' && body[key] !== undefined && Number(body[key]) < 0) throw new Error('Nutrition values cannot be negative.')
+    return body[key] === '' || body[key] === undefined ? null : Number(body[key])
+  })
+  for (const price of body.prices || []) if (price.price !== '' && Number(price.price) < 0) throw new Error('Price cannot be negative.')
+  return nutrition
+}
+async function adminProducts() {
+  const [rows] = await pool.query(`SELECT p.id,p.product_name AS productName,p.category,p.image,p.calories,p.protein,p.carbohydrates,p.fat,p.fiber,p.sugar,p.sodium,p.health_benefits AS healthBenefits,p.healthier_alternatives AS healthierAlternatives,p.created_at AS createdAt,p.updated_at AS updatedAt,pp.retailer,pp.price,pp.updated_at AS priceUpdatedAt FROM products p LEFT JOIN product_prices pp ON pp.product_id=p.id ORDER BY p.updated_at DESC`)
+  const indexed = new Map()
+  rows.forEach((row) => { if (!indexed.has(row.id)) { const { retailer, price, priceUpdatedAt, ...product } = row; indexed.set(row.id, { ...product, prices: [] }) }; if (row.retailer) indexed.get(row.id).prices.push({ retailer: row.retailer, price: Number(row.price), updatedAt: row.priceUpdatedAt }) })
+  return [...indexed.values()]
+}
+app.get('/api/admin/products', requireAuth, requireAdmin, async (req,res) => { try { res.json({ products: await adminProducts() }) } catch (error) { console.error(error); res.status(500).json({ message:'Unable to load products.' }) } })
+app.get('/api/products', async (req,res) => { try { res.json({ products: await adminProducts() }) } catch (error) { console.error(error); res.status(500).json({ message:'Unable to load products.' }) } })
+app.get('/api/admin/dashboard', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [[productCount]] = await pool.query('SELECT COUNT(*) AS total FROM products')
+    const [[userCount]] = await pool.query("SELECT COUNT(*) AS total FROM users WHERE role != 'admin'")
+    // Pantry storage is not present in older installations; return truthful zeroes until users add pantry data.
+    let pantryItems = 0, expiryAlerts = 0
+    const [tables] = await pool.query("SHOW TABLES LIKE 'pantry_items'")
+    if (tables.length) {
+      const [[pantry]] = await pool.query('SELECT COUNT(*) AS total FROM pantry_items')
+      const [[alerts]] = await pool.query("SELECT COUNT(*) AS total FROM pantry_items WHERE expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)")
+      pantryItems = pantry.total; expiryAlerts = alerts.total
+    }
+    const [activity] = await pool.query("SELECT 'Product updated' AS activity, product_name AS detail, updated_at AS occurredAt, 'Admin' AS actor FROM products UNION ALL SELECT 'User registered', name, created_at, 'User' FROM users WHERE role != 'admin' ORDER BY occurredAt DESC LIMIT 8")
+    res.json({ stats: { products: productCount.total, users: userCount.total, pantryItems, expiryAlerts }, activity })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load dashboard data.' }) }
+})
+async function persistProduct(req,res,id) { try { const b=req.body, values=validateProduct(b); let productId=id; if (id) await pool.execute('UPDATE products SET product_name=?,category=?,image=?,calories=?,protein=?,carbohydrates=?,fat=?,fiber=?,sugar=?,sodium=?,health_benefits=?,healthier_alternatives=? WHERE id=?',[b.productName.trim(),b.category,b.image||null,...values,b.healthBenefits||null,b.healthierAlternatives||null,id]); else { const [result]=await pool.execute('INSERT INTO products (product_name,category,image,calories,protein,carbohydrates,fat,fiber,sugar,sodium,health_benefits,healthier_alternatives) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',[b.productName.trim(),b.category,b.image||null,...values,b.healthBenefits||null,b.healthierAlternatives||null]); productId=result.insertId }; await pool.execute('DELETE FROM product_prices WHERE product_id=?',[productId]); for(const p of b.prices||[]) if(p.price !== '' && p.price != null) await pool.execute('INSERT INTO product_prices (product_id,retailer,price,updated_at) VALUES (?,?,?,?)',[productId,p.retailer,Number(p.price),p.updatedAt||null]); res.status(id?200:201).json({message:id?'Product updated successfully.':'Product added successfully.',id:productId}) } catch(error) { console.error(error); res.status(error.message?.includes('required')||error.message?.includes('negative')?400:500).json({message:error.message||'Unable to save product.'}) } }
+app.post('/api/admin/products', requireAuth, requireAdmin, (req,res) => persistProduct(req,res))
+app.put('/api/admin/products/:id', requireAuth, requireAdmin, (req,res) => persistProduct(req,res,Number(req.params.id)))
+app.delete('/api/admin/products/:id', requireAuth, requireAdmin, async (req,res) => { try { await pool.execute('DELETE FROM products WHERE id=?',[req.params.id]); res.status(204).end() } catch(error) { console.error(error); res.status(500).json({message:'Unable to delete product.'}) } })
+
 app.post('/api/auth/reset-password', async (req, res) => {
   const { email, password } = req.body
   try {
@@ -170,6 +237,7 @@ app.put('/api/profile', requireAuth, async (req, res) => {
 })
 
 ensureProfileColumns()
+  .then(() => ensureProductTables())
   .then(() => ensureAdminAccess())
   .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
   .catch((error) => {
