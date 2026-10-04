@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { apiRequest } from '../api.js'
 import './ForgotPassword.css'
 
-function ForgotPassword() {
+function ForgotPassword({ admin = false }) {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -28,8 +28,8 @@ function ForgotPassword() {
       setError('Please enter a valid email address.')
       return
     }
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters long.')
+    if (newPassword.length < (admin ? 8 : 6)) {
+      setError(`New password must be at least ${admin ? 8 : 6} characters long.`)
       return
     }
     if (newPassword !== confirmPassword) {
@@ -42,8 +42,8 @@ function ForgotPassword() {
       method: 'POST',
       body: JSON.stringify({ email, password: newPassword })
     }).then(() => {
-      setSuccess('Password updated successfully. Redirecting to login...')
-      setTimeout(() => navigate('/login'), 1000)
+      setSuccess(`Password updated successfully. Redirecting to ${admin ? 'admin' : ''} login...`)
+      setTimeout(() => navigate(admin ? '/admin-login' : '/login'), 1000)
     }).catch((requestError) => {
       setError(requestError.message)
       setLoading(false)
@@ -85,7 +85,7 @@ function ForgotPassword() {
         <div className="forgot-card">
           <div className="card-header">
             <div className="card-icon">&#128273;</div>
-            <h2>Reset Password</h2>
+            <h2>{admin ? 'Reset Admin Password' : 'Reset Password'}</h2>
             <p>Enter your email and choose a new password</p>
           </div>
 
@@ -115,7 +115,7 @@ function ForgotPassword() {
                 <input
                   id="new-password"
                   type={showNewPassword ? 'text' : 'password'}
-                  placeholder="At least 6 characters"
+                  placeholder={`At least ${admin ? 8 : 6} characters`}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
@@ -160,11 +160,9 @@ function ForgotPassword() {
           </form>
 
           <p className="back-to-login">
-            Remembered your password? <Link to="/login">Back to Login</Link>
+            Remembered your password? <Link to={admin ? '/admin-login' : '/login'}>Back to {admin ? 'Admin ' : ''}Login</Link>
           </p>
-          <p className="register-link">
-            Don't have an account? <Link to="/register">Register here</Link>
-          </p>
+          {!admin && <p className="register-link">Don't have an account? <Link to="/register">Register here</Link></p>}
         </div>
       </div>
     </div>

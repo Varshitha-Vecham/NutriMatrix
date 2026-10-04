@@ -49,6 +49,7 @@ function AdminLogin() {
           </div>
           <button className="admin-login-submit" type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in to dashboard →'}</button>
         </form>
+        <Link to="/admin-forgot-password" className="admin-back-link">Forgot password?</Link>
         <Link to="/login" className="admin-back-link">Back to user login</Link>
       </section>
     </main>
