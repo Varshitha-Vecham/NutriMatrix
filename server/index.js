@@ -253,21 +253,10 @@ async function ensureAdminAccess() {
 async function ensureProductTables() {
   await pool.query(`CREATE TABLE IF NOT EXISTS products (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_name VARCHAR(255) NOT NULL, category VARCHAR(100) NOT NULL, image LONGTEXT NULL, calories DECIMAL(10,2) NULL, protein DECIMAL(10,2) NULL, carbohydrates DECIMAL(10,2) NULL, fat DECIMAL(10,2) NULL, fiber DECIMAL(10,2) NULL, sugar DECIMAL(10,2) NULL, sodium DECIMAL(10,2) NULL, health_benefits TEXT NULL, healthier_alternatives TEXT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`)
   await pool.query(`CREATE TABLE IF NOT EXISTS product_prices (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_id INT UNSIGNED NOT NULL, retailer VARCHAR(100) NOT NULL, price DECIMAL(10,2) NOT NULL, updated_at DATE NULL, CONSTRAINT fk_product_price FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS product_catalogue_seed (catalogue_version VARCHAR(50) PRIMARY KEY, seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`)
 }
 
 app.use(cors({ origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:5174'], credentials: true }))
-// Move the original Product Analysis catalogue into the database once, so it is
-// included in admin totals and can be priced/edited just like new products.
-async function seedCatalogueProducts() {
-  const catalogue = [
-    ['Organic Greek Yogurt','Dairy',120,17,8,3],['Avocado Hass','Fruits',240,3,13,22],['Red Bell Peppers','Vegetables',37,1,7,0],['Wild Blueberries','Fruits',84,1,21,0],['Baby Spinach','Vegetables',20,2,3,0],['Almond Butter','Nuts & Seeds',196,7,6,18],['Honeycrisp Apples','Fruits',95,1,25,0],['Cherry Tomatoes','Vegetables',27,1,6,0],['Free-Range Eggs','Dairy',143,13,1,10],['Whole Grain Oats','Grains',150,5,27,3],['Broccoli Crowns','Vegetables',31,3,6,0],['Strawberries','Fruits',49,1,12,0],['Bananas','Fruits',105,1,27,0],['Fresh Paneer','Dairy',265,18,6,20],['Toned Milk','Dairy',120,8,12,4],['Yellow Moong Dal','Pulses',174,12,30,1]
-  ]
-  for (const [productName, category, calories, protein, carbohydrates, fat] of catalogue) {
-    const [found] = await pool.execute('SELECT id FROM products WHERE product_name = ? LIMIT 1', [productName])
-    if (!found.length) await pool.execute('INSERT INTO products (product_name, category, calories, protein, carbohydrates, fat) VALUES (?, ?, ?, ?, ?, ?)', [productName, category, calories, protein, carbohydrates, fat])
-  }
-}
-
 app.use(express.json({ limit: '8mb' }))
 app.use(cookieParser())
 
@@ -382,6 +371,68 @@ async function adminProducts() {
   rows.forEach((row) => { if (!indexed.has(row.id)) { const { retailer, price, priceUpdatedAt, ...product } = row; indexed.set(row.id, { ...product, prices: [] }) }; if (row.retailer) indexed.get(row.id).prices.push({ retailer: row.retailer, price: Number(row.price), updatedAt: row.priceUpdatedAt }) })
   return [...indexed.values()]
 }
+app.post('/api/admin/products/catalogue', requireAuth, requireAdmin, async (req, res) => {
+  const catalogue = req.body?.products
+  if (!Array.isArray(catalogue) || catalogue.length !== 100 ||
+      catalogue.some((product) =>
+        !product || typeof product.name !== 'string' || !product.name.trim() ||
+        typeof product.category !== 'string' || !product.category.trim() ||
+        ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium'].some((key) =>
+          !Number.isFinite(Number(product[key]))
+        )
+      )) {
+    return res.status(400).json({ message: 'The Product Analysis catalogue must contain 100 valid products.' })
+  }
+
+  let connection
+  try {
+    const names = catalogue.map((product) => product.name.trim())
+    if (new Set(names.map((name) => name.toLowerCase())).size !== 100) {
+      return res.status(400).json({ message: 'The Product Analysis catalogue contains duplicate product names.' })
+    }
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    const [seed] = await connection.execute(
+      "INSERT IGNORE INTO product_catalogue_seed (catalogue_version) VALUES ('analysis-100-v1')"
+    )
+    if (!seed.affectedRows) {
+      await connection.commit()
+      return res.json({ added: 0, total: 100 })
+    }
+
+    const [existing] = await connection.query('SELECT product_name FROM products WHERE product_name IN (?)', [names])
+    const existingNames = new Set(existing.map((product) => product.product_name.toLowerCase()))
+    const missing = catalogue.filter((product) => !existingNames.has(product.name.trim().toLowerCase()))
+
+    if (missing.length) {
+      const values = missing.map((product) => [
+        product.name.trim(),
+        product.category,
+        product.image || null,
+        product.calories,
+        product.protein,
+        product.carbs,
+        product.fat,
+        product.fiber,
+        product.sugar,
+        product.sodium,
+      ])
+      await connection.query(
+        'INSERT INTO products (product_name, category, image, calories, protein, carbohydrates, fat, fiber, sugar, sodium) VALUES ?',
+        [values]
+      )
+    }
+
+    await connection.commit()
+    res.json({ added: missing.length, total: 100 })
+  } catch (error) {
+    if (connection) await connection.rollback()
+    console.error(error)
+    res.status(500).json({ message: 'Unable to sync the Product Analysis catalogue.' })
+  } finally {
+    connection?.release()
+  }
+})
 app.get('/api/admin/products', requireAuth, requireAdmin, async (req,res) => { try { res.json({ products: await adminProducts() }) } catch (error) { console.error(error); res.status(500).json({ message:'Unable to load products.' }) } })
 app.get('/api/products', async (req,res) => { try { res.json({ products: await adminProducts() }) } catch (error) { console.error(error); res.status(500).json({ message:'Unable to load products.' }) } })
 app.get('/api/admin/dashboard', requireAuth, requireAdmin, async (req, res) => {
@@ -541,7 +592,6 @@ ensureProfileColumns()
   .then(() => ensureReceiptProductsTable())
   .then(() => ensureSavedMealsTable())
   .then(() => ensureProductTables())
-  .then(() => seedCatalogueProducts())
   .then(() => ensureAdminAccess())
   .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
   .catch((error) => {

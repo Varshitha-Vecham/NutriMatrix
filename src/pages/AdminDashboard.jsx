@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../api.js'
+import { products as analysisProducts } from './Products.jsx'
 import './AdminDashboard.css'
 import './AdminDashboardOverrides.css'
 
@@ -74,14 +75,19 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const [a, p, u, d] = await Promise.all([
-      apiRequest('/api/auth/me'),
+    const a = await apiRequest('/api/auth/me')
+
+    if (a.user.role !== 'admin') return navigate('/home')
+
+    await apiRequest('/api/admin/products/catalogue', {
+      method: 'POST',
+      body: JSON.stringify({ products: analysisProducts }),
+    })
+    const [p, u, d] = await Promise.all([
       apiRequest('/api/admin/products'),
       apiRequest('/api/admin/users'),
       apiRequest('/api/admin/dashboard'),
     ])
-
-    if (a.user.role !== 'admin') return navigate('/home')
 
     setAdmin(a.user)
     setProducts(p.products)
@@ -130,6 +136,23 @@ export default function AdminDashboard() {
       ...x,
       prices: x.prices.map((p, n) => (n === i ? { ...p, price: v } : p)),
     }))
+
+  const createAlternative = async (alternative) => {
+    try {
+      const result = await apiRequest('/api/admin/products', {
+        method: 'POST',
+        body: JSON.stringify({ ...alternative, prices: [] }),
+      })
+      const product = { ...alternative, id: result.id, prices: [] }
+      setProducts((current) => [product, ...current])
+      setStats((current) => ({ ...current, products: current.products + 1 }))
+      setError('')
+      return product
+    } catch (e) {
+      setError(e.message)
+      throw e
+    }
+  }
 
   const image = (e) => {
     const file = e.target.files?.[0]
@@ -281,7 +304,7 @@ export default function AdminDashboard() {
 
         {page === 'Dashboard' && <Overview stats={stats} activity={activity} onProducts={() => go('Product Management')} />}
         {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} />}
-        {page === 'Add Product' && <Form form={form} products={products} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
+        {page === 'Add Product' && <Form form={form} products={products} editing={editing} change={change} price={price} image={image} save={save} createAlternative={createAlternative} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
         {page === 'Admin Profile' && <Profile admin={admin} setAdmin={setAdmin} notify={setMessage} fail={setError} />}
       </main>
@@ -293,8 +316,6 @@ function Overview({ stats, activity, onProducts }) {
   const cards = [
     ['Total Products', stats.products, '◈'],
     ['Total Users', stats.users, '♙'],
-    ['Pantry Items', stats.pantryItems, '▤'],
-    ['Expiry Alerts', stats.expiryAlerts, '◷'],
   ]
 
   return (
@@ -305,7 +326,7 @@ function Overview({ stats, activity, onProducts }) {
             <i>{icon}</i>
             <p>{label}</p>
             <strong>{value}</strong>
-            <small>{label === 'Expiry Alerts' ? 'Expiring within 7 days' : 'Live database total'}</small>
+            <small>Live database total</small>
           </article>
         ))}
       </section>
@@ -377,7 +398,7 @@ function ProductList({ products, add, edit, remove }) {
   )
 }
 
-function Form({ form, products, editing, change, price, image, save, back }) {
+function Form({ form, products, editing, change, price, image, save, createAlternative, back }) {
   const changeAlternative = (index, productId) => {
     const alternatives = [...form.healthierAlternatives]
     alternatives[index] = productId
@@ -451,7 +472,7 @@ function Form({ form, products, editing, change, price, image, save, back }) {
             </label>
           </div>
           <div className="alternative-pickers">
-            <p className="muted">Choose up to three products from Product Analysis. Search by product name.</p>
+            <p className="muted">Choose up to three products from Product Analysis, or add a missing alternative with its nutrition details.</p>
             {[0, 1, 2].map((index) => (
               <AlternativePicker
                 key={index}
@@ -460,6 +481,7 @@ function Form({ form, products, editing, change, price, image, save, back }) {
                 excludedIds={[editing, ...form.healthierAlternatives.filter((id, itemIndex) => itemIndex !== index)]}
                 value={form.healthierAlternatives[index] || ''}
                 onChange={(productId) => changeAlternative(index, productId)}
+                onCreate={createAlternative}
               />
             ))}
           </div>
@@ -489,31 +511,71 @@ function Form({ form, products, editing, change, price, image, save, back }) {
   )
 }
 
-function AlternativePicker({ index, products, excludedIds, value, onChange }) {
+function AlternativePicker({ index, products, excludedIds, value, onChange, onCreate }) {
   const [search, setSearch] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [details, setDetails] = useState({
+    productName: '',
+    category: '',
+    calories: '',
+    protein: '',
+    carbohydrates: '',
+    fat: '',
+    fiber: '',
+    sugar: '',
+    sodium: '',
+    healthBenefits: '',
+  })
   const selected = products.find((product) => String(product.id) === String(value))
   const query = search || selected?.productName || ''
-  const matches = query.trim()
-    ? products.filter((product) =>
-        !excludedIds.some((id) => id != null && String(id) === String(product.id)) &&
-        product.productName.toLowerCase().includes(query.trim().toLowerCase())
-      ).slice(0, 8)
+  const normalizedQuery = query.trim().toLowerCase()
+  const nameMatches = normalizedQuery
+    ? products.filter((product) => product.productName.toLowerCase().includes(normalizedQuery))
     : []
+  const matches = selected && !search
+    ? []
+    : nameMatches.filter((product) =>
+        !excludedIds.some((id) => id != null && String(id) === String(product.id))
+      ).slice(0, 8)
+
+  const updateDetails = (key, nextValue) => setDetails((current) => ({ ...current, [key]: nextValue }))
+
+  const beginAdding = () => {
+    setDetails((current) => ({ ...current, productName: query.trim() }))
+    setAdding(true)
+  }
+
+  const saveAlternative = async () => {
+    setSaving(true)
+    try {
+      const product = await onCreate(details)
+      onChange(product.id)
+      setSearch('')
+      setAdding(false)
+    } catch {
+      // The dashboard surfaces the API error in its main error banner.
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
-    <label className="alternative-picker">
-      Alternative {index + 1}
+    <div className="alternative-picker">
+      <label htmlFor={`alternative-search-${index}`}>Alternative {index + 1}</label>
       <input
+        id={`alternative-search-${index}`}
         type="search"
         value={query}
         onChange={(event) => {
           setSearch(event.target.value)
+          setAdding(false)
           onChange('')
         }}
         placeholder="Search Product Analysis products"
         aria-label={`Search healthier alternative ${index + 1}`}
       />
-      {matches.length > 0 && (
+      {!selected && matches.length > 0 && (
         <span className="alternative-suggestions">
           {matches.map((product) => (
             <button
@@ -522,6 +584,7 @@ function AlternativePicker({ index, products, excludedIds, value, onChange }) {
               onClick={() => {
                 onChange(product.id)
                 setSearch('')
+                setAdding(false)
               }}
             >
               {product.productName} · {product.category}
@@ -529,9 +592,57 @@ function AlternativePicker({ index, products, excludedIds, value, onChange }) {
           ))}
         </span>
       )}
+      {!selected && matches.length === 0 && normalizedQuery && !adding && (
+        nameMatches.length === 0
+          ? <span className="alternative-suggestions">
+              <button type="button" onClick={beginAdding}>＋ Add “{query.trim()}” as a new product</button>
+            </span>
+          : <small>No available matching products.</small>
+      )}
+      {adding && (
+        <div className="alternative-new-product">
+          <strong>New alternative product details</strong>
+          <label>
+            Product name
+            <input required value={details.productName} onChange={(event) => updateDetails('productName', event.target.value)} />
+          </label>
+          <label>
+            Category
+            <select required value={details.category} onChange={(event) => updateDetails('category', event.target.value)}>
+              <option value="">Select category</option>
+              {categories.map((category) => <option key={category}>{category}</option>)}
+            </select>
+          </label>
+          <div className="alternative-nutrients">
+            {[
+              ['calories', 'Calories (kcal)'],
+              ['protein', 'Protein (g)'],
+              ['carbohydrates', 'Carbohydrates (g)'],
+              ['fat', 'Fat (g)'],
+              ['fiber', 'Fiber (g)'],
+              ['sugar', 'Sugar (g)'],
+              ['sodium', 'Sodium (mg)'],
+            ].map(([key, label]) => (
+              <label key={key}>
+                {label}
+                <input min="0" type="number" step="0.1" value={details[key]} onChange={(event) => updateDetails(key, event.target.value)} />
+              </label>
+            ))}
+          </div>
+          <label>
+            Health benefits
+            <textarea value={details.healthBenefits} onChange={(event) => updateDetails('healthBenefits', event.target.value)} />
+          </label>
+          <div className="alternative-new-actions">
+            <button type="button" onClick={() => setAdding(false)}>Cancel</button>
+            <button type="button" className="primary" disabled={saving || !details.productName.trim() || !details.category} onClick={saveAlternative}>
+              {saving ? 'Adding…' : 'Add alternative'}
+            </button>
+          </div>
+        </div>
+      )}
       {!query && <small>Optional — choose an existing analysis product.</small>}
-      {query && !selected && matches.length === 0 && <small>No matching products found.</small>}
-    </label>
+    </div>
   )
 }
 

@@ -46,7 +46,7 @@ const packageOptionsFor = (category, name) => {
   if (category === 'Dairy') return [{ id: '200g', label: '200 g', amount: 200, unit: 'g', factor: 0.8 }, { id: '500g', label: '500 g', amount: 500, unit: 'g', factor: 1.8 }, { id: '1kg', label: '1 kg', amount: 1, unit: 'kg', factor: 3.4 }]
   return [{ id: '100g', label: '100 g', amount: 100, unit: 'g', factor: 1 }, { id: '500g', label: '500 g', amount: 500, unit: 'g', factor: 4.6 }, { id: '1kg', label: '1 kg', amount: 1, unit: 'kg', factor: 8.8 }, { id: '2kg', label: '2 kg', amount: 2, unit: 'kg', factor: 17 }, { id: '5kg', label: '5 kg', amount: 5, unit: 'kg', factor: 41 }]
 }
-const products = groups.flatMap(([category, items], categoryIndex) => items.map(([name, imageTags], itemIndex) => {
+export const products = groups.flatMap(([category, items], categoryIndex) => items.map(([name, imageTags], itemIndex) => {
   const id = categoryIndex * 20 + itemIndex + 1
   const packageOptions = packageOptionsFor(category, name)
   const [calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium] = nutritionByProduct[name]
