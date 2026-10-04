@@ -14,7 +14,11 @@ export async function apiRequest(path, options = {}) {
     try {
       data = JSON.parse(responseText)
     } catch {
-      throw new Error(`API returned an unexpected response (${response.status}). Is the correct local server running?`)
+      const htmlResponse = /<!doctype html|<html/i.test(responseText)
+      const message = htmlResponse
+        ? `The API returned an HTML page instead of JSON (${response.status}). Check that the NutriMatrix API is running on ${API_URL}.`
+        : `The API returned invalid JSON (${response.status}). Check the NutriMatrix API response.`
+      throw new Error(message)
     }
   }
   if (!response.ok) throw new Error(data?.message || 'Something went wrong.')

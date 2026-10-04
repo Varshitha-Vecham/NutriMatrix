@@ -1,0 +1,70 @@
+.profile-card {
+  width: min(100%, 960px);
+  max-width: 960px;
+}
+
+.profile-form {
+  width: 100%;
+  max-width: none;
+  padding: 30px;
+}
+
+.profile-form label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  text-align: left;
+}
+
+.profile-form input {
+  width: 100%;
+  text-align: left;
+}
+
+.profile-form .form-actions {
+  justify-content: flex-end;
+}
+
+.price-search {
+  display: flex;
+  flex: 0 1 290px;
+  align-items: center;
+  gap: 10px;
+  color: #718078;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.price-search input {
+  width: 250px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d8e3da;
+  border-radius: 8px;
+  background: #fff;
+  color: #203328;
+  font: 500 0.88rem 'DM Sans', sans-serif;
+}
+
+.price-search input:focus {
+  outline: 3px solid rgba(66, 169, 104, 0.16);
+  border-color: #42a968;
+}
+
+@media (max-width: 700px) {
+  .profile-form {
+    padding: 22px 16px;
+  }
+
+  .price-search {
+    width: 100%;
+    max-width: 100%;
+    flex-basis: auto;
+  }
+
+  .price-search input {
+    width: 100%;
+  }
+}

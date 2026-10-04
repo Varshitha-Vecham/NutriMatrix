@@ -256,7 +256,19 @@ async function ensureProductTables() {
 }
 
 app.use(cors({ origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:5174'], credentials: true }))
-app.use(express.json())
+// Move the original Product Analysis catalogue into the database once, so it is
+// included in admin totals and can be priced/edited just like new products.
+async function seedCatalogueProducts() {
+  const catalogue = [
+    ['Organic Greek Yogurt','Dairy',120,17,8,3],['Avocado Hass','Fruits',240,3,13,22],['Red Bell Peppers','Vegetables',37,1,7,0],['Wild Blueberries','Fruits',84,1,21,0],['Baby Spinach','Vegetables',20,2,3,0],['Almond Butter','Nuts & Seeds',196,7,6,18],['Honeycrisp Apples','Fruits',95,1,25,0],['Cherry Tomatoes','Vegetables',27,1,6,0],['Free-Range Eggs','Dairy',143,13,1,10],['Whole Grain Oats','Grains',150,5,27,3],['Broccoli Crowns','Vegetables',31,3,6,0],['Strawberries','Fruits',49,1,12,0],['Bananas','Fruits',105,1,27,0],['Fresh Paneer','Dairy',265,18,6,20],['Toned Milk','Dairy',120,8,12,4],['Yellow Moong Dal','Pulses',174,12,30,1]
+  ]
+  for (const [productName, category, calories, protein, carbohydrates, fat] of catalogue) {
+    const [found] = await pool.execute('SELECT id FROM products WHERE product_name = ? LIMIT 1', [productName])
+    if (!found.length) await pool.execute('INSERT INTO products (product_name, category, calories, protein, carbohydrates, fat) VALUES (?, ?, ?, ?, ?, ?)', [productName, category, calories, protein, carbohydrates, fat])
+  }
+}
+
+app.use(express.json({ limit: '8mb' }))
 app.use(cookieParser())
 
 function setAuthCookie(res, user) {
@@ -534,6 +546,7 @@ ensureProfileColumns()
   .then(() => ensureReceiptProductsTable())
   .then(() => ensureSavedMealsTable())
   .then(() => ensureProductTables())
+  .then(() => seedCatalogueProducts())
   .then(() => ensureAdminAccess())
   .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
   .catch((error) => {
