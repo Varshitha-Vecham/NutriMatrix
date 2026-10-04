@@ -38,6 +38,7 @@ function parseAlternativeIds(value) {
 const nav = [
   ['Dashboard', '▦'],
   ['Product Management', '◈'],
+  ['Deleted Products', '↶'],
   ['User Management', '♙'],
   ['Admin Profile', '◉'],
 ]
@@ -125,7 +126,12 @@ export default function AdminDashboard() {
     setForm({
       ...p,
       healthierAlternatives: parseAlternativeIds(p.healthierAlternatives),
-      prices: retailers.map((retailer) => p.prices?.find((x) => x.retailer === retailer) || { retailer, price: '' }),
+      prices: retailers.map((retailer) => {
+        const savedPrice = p.prices?.find(
+          (entry) => entry.retailer?.trim().toLowerCase() === retailer.toLowerCase()
+        )
+        return { retailer, price: savedPrice?.price != null ? String(savedPrice.price) : '' }
+      }),
     })
     go('Add Product')
   }
@@ -217,6 +223,28 @@ export default function AdminDashboard() {
     }
   }
 
+  async function restoreAll() {
+    try {
+      await apiRequest('/api/admin/products/restore-all', { method: 'POST' })
+      await load()
+      setMessage('All deleted products were restored to Product Analysis.')
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function deleteAll() {
+    if (!window.confirm('Permanently delete all deleted products? This cannot be undone.')) return
+
+    try {
+      await apiRequest('/api/admin/products/deleted', { method: 'DELETE' })
+      await load()
+      setMessage('All deleted products were permanently removed.')
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   if (loading) return <div className="admin-loading">Loading secure admin workspace…</div>
 
   return (
@@ -296,8 +324,9 @@ export default function AdminDashboard() {
         {error && <div className="toast error">{error}</div>}
 
         {page === 'Dashboard' && <Overview stats={stats} activity={activity} onProducts={() => go('Product Management')} />}
-        {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} restore={restore} />}
-        {page === 'Add Product' && <Form form={form} products={products.filter((product) => product.isActive)} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
+        {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} onDeletedProducts={() => go('Deleted Products')} />}
+        {page === 'Deleted Products' && <DeletedProducts products={products} restore={restore} restoreAll={restoreAll} deleteAll={deleteAll} />}
+        {page === 'Add Product' && <Form form={form} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
         {page === 'Admin Profile' && <Profile admin={admin} setAdmin={setAdmin} notify={setMessage} fail={setError} />}
       </main>
@@ -328,7 +357,7 @@ function Overview({ stats, activity, onProducts }) {
         <div className="heading">
           <div>
             <h2>Recent activity</h2>
-            <p>Latest product changes and registered users.</p>
+            <p>Product additions and edits by administrators.</p>
           </div>
           <button onClick={onProducts}>Manage products →</button>
         </div>
@@ -352,9 +381,8 @@ function Overview({ stats, activity, onProducts }) {
   )
 }
 
-function ProductList({ products, add, edit, remove, restore }) {
+function ProductList({ products, add, edit, remove, onDeletedProducts }) {
   const [search, setSearch] = useState('')
-  const [showDeleted, setShowDeleted] = useState(false)
   const activeProducts = products.filter((product) => product.isActive)
   const deletedProducts = products.filter((product) => !product.isActive)
   const query = search.trim().toLowerCase()
@@ -371,8 +399,8 @@ function ProductList({ products, add, edit, remove, restore }) {
         </div>
         <div className="product-management-actions">
           <button className="primary" onClick={add}>＋ Add New Product</button>
-          <button type="button" className="restore-toggle" onClick={() => setShowDeleted((current) => !current)}>
-            {showDeleted ? 'Hide deleted products' : `Restore products${deletedProducts.length ? ` (${deletedProducts.length})` : ''}`}
+          <button type="button" className="restore-toggle" onClick={onDeletedProducts}>
+            {`Restore products${deletedProducts.length ? ` (${deletedProducts.length})` : ''}`}
           </button>
         </div>
       </div>
@@ -406,33 +434,41 @@ function ProductList({ products, add, edit, remove, restore }) {
           </tr>
         )}
       </Table>
-      {showDeleted && (
-        <div className="deleted-products">
-          <h3>Deleted products</h3>
-          {deletedProducts.length ? (
-            <Table heads={['Product', 'Category', 'Actions']}>
-              {deletedProducts.map((product) => (
-                <tr key={product.id}>
-                  <td><strong>{product.productName}</strong></td>
-                  <td>{product.category}</td>
-                  <td className="actions"><button type="button" onClick={() => restore(product.id)}>Restore</button></td>
-                </tr>
-              ))}
-            </Table>
-          ) : <p className="muted">There are no deleted products to restore.</p>}
-        </div>
-      )}
     </section>
   )
 }
 
-function Form({ form, products, editing, change, price, image, save, back }) {
-  const changeAlternative = (index, productId) => {
-    const alternatives = [...form.healthierAlternatives]
-    alternatives[index] = productId
-    change('healthierAlternatives', alternatives)
-  }
+function DeletedProducts({ products, restore, restoreAll, deleteAll }) {
+  const deletedProducts = products.filter((product) => !product.isActive)
 
+  return (
+    <section className="panel">
+      <div className="toolbar">
+        <div>
+          <h2>Deleted products</h2>
+          <p className="muted">{deletedProducts.length} deleted products are hidden from Product Analysis.</p>
+        </div>
+        <div className="deleted-product-actions">
+          <button type="button" onClick={restoreAll} disabled={!deletedProducts.length}>Restore all</button>
+          <button type="button" className="danger" onClick={deleteAll} disabled={!deletedProducts.length}>Delete all</button>
+        </div>
+      </div>
+      {deletedProducts.length ? (
+        <Table heads={['Product', 'Category', 'Actions']}>
+          {deletedProducts.map((product) => (
+            <tr key={product.id}>
+              <td><strong>{product.productName}</strong></td>
+              <td>{product.category}</td>
+              <td className="actions"><button type="button" onClick={() => restore(product.id)}>Restore</button></td>
+            </tr>
+          ))}
+        </Table>
+      ) : <p className="muted empty">There are no deleted products.</p>}
+    </section>
+  )
+}
+
+function Form({ form, editing, change, price, image, save, back }) {
   return (
     <>
       <button className="back-button" onClick={back}>← Back to products</button>
@@ -499,19 +535,6 @@ function Form({ form, products, editing, change, price, image, save, back }) {
               <textarea value={form.healthBenefits || ''} onChange={(e) => change('healthBenefits', e.target.value)} />
             </label>
           </div>
-          <div className="alternative-pickers">
-            <p className="muted">Select up to three existing products as healthier alternatives. Manage product details from Product Management.</p>
-            {[0, 1, 2].map((index) => (
-              <AlternativePicker
-                key={index}
-                index={index}
-                products={products}
-                excludedIds={[editing, ...form.healthierAlternatives.filter((id, itemIndex) => itemIndex !== index)]}
-                value={form.healthierAlternatives[index] || ''}
-                onChange={(productId) => changeAlternative(index, productId)}
-              />
-            ))}
-          </div>
         </Section>
 
         <Section title="Retailer prices">
@@ -535,56 +558,6 @@ function Form({ form, products, editing, change, price, image, save, back }) {
         </div>
       </form>
     </>
-  )
-}
-
-function AlternativePicker({ index, products, excludedIds, value, onChange }) {
-  const [search, setSearch] = useState('')
-  const selected = products.find((product) => String(product.id) === String(value))
-  const query = search || selected?.productName || ''
-  const normalizedQuery = query.trim().toLowerCase()
-  const nameMatches = normalizedQuery
-    ? products.filter((product) => product.productName.toLowerCase().includes(normalizedQuery))
-    : []
-  const matches = selected && !search
-    ? []
-    : nameMatches.filter((product) =>
-        !excludedIds.some((id) => id != null && String(id) === String(product.id))
-      ).slice(0, 8)
-
-  return (
-    <div className="alternative-picker">
-      <label htmlFor={`alternative-search-${index}`}>Alternative {index + 1}</label>
-      <input
-        id={`alternative-search-${index}`}
-        type="search"
-        value={query}
-        onChange={(event) => {
-          setSearch(event.target.value)
-          onChange('')
-        }}
-        placeholder="Search Product Analysis products"
-        aria-label={`Search healthier alternative ${index + 1}`}
-      />
-      {!selected && matches.length > 0 && (
-        <span className="alternative-suggestions">
-          {matches.map((product) => (
-            <button
-              type="button"
-              key={product.id}
-              onClick={() => {
-                onChange(product.id)
-                setSearch('')
-              }}
-            >
-              {product.productName} · {product.category}
-            </button>
-          ))}
-        </span>
-      )}
-      {!selected && matches.length === 0 && normalizedQuery && <small>No available matching products.</small>}
-      {!query && <small>Optional — choose an existing analysis product.</small>}
-    </div>
   )
 }
 

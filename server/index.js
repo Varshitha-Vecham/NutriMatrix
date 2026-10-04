@@ -253,6 +253,7 @@ async function ensureAdminAccess() {
 async function ensureProductTables() {
   await pool.query(`CREATE TABLE IF NOT EXISTS products (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_name VARCHAR(255) NOT NULL, category VARCHAR(100) NOT NULL, image LONGTEXT NULL, calories DECIMAL(10,2) NULL, protein DECIMAL(10,2) NULL, carbohydrates DECIMAL(10,2) NULL, fat DECIMAL(10,2) NULL, fiber DECIMAL(10,2) NULL, sugar DECIMAL(10,2) NULL, sodium DECIMAL(10,2) NULL, health_benefits TEXT NULL, healthier_alternatives TEXT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`)
   await pool.query(`CREATE TABLE IF NOT EXISTS product_prices (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_id INT UNSIGNED NOT NULL, retailer VARCHAR(100) NOT NULL, price DECIMAL(10,2) NOT NULL, updated_at DATE NULL, CONSTRAINT fk_product_price FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`)
+  await pool.query(`CREATE TABLE IF NOT EXISTS product_activity (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, activity VARCHAR(50) NOT NULL, detail VARCHAR(255) NOT NULL, occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_product_activity_occurred_at (occurred_at))`)
   await pool.query(`CREATE TABLE IF NOT EXISTS product_catalogue_seed (catalogue_version VARCHAR(50) PRIMARY KEY, seeded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`)
   const [columns] = await pool.query('SHOW COLUMNS FROM products')
   if (!columns.some((column) => column.Field === 'is_active')) {
@@ -469,13 +470,94 @@ app.get('/api/admin/dashboard', requireAuth, requireAdmin, async (req, res) => {
     const [[pantry]] = await pool.query('SELECT COUNT(*) AS total FROM receipt_products')
     const [[alerts]] = await pool.query(`SELECT COUNT(*) AS total FROM receipt_products
       WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)`)
-    const [activity] = await pool.query("SELECT 'Product updated' AS activity, product_name AS detail, updated_at AS occurredAt, 'Admin' AS actor FROM products UNION ALL SELECT 'User registered', name, created_at, 'User' FROM users WHERE role != 'admin' ORDER BY occurredAt DESC LIMIT 8")
+    const [activity] = await pool.query('SELECT activity, detail, occurred_at AS occurredAt, ? AS actor FROM product_activity ORDER BY occurred_at DESC LIMIT 8', ['Admin'])
     res.json({ stats: { products: productCount.total, users: userCount.total, pantryItems: pantry.total, expiryAlerts: alerts.total }, activity })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load dashboard data.' }) }
 })
-async function persistProduct(req,res,id) { try { const b=req.body, values=validateProduct(b); let productId=id; if (id) await pool.execute('UPDATE products SET product_name=?,category=?,image=?,calories=?,protein=?,carbohydrates=?,fat=?,fiber=?,sugar=?,sodium=?,health_benefits=?,healthier_alternatives=? WHERE id=?',[b.productName.trim(),b.category,b.image||null,...values,b.healthBenefits||null,b.healthierAlternatives||null,id]); else { const [result]=await pool.execute('INSERT INTO products (product_name,category,image,calories,protein,carbohydrates,fat,fiber,sugar,sodium,health_benefits,healthier_alternatives) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',[b.productName.trim(),b.category,b.image||null,...values,b.healthBenefits||null,b.healthierAlternatives||null]); productId=result.insertId }; await pool.execute('DELETE FROM product_prices WHERE product_id=?',[productId]); for(const p of b.prices||[]) if(p.price !== '' && p.price != null) await pool.execute('INSERT INTO product_prices (product_id,retailer,price,updated_at) VALUES (?,?,?,?)',[productId,p.retailer,Number(p.price),p.updatedAt||null]); res.status(id?200:201).json({message:id?'Product updated successfully.':'Product added successfully.',id:productId}) } catch(error) { console.error(error); res.status(error.message?.includes('required')||error.message?.includes('negative')?400:500).json({message:error.message||'Unable to save product.'}) } }
+async function persistProduct(req, res, id) {
+  let connection
+  let transactionStarted = false
+  try {
+    const body = req.body
+    const nutrition = validateProduct(body)
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    transactionStarted = true
+
+    let productId = id
+    if (id) {
+      const [existing] = await connection.execute('SELECT id FROM products WHERE id = ? FOR UPDATE', [id])
+      if (!existing.length) {
+        await connection.rollback()
+        transactionStarted = false
+        return res.status(404).json({ message: 'Product not found.' })
+      }
+      await connection.execute(
+        'UPDATE products SET product_name=?,category=?,image=?,calories=?,protein=?,carbohydrates=?,fat=?,fiber=?,sugar=?,sodium=?,health_benefits=?,healthier_alternatives=? WHERE id=?',
+        [body.productName.trim(), body.category, body.image || null, ...nutrition, body.healthBenefits || null, body.healthierAlternatives || null, id]
+      )
+    } else {
+      const [result] = await connection.execute(
+        'INSERT INTO products (product_name,category,image,calories,protein,carbohydrates,fat,fiber,sugar,sodium,health_benefits,healthier_alternatives) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+        [body.productName.trim(), body.category, body.image || null, ...nutrition, body.healthBenefits || null, body.healthierAlternatives || null]
+      )
+      productId = result.insertId
+    }
+
+    await connection.execute('DELETE FROM product_prices WHERE product_id=?', [productId])
+    for (const entry of body.prices || []) {
+      if (entry.price !== '' && entry.price != null) {
+        await connection.execute(
+          'INSERT INTO product_prices (product_id,retailer,price,updated_at) VALUES (?,?,?,?)',
+          [productId, entry.retailer, Number(entry.price), entry.updatedAt || null]
+        )
+      }
+    }
+    await connection.execute(
+      'INSERT INTO product_activity (activity, detail) VALUES (?, ?)',
+      [id ? 'Product updated' : 'Product added', body.productName.trim()]
+    )
+    await connection.commit()
+    transactionStarted = false
+    res.status(id ? 200 : 201).json({
+      message: id ? 'Product updated successfully.' : 'Product added successfully.',
+      id: productId,
+    })
+  } catch (error) {
+    if (connection && transactionStarted) {
+      try {
+        await connection.rollback()
+      } catch (rollbackError) {
+        console.error('Unable to roll back the product save transaction.', rollbackError)
+      }
+    }
+    console.error(error)
+    res.status(error.message?.includes('required') || error.message?.includes('negative') ? 400 : 500)
+      .json({ message: error.message || 'Unable to save product.' })
+  } finally {
+    connection?.release()
+  }
+}
 app.post('/api/admin/products', requireAuth, requireAdmin, (req,res) => persistProduct(req,res))
 app.put('/api/admin/products/:id', requireAuth, requireAdmin, (req,res) => persistProduct(req,res,Number(req.params.id)))
+app.post('/api/admin/products/restore-all', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [result] = await pool.execute('UPDATE products SET is_active = TRUE WHERE is_active = FALSE')
+    res.json({ restored: result.affectedRows })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Unable to restore deleted products.' })
+  }
+})
+app.delete('/api/admin/products/deleted', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [result] = await pool.execute('DELETE FROM products WHERE is_active = FALSE')
+    res.json({ deleted: result.affectedRows })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Unable to permanently delete deleted products.' })
+  }
+})
 app.delete('/api/admin/products/:id', requireAuth, requireAdmin, async (req,res) => { try { await pool.execute('UPDATE products SET is_active = FALSE WHERE id = ?', [req.params.id]); res.status(204).end() } catch(error) { console.error(error); res.status(500).json({message:'Unable to delete product.'}) } })
 app.post('/api/admin/products/:id/restore', requireAuth, requireAdmin, async (req,res) => { try { const [result] = await pool.execute('UPDATE products SET is_active = TRUE WHERE id = ?', [req.params.id]); if (!result.affectedRows) return res.status(404).json({ message: 'Product not found.' }); res.json({ message: 'Product restored successfully.' }) } catch(error) { console.error(error); res.status(500).json({message:'Unable to restore product.'}) } })
 

@@ -68,6 +68,13 @@ CREATE TABLE IF NOT EXISTS product_prices (
   retailer VARCHAR(100) NOT NULL, price DECIMAL(10,2) NOT NULL, updated_at DATE NULL,
   CONSTRAINT fk_product_price FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS product_activity (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  activity VARCHAR(50) NOT NULL,
+  detail VARCHAR(255) NOT NULL,
+  occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_product_activity_occurred_at (occurred_at)
+);
 
 SET @schema_name = DATABASE();
 

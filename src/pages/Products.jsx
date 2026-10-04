@@ -157,6 +157,31 @@ function mapApiProduct(product) {
   }
 }
 
+function nutritionQualityScore(product) {
+  return product.protein * 2 + product.fiber * 3 -
+    product.calories * 0.02 - product.fat * 0.5 - product.sugar * 0.75 - product.sodium * 0.01
+}
+
+function alternativesFor(product, products) {
+  const savedAlternatives = product.healthierAlternatives
+    .map((id) => products.find((candidate) => candidate.id === id))
+    .filter(Boolean)
+  if (savedAlternatives.length) return savedAlternatives
+
+  const sameCategory = products.filter((candidate) =>
+    candidate.id !== product.id && candidate.category === product.category
+  )
+  const candidates = sameCategory.length
+    ? sameCategory
+    : products.filter((candidate) => candidate.id !== product.id)
+  const healthier = candidates.filter((candidate) =>
+    nutritionQualityScore(candidate) > nutritionQualityScore(product)
+  )
+  const ranked = (healthier.length ? healthier : candidates)
+    .sort((a, b) => nutritionQualityScore(b) - nutritionQualityScore(a))
+  return ranked.slice(0, 3)
+}
+
 const nutritionDetails = (product) => ({
   calories: product.calories, protein: product.protein, carbohydrates: product.carbs,
   totalFat: product.fat, saturatedFat: product.saturatedFat,
@@ -233,9 +258,7 @@ function Products() {
   if (catalogError) return <div className="products-page"><Navbar /><main className="products-main"><p className="catalog-error" role="alert">{catalogError}</p></main></div>
   if (selectedProduct) {
     const selectedPackageId = packageSelections[selectedProduct.id] || selectedProduct.packageOptions[0].id
-    const alternatives = selectedProduct.healthierAlternatives
-      .map((id) => productCatalog.find((product) => product.id === id))
-      .filter(Boolean)
+    const alternatives = alternativesFor(selectedProduct, productCatalog)
     return <ProductAnalysis product={selectedProduct} alternatives={alternatives} onBack={() => setSelectedProduct(null)} onAdd={addToCart} onChangeQuantity={changeQuantity} quantity={cart.find((item) => item.id === selectedProduct.id && item.packageId === selectedPackageId)?.quantity} packageId={selectedPackageId} onChangePackage={changePackage} onSelect={setSelectedProduct} />
   }
   return <div className="products-page"><Navbar />
