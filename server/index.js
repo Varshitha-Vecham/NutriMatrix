@@ -387,14 +387,22 @@ app.put('/api/admin/password', requireAuth, requireAdmin, async (req, res) => {
 function validateProduct(body) {
   if (!body.productName?.trim() || !body.category) throw new Error('Product name and category are required.')
   const nutrition = ['calories','protein','carbohydrates','fat','fiber','sugar','sodium'].map((key) => {
-    if (body[key] !== '' && body[key] !== undefined && Number(body[key]) < 0) throw new Error('Nutrition values cannot be negative.')
+    if (body[key] !== '' && body[key] !== undefined && (!Number.isFinite(Number(body[key])) || Number(body[key]) < 0)) throw new Error('Nutrition values must be valid non-negative numbers.')
     return body[key] === '' || body[key] === undefined ? null : Number(body[key])
   })
-  for (const price of body.prices || []) if (price.price !== '' && Number(price.price) < 0) throw new Error('Price cannot be negative.')
+  const bigBasketPrice = (body.prices || []).find((price) => price.retailer?.trim().toLowerCase() === 'bigbasket')
+  if (!bigBasketPrice || bigBasketPrice.price === '' || bigBasketPrice.price == null || !Number.isFinite(Number(bigBasketPrice.price))) {
+    throw new Error('A valid BigBasket price is required.')
+  }
+  for (const price of body.prices || []) {
+    if (price.price !== '' && price.price != null && (!Number.isFinite(Number(price.price)) || Number(price.price) < 0)) {
+      throw new Error('Prices must be valid non-negative numbers.')
+    }
+  }
   return nutrition
 }
 async function adminProducts() {
-  const [rows] = await pool.query(`SELECT p.id,p.product_name AS productName,p.category,p.image,p.calories,p.protein,p.carbohydrates,p.fat,p.fiber,p.sugar,p.sodium,p.health_benefits AS healthBenefits,p.healthier_alternatives AS healthierAlternatives,p.is_active AS isActive,p.created_at AS createdAt,p.updated_at AS updatedAt,pp.retailer,pp.price,pp.updated_at AS priceUpdatedAt FROM products p LEFT JOIN product_prices pp ON pp.product_id=p.id ORDER BY p.updated_at DESC`)
+  const [rows] = await pool.query(`SELECT p.id,p.product_name AS productName,p.category,p.image,p.calories,p.protein,p.carbohydrates,p.fat,p.fiber,p.sugar,p.sodium,p.healthier_alternatives AS healthierAlternatives,p.is_active AS isActive,p.created_at AS createdAt,p.updated_at AS updatedAt,pp.retailer,pp.price,pp.updated_at AS priceUpdatedAt FROM products p LEFT JOIN product_prices pp ON pp.product_id=p.id ORDER BY p.updated_at DESC`)
   const indexed = new Map()
   rows.forEach((row) => { if (!indexed.has(row.id)) { const { retailer, price, priceUpdatedAt, ...product } = row; indexed.set(row.id, { ...product, prices: [] }) }; if (row.retailer) indexed.get(row.id).prices.push({ retailer: row.retailer, price: Number(row.price), updatedAt: row.priceUpdatedAt }) })
   return [...indexed.values()]
@@ -407,7 +415,9 @@ app.post('/api/admin/products/catalogue', requireAuth, requireAdmin, async (req,
         typeof product.category !== 'string' || !product.category.trim() ||
         ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium'].some((key) =>
           !Number.isFinite(Number(product[key]))
-        )
+        ) ||
+        !Array.isArray(product.retailers) ||
+        !product.retailers.some((entry) => entry.name === 'BigBasket' && Number.isFinite(Number(entry.price)) && Number(entry.price) >= 0)
       )) {
     return res.status(400).json({ message: 'The Product Analysis catalogue must contain 100 valid products.' })
   }
@@ -423,14 +433,12 @@ app.post('/api/admin/products/catalogue', requireAuth, requireAdmin, async (req,
     const [seed] = await connection.execute(
       "INSERT IGNORE INTO product_catalogue_seed (catalogue_version) VALUES ('analysis-100-v1')"
     )
-    if (!seed.affectedRows) {
-      await connection.commit()
-      return res.json({ added: 0, total: 100 })
-    }
 
-    const [existing] = await connection.query('SELECT product_name FROM products WHERE product_name IN (?)', [names])
-    const existingNames = new Set(existing.map((product) => product.product_name.toLowerCase()))
-    const missing = catalogue.filter((product) => !existingNames.has(product.name.trim().toLowerCase()))
+    const [existing] = await connection.query('SELECT id, product_name AS productName FROM products WHERE product_name IN (?)', [names])
+    const existingNames = new Set(existing.map((product) => product.productName.toLowerCase()))
+    const missing = seed.affectedRows
+      ? catalogue.filter((product) => !existingNames.has(product.name.trim().toLowerCase()))
+      : []
 
     if (missing.length) {
       const values = missing.map((product) => [
@@ -451,8 +459,41 @@ app.post('/api/admin/products/catalogue', requireAuth, requireAdmin, async (req,
       )
     }
 
+    const [priceSeed] = await connection.execute(
+      "INSERT IGNORE INTO product_catalogue_seed (catalogue_version) VALUES ('analysis-100-prices-v1')"
+    )
+    let pricesAdded = 0
+    if (priceSeed.affectedRows) {
+      const [catalogueProducts] = await connection.query(
+        'SELECT id, product_name AS productName FROM products WHERE product_name IN (?)',
+        [names]
+      )
+      const productIds = new Map(catalogueProducts.map((product) => [product.productName.toLowerCase(), product.id]))
+      const [existingPrices] = await connection.query(
+        'SELECT pp.product_id AS productId, pp.retailer FROM product_prices pp JOIN products p ON p.id = pp.product_id WHERE p.product_name IN (?)',
+        [names]
+      )
+      const priceKeys = new Set(existingPrices.map((entry) => `${entry.productId}:${entry.retailer.trim().toLowerCase()}`))
+      const newPrices = catalogue.flatMap((product) => {
+        const productId = productIds.get(product.name.trim().toLowerCase())
+        return product.retailers.flatMap((entry) => {
+          const key = `${productId}:${entry.name.trim().toLowerCase()}`
+          return productId && !priceKeys.has(key)
+            ? [[productId, entry.name.trim(), Number(entry.price)]]
+            : []
+        })
+      })
+      if (newPrices.length) {
+        await connection.query(
+          'INSERT INTO product_prices (product_id, retailer, price) VALUES ?',
+          [newPrices]
+        )
+        pricesAdded = newPrices.length
+      }
+    }
+
     await connection.commit()
-    res.json({ added: missing.length, total: 100 })
+    res.json({ added: missing.length, pricesAdded, total: 100 })
   } catch (error) {
     if (connection) await connection.rollback()
     console.error(error)
@@ -493,13 +534,13 @@ async function persistProduct(req, res, id) {
         return res.status(404).json({ message: 'Product not found.' })
       }
       await connection.execute(
-        'UPDATE products SET product_name=?,category=?,image=?,calories=?,protein=?,carbohydrates=?,fat=?,fiber=?,sugar=?,sodium=?,health_benefits=?,healthier_alternatives=? WHERE id=?',
-        [body.productName.trim(), body.category, body.image || null, ...nutrition, body.healthBenefits || null, body.healthierAlternatives || null, id]
+        'UPDATE products SET product_name=?,category=?,image=?,calories=?,protein=?,carbohydrates=?,fat=?,fiber=?,sugar=?,sodium=?,healthier_alternatives=? WHERE id=?',
+        [body.productName.trim(), body.category, body.image || null, ...nutrition, body.healthierAlternatives || null, id]
       )
     } else {
       const [result] = await connection.execute(
-        'INSERT INTO products (product_name,category,image,calories,protein,carbohydrates,fat,fiber,sugar,sodium,health_benefits,healthier_alternatives) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-        [body.productName.trim(), body.category, body.image || null, ...nutrition, body.healthBenefits || null, body.healthierAlternatives || null]
+        'INSERT INTO products (product_name,category,image,calories,protein,carbohydrates,fat,fiber,sugar,sodium,healthier_alternatives) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        [body.productName.trim(), body.category, body.image || null, ...nutrition, body.healthierAlternatives || null]
       )
       productId = result.insertId
     }
@@ -532,7 +573,7 @@ async function persistProduct(req, res, id) {
       }
     }
     console.error(error)
-    res.status(error.message?.includes('required') || error.message?.includes('negative') ? 400 : 500)
+    res.status(error.message?.includes('required') || error.message?.includes('negative') || error.message?.includes('valid') ? 400 : 500)
       .json({ message: error.message || 'Unable to save product.' })
   } finally {
     connection?.release()

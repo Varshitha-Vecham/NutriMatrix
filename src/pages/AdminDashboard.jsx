@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../api.js'
-import { products as analysisProducts } from './Products.jsx'
+import { defaultRetailerPriceFor, products as analysisProducts } from './Products.jsx'
 import './AdminDashboard.css'
 import './AdminDashboardOverrides.css'
 
@@ -19,7 +19,6 @@ const blank = () => ({
   fiber: '',
   sugar: '',
   sodium: '',
-  healthBenefits: '',
   healthierAlternatives: [],
   prices: retailers.map((retailer) => ({ retailer, price: '' })),
 })
@@ -130,7 +129,8 @@ export default function AdminDashboard() {
         const savedPrice = p.prices?.find(
           (entry) => entry.retailer?.trim().toLowerCase() === retailer.toLowerCase()
         )
-        return { retailer, price: savedPrice?.price != null ? String(savedPrice.price) : '' }
+        const defaultPrice = defaultRetailerPriceFor(p, retailer)
+        return { retailer, price: savedPrice?.price != null ? String(savedPrice.price) : String(defaultPrice ?? '') }
       }),
     })
     go('Add Product')
@@ -410,7 +410,7 @@ function ProductList({ products, add, edit, remove, onDeletedProducts }) {
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by product name or category" />
       </label>
 
-      <Table heads={['Product', 'Category', 'Calories', 'Protein', 'Carbohydrates', 'Fat', 'Actions']}>
+      <Table heads={['Product', 'Category', 'Calories', 'Protein', 'Carbohydrates', 'Fat', 'BigBasket price', 'Actions']}>
         {visibleProducts.map((p) => (
           <tr key={p.id}>
             <td className="product">
@@ -422,6 +422,7 @@ function ProductList({ products, add, edit, remove, onDeletedProducts }) {
             <td>{p.protein || 0} g</td>
             <td>{p.carbohydrates || 0} g</td>
             <td>{p.fat || 0} g</td>
+            <td>₹{Number(p.prices?.find((entry) => entry.retailer?.trim().toLowerCase() === 'bigbasket')?.price ?? defaultRetailerPriceFor(p, 'BigBasket')).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
             <td className="actions">
               <button onClick={() => edit(p)}>Edit</button>
               <button className="danger" onClick={() => remove(p.id)}>Delete</button>
@@ -430,7 +431,7 @@ function ProductList({ products, add, edit, remove, onDeletedProducts }) {
         ))}
         {!visibleProducts.length && (
           <tr>
-            <td colSpan="7" className="empty">{activeProducts.length ? 'No products match your search.' : 'No products yet. Add one to publish it in Product Analysis.'}</td>
+            <td colSpan="8" className="empty">{activeProducts.length ? 'No products match your search.' : 'No products yet. Add one to publish it in Product Analysis.'}</td>
           </tr>
         )}
       </Table>
@@ -528,15 +529,6 @@ function Form({ form, editing, change, price, image, save, back }) {
           </div>
         </Section>
 
-        <Section title="Health information">
-          <div className="grid">
-            <label>
-              Health benefits
-              <textarea value={form.healthBenefits || ''} onChange={(e) => change('healthBenefits', e.target.value)} />
-            </label>
-          </div>
-        </Section>
-
         <Section title="Retailer prices">
           <p className="muted">Estimated comparison data only.</p>
           <div className="prices">
@@ -545,7 +537,7 @@ function Form({ form, editing, change, price, image, save, back }) {
                 <strong>{p.retailer}</strong>
                 <label>
                   Price (₹)
-                  <input min="0" type="number" step=".01" value={p.price} onChange={(e) => price(i, e.target.value)} />
+                  <input min="0" type="number" step=".01" required={p.retailer === 'BigBasket'} value={p.price} onChange={(e) => price(i, e.target.value)} />
                 </label>
               </div>
             ))}

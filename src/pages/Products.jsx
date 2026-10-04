@@ -47,38 +47,56 @@ const packageOptionsFor = (category, name) => {
   if (category === 'Dairy') return [{ id: '200g', label: '200 g', amount: 200, unit: 'g', factor: 0.8 }, { id: '500g', label: '500 g', amount: 500, unit: 'g', factor: 1.8 }, { id: '1kg', label: '1 kg', amount: 1, unit: 'kg', factor: 3.4 }]
   return [{ id: '100g', label: '100 g', amount: 100, unit: 'g', factor: 1 }, { id: '500g', label: '500 g', amount: 500, unit: 'g', factor: 4.6 }, { id: '1kg', label: '1 kg', amount: 1, unit: 'kg', factor: 8.8 }, { id: '2kg', label: '2 kg', amount: 2, unit: 'kg', factor: 17 }, { id: '5kg', label: '5 kg', amount: 5, unit: 'kg', factor: 41 }]
 }
-export const products = groups.flatMap(([category, items], categoryIndex) => items.map(([name, imageTags], itemIndex) => {
-  const id = categoryIndex * 20 + itemIndex + 1
-  const packageOptions = packageOptionsFor(category, name)
-  const [calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium] = nutritionByProduct[name]
-  return { id, name, category, image: productImage(name, imageTags, id), brand: 'Nutrition Library', serving: packageOptions[0].label, packageOptions, calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium, retailers: [{ price: 1 }] }
-}))
-const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages', 'Pantry']
 const retailerNames = ['BigBasket', 'Blinkit', 'Zepto', 'Swiggy Instamart', 'JioMart', 'Amazon Fresh', 'Flipkart Minutes']
 const retailerMultipliers = [1, 1.06, 0.97, 1.03, 1.08, 1.02, 1.04]
-// Spread retailer promotions by product name instead of catalog position. This
-// prevents a run of products (or a user's usual staples) from repeatedly
-// favouring one marketplace simply because of their numeric IDs.
 const promotedRetailerIndex = (product) => {
   let hash = 0
   for (const character of `${product.category}:${product.name}`) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
   return hash % retailerNames.length
 }
-const catalog = products.map((product) => {
-  const basePrice = product.category === 'Nuts & Seeds' ? 24 + (product.id % 5) * 7 : product.category === 'Fruits' || product.category === 'Vegetables' ? 5 + (product.id % 5) * 2 : product.category === 'Dairy' || product.category === 'Beverages' ? 12 + (product.id % 5) * 4 : 12 + (product.id % 6) * 4
+const estimatedBasePriceFor = (product) => product.category === 'Nuts & Seeds' ? 24 + (product.id % 5) * 7
+  : product.category === 'Fruits' || product.category === 'Vegetables' ? 5 + (product.id % 5) * 2
+    : product.category === 'Dairy' || product.category === 'Beverages' ? 12 + (product.id % 5) * 4
+      : 12 + (product.id % 6) * 4
+const defaultRetailerPricesFor = (product) => {
+  const basePrice = estimatedBasePriceFor(product)
   const recommendedIndex = promotedRetailerIndex(product)
-  return { ...product, retailers: retailerNames.map((name, index) => {
-    const estimatedPrice = /\bOil\b/.test(product.name)
-      ? basePrice * (index === recommendedIndex ? 0.92 : retailerMultipliers[index])
-      : basePrice * (index === recommendedIndex ? 0.9 : retailerMultipliers[index])
-    return { name, price: product.id % 3 === 0 ? Math.round(estimatedPrice) : Number(estimatedPrice.toFixed(2)) }
-  }) }
-})
+  const defaultPackageFactor = (product.packageOptions || packageOptionsFor(product.category, product.name))[0].factor
+  return retailerNames.map((name, index) => {
+    const multiplier = index === recommendedIndex
+      ? (/\bOil\b/.test(product.name) ? 0.92 : 0.9)
+      : retailerMultipliers[index]
+    const estimate = basePrice * multiplier * defaultPackageFactor
+    return {
+      name,
+      price: product.id % 3 === 0 ? Math.round(estimate) : Number(estimate.toFixed(2)),
+    }
+  })
+}
+export const products = groups.flatMap(([category, items], categoryIndex) => items.map(([name, imageTags], itemIndex) => {
+  const id = categoryIndex * 20 + itemIndex + 1
+  const packageOptions = packageOptionsFor(category, name)
+  const [calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium] = nutritionByProduct[name]
+  const product = { id, name, category, image: productImage(name, imageTags, id), brand: 'Nutrition Library', serving: packageOptions[0].label, packageOptions, calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium }
+  return { ...product, retailers: defaultRetailerPricesFor(product) }
+}))
+const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages', 'Pantry']
+const catalog = products
+export const defaultRetailerPriceFor = (product, retailerName) => {
+  const matchingProduct = catalog.find((entry) => entry.name === product.productName || entry.name === product.name)
+  const retailerPrice = matchingProduct?.retailers.find((entry) => entry.name.toLowerCase() === retailerName.toLowerCase())
+  return retailerPrice?.price ?? defaultRetailerPricesFor({
+    id: Number(product.id),
+    name: product.productName || product.name,
+    category: product.category,
+    packageOptions: packageOptionsFor(product.category, product.productName || product.name),
+  }).find((entry) => entry.name.toLowerCase() === retailerName.toLowerCase())?.price
+}
 const formatINR = (value) => `Rs. ${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 const SMART_CART_STORAGE_KEY = 'nutrimatrix-smart-cart'
 const packageFor = (product, packageId) => product.packageOptions.find((option) => option.id === packageId) || product.packageOptions[0]
 const cartItemKey = (id, packageId) => `${id}-${packageId}`
-const priceForPackage = (product, retailer, packageId) => retailer.price * packageFor(product, packageId).factor
+const priceForPackage = (product, retailer, packageId) => retailer.price * packageFor(product, packageId).factor / product.packageOptions[0].factor
 const totalPackageLabel = (product, packageId, quantity) => { const option = packageFor(product, packageId); const amount = option.amount * quantity; return `${amount} ${amount === 1 ? option.unit : option.pluralUnit || option.unit}` }
 
 function QuantityStepper({ product, packageId, quantity, onChange, className = 'quantity' }) {
@@ -124,10 +142,6 @@ function mapApiProduct(product) {
   const category = product.category
   const defaultProduct = catalog.find((entry) => entry.name === name)
   const packageOptions = defaultProduct?.packageOptions || packageOptionsFor(category, name)
-  const estimatedBase = category === 'Nuts & Seeds' ? 24 + (id % 5) * 7
-    : category === 'Fruits' || category === 'Vegetables' ? 5 + (id % 5) * 2
-      : category === 'Dairy' || category === 'Beverages' ? 12 + (id % 5) * 4
-        : 12 + (id % 6) * 4
 
   return {
     id,
@@ -135,7 +149,7 @@ function mapApiProduct(product) {
     category,
     brand: 'NutriMatrix',
     image: product.image || defaultProduct?.image || '',
-    description: product.healthBenefits || `${name} from the NutriMatrix nutrition library.`,
+    description: `${name} from the NutriMatrix nutrition library.`,
     serving: packageOptions[0].label,
     packageOptions,
     calories: Number(product.calories) || 0,
@@ -147,12 +161,9 @@ function mapApiProduct(product) {
     sugar: Number(product.sugar) || 0,
     sodium: Number(product.sodium) || 0,
     healthierAlternatives: parseAlternativeIds(product.healthierAlternatives),
-    retailers: retailerNames.map((retailer, index) => {
-      const savedPrice = product.prices?.find((entry) => entry.retailer === retailer)
-      const defaultPrice = defaultProduct?.retailers.find((entry) => entry.name === retailer)?.price
-      const multiplier = retailerMultipliers[index]
-      const estimatedPrice = id % 3 === 0 ? Math.round(estimatedBase * multiplier) : Number((estimatedBase * multiplier).toFixed(2))
-      return { name: retailer, price: savedPrice ? Number(savedPrice.price) : defaultPrice ?? estimatedPrice }
+    retailers: retailerNames.map((retailer) => {
+      const savedPrice = product.prices?.find((entry) => entry.retailer?.trim().toLowerCase() === retailer.toLowerCase())
+      return { name: retailer, price: savedPrice ? Number(savedPrice.price) : defaultRetailerPriceFor({ ...product, id, name, category }, retailer) }
     }),
   }
 }

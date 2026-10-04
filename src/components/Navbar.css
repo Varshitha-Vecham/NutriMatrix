@@ -11,9 +11,9 @@
 }
 
 .nav-container {
-  max-width: 1280px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 14px 24px;
+  padding: 14px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;

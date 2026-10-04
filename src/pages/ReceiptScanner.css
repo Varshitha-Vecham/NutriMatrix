@@ -1,5 +1,5 @@
 .receipt-page { min-height: 100vh; background: linear-gradient(145deg, #eef9f1, #fff 60%, #fffaf0); color: #183d27; }
-.receipt-content { max-width: 900px; margin: auto; padding: 48px 24px 90px; }
+.receipt-content { max-width: 1300px; margin: auto; padding: 48px 28px 90px; }
 .receipt-back { display: block; margin-bottom: 54px; padding: 0; background: transparent; color: #267646; font-weight: 800; }
 .receipt-content h1 { margin: 14px 0 10px; color: #16472b; font-size: clamp(2.5rem, 5vw, 4.5rem); letter-spacing: -.06em; }
 .receipt-content h1 em { color: #df8c1d; font-style: normal; }
@@ -17,7 +17,7 @@
 .receipt-error, .receipt-message { max-width: 680px; margin: 18px 0; padding: 14px 16px; border-radius: 10px; font-weight: 700; }
 .receipt-error { background: #fff0ed; color: #a43d2b; }
 .receipt-message { background: #e9f7ed; color: #21683a; }
-.receipt-products, .tracked-products { max-width: 900px; margin-top: 54px; }
+.receipt-products, .tracked-products { max-width: 1300px; margin-top: 54px; }
 .receipt-section-heading h2 { margin: 8px 0; color: #28583a; font-size: 1.7rem; }
 .receipt-section-heading p { max-width: 650px; color: #687b6e; line-height: 1.6; }
 .receipt-product-list { display: grid; gap: 12px; margin-top: 20px; }

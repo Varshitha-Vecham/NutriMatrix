@@ -1,5 +1,5 @@
 .profile-page { min-height: 100vh; background: linear-gradient(135deg, #f4fbf6 0%, #fffdf5 52%, #fff7ed 100%); }
-.profile-content { max-width: 1120px; margin: 0 auto; padding: 64px 24px 90px; }
+.profile-content { max-width: 1400px; margin: 0 auto; padding: 64px 28px 90px; }
 .profile-intro { max-width: 730px; margin-bottom: 42px; }
 .profile-intro h1 { color: #14532d; font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.05; margin: 14px 0 18px; letter-spacing: -1px; }
 .profile-intro h1 span { color: #e28a16; }
