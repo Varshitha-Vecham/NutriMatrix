@@ -42,4 +42,16 @@
 .alternative-list img { aspect-ratio: auto; height: 160px; border-bottom: 1px solid #d6e0d4; }
 .price-total big { display: block; color: #7c887d; font-size: .98rem; margin-top: 5px; }
 .analysis-quantity { display: inline-flex; align-items: center; gap: 14px; margin-top: 18px; padding: 6px 8px; border: 1px solid #d6e0d4; border-radius: 6px; background: #f5f8f3; color: #39473b; font-weight: 700; }.analysis-quantity button { width: 28px; height: 28px; border-radius: 4px; background: #e4ede2; color: #31583c; font-size: 1.2rem; line-height: 1; }.analysis-quantity button:hover { background: #3c6546; color: #fff; }
+.product-art > .analysis-image-placeholder,
+.analysis-hero > .analysis-image-placeholder {
+  display: grid;
+  place-items: center;
+  background: #e7ece3;
+  color: #55805b;
+  font-size: 2rem;
+}
+.product-art > .analysis-image-placeholder { width: 100%; height: 100%; }
+.analysis-hero > .analysis-image-placeholder { width: 300px; height: 250px; border-radius: 9px; }
+.catalog-error { padding: 14px; border-radius: 7px; background: #fff0ed; color: #a63d34; }
+@media (max-width: 780px) { .analysis-hero > .analysis-image-placeholder { width: 100%; height: 220px; } }
 .product-name-row { display: flex; align-items: start; justify-content: space-between; gap: 8px; }.product-name-row h2 { margin-right: 0; }.product-price { color: #3c6546; font-size: .78rem; white-space: nowrap; padding-top: 5px; }.card-quantity { display: flex; align-items: center; gap: 8px; border: 1px solid #d6e0d4; border-radius: 5px; background: #f5f8f3; padding: 4px 6px; color: #39473b; font-size: .78rem; font-weight: 700; }.card-quantity button { width: 19px; height: 19px; border-radius: 3px; background: #e4ede2; color: #31583c; font-size: 1rem; line-height: 1; }.card-quantity button:hover { background: #3c6546; color: #fff; }.basket-item-info small, .basket-item-price { display: block; }.basket-item-price { color: #3c6546; font-size: .7rem; font-weight: 700; margin-top: 3px; } @media (max-width: 480px) { .product-name-row { display: block; }.product-price { display: block; padding-top: 0; margin-bottom: 4px; }.card-quantity { gap: 5px; padding: 4px; } }

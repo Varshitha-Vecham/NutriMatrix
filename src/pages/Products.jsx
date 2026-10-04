@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
+import { apiRequest } from '../api.js'
 import './Products.css'
 
 //const productImageFallback = (tags, id) => `https://loremflickr.com/700/500/${encodeURIComponent(tags.replaceAll(' ', ','))}/all?lock=${id}`
@@ -52,7 +53,7 @@ export const products = groups.flatMap(([category, items], categoryIndex) => ite
   const [calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium] = nutritionByProduct[name]
   return { id, name, category, image: productImage(name, imageTags, id), brand: 'Nutrition Library', serving: packageOptions[0].label, packageOptions, calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium, retailers: [{ price: 1 }] }
 }))
-const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages']
+const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages', 'Pantry']
 const retailerNames = ['BigBasket', 'Blinkit', 'Zepto', 'Swiggy Instamart', 'JioMart', 'Amazon Fresh', 'Flipkart Minutes']
 const retailerMultipliers = [1, 1.06, 0.97, 1.03, 1.08, 1.02, 1.04]
 // Spread retailer promotions by product name instead of catalog position. This
@@ -98,14 +99,62 @@ function loadSavedCart() {
   try {
     const savedCart = JSON.parse(localStorage.getItem(SMART_CART_STORAGE_KEY) || '[]')
     if (!Array.isArray(savedCart)) return []
-    return savedCart.filter((item) => Number.isInteger(item.id) && item.quantity > 0).reduce((items, item) => {
-      const product = catalog.find((entry) => entry.id === item.id)
-      if (!product) return items
-      const packageId = packageFor(product, item.packageId).id
+    return savedCart.filter((item) => Number.isInteger(item.id) && Number.isFinite(item.quantity) && item.quantity > 0).reduce((items, item) => {
+      const packageId = typeof item.packageId === 'string' ? item.packageId : '100g'
       const existing = items.find((entry) => entry.id === item.id && entry.packageId === packageId)
       return existing ? items.map((entry) => entry === existing ? { ...entry, quantity: entry.quantity + item.quantity } : entry) : [...items, { id: item.id, packageId, quantity: item.quantity }]
     }, [])
   } catch { return [] }
+}
+
+function parseAlternativeIds(value) {
+  if (Array.isArray(value)) return value.map(Number).filter(Number.isInteger)
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isInteger) : []
+  } catch {
+    return []
+  }
+}
+
+function mapApiProduct(product) {
+  const id = Number(product.id)
+  const name = product.productName
+  const category = product.category
+  const defaultProduct = catalog.find((entry) => entry.name === name)
+  const packageOptions = defaultProduct?.packageOptions || packageOptionsFor(category, name)
+  const estimatedBase = category === 'Nuts & Seeds' ? 24 + (id % 5) * 7
+    : category === 'Fruits' || category === 'Vegetables' ? 5 + (id % 5) * 2
+      : category === 'Dairy' || category === 'Beverages' ? 12 + (id % 5) * 4
+        : 12 + (id % 6) * 4
+
+  return {
+    id,
+    name,
+    category,
+    brand: 'NutriMatrix',
+    image: product.image || defaultProduct?.image || '',
+    description: product.healthBenefits || `${name} from the NutriMatrix nutrition library.`,
+    serving: packageOptions[0].label,
+    packageOptions,
+    calories: Number(product.calories) || 0,
+    protein: Number(product.protein) || 0,
+    carbs: Number(product.carbohydrates) || 0,
+    fat: Number(product.fat) || 0,
+    fiber: Number(product.fiber) || 0,
+    saturatedFat: 0,
+    sugar: Number(product.sugar) || 0,
+    sodium: Number(product.sodium) || 0,
+    healthierAlternatives: parseAlternativeIds(product.healthierAlternatives),
+    retailers: retailerNames.map((retailer, index) => {
+      const savedPrice = product.prices?.find((entry) => entry.retailer === retailer)
+      const defaultPrice = defaultProduct?.retailers.find((entry) => entry.name === retailer)?.price
+      const multiplier = retailerMultipliers[index]
+      const estimatedPrice = id % 3 === 0 ? Math.round(estimatedBase * multiplier) : Number((estimatedBase * multiplier).toFixed(2))
+      return { name: retailer, price: savedPrice ? Number(savedPrice.price) : defaultPrice ?? estimatedPrice }
+    }),
+  }
 }
 
 const nutritionDetails = (product) => ({
@@ -130,26 +179,47 @@ function ProductAnalysis({ product, alternatives, onBack, onAdd, onChangeQuantit
   if (facts.totalFat <= 3) summaryParts.push('low fat')
   const summary = summaryParts.length ? `This product provides ${summaryParts.join(' and ')} based on its listed nutrition values.` : 'This product has a balanced mix of nutrients based on its listed nutrition values.'
   return <div className="products-page"><Navbar /><main className="products-main analysis-main"><button className="analysis-back" onClick={onBack}>Back to products</button>
-  <section className="analysis-hero"><img src={product.image} alt={product.name} /><div><p className="eyebrow">{product.category}</p><h1>{product.name}</h1><p>{product.description || `${product.name} from the NutriMatrix nutrition library.`}</p>
+  <section className="analysis-hero">{product.image ? <img src={product.image} alt={product.name} /> : <div className="analysis-image-placeholder" aria-hidden="true">◈</div>}<div><p className="eyebrow">{product.category}</p><h1>{product.name}</h1><p>{product.description || `${product.name} from the NutriMatrix nutrition library.`}</p>
   <label className="analysis-package-label">Pack size<PackageSelect product={product} value={packageId} onChange={(nextPackageId) => onChangePackage(product, nextPackageId)} /></label>{quantity ? <div className="analysis-quantity" aria-label={`${product.name} quantity`}>
     <button onClick={() => onChangeQuantity(product.id, packageId, -1)} aria-label={`Remove one ${product.name}`}>−</button><span>{quantity} ({totalPackageLabel(product, packageId, quantity)})</span><button onClick={() => onChangeQuantity(product.id, packageId, 1)} aria-label={`Add one ${product.name}`}>+</button></div> : <button className="add-button" onClick={() => onAdd(product, packageId)}>Add to SmartCart</button>}</div></section>
     <section className="analysis-block"><h2>Nutrition facts</h2><p className="nutrition-basis">Values shown per 100 g (per 100 ml for drinks); each product has its own food-composition entry.</p><div className="analysis-facts">{Object.entries(facts).map(([key, value]) => <div key={key}><span>{key.replace(/([A-Z])/g, ' $1')}</span><strong>{value}{key === 'calories' ? ' kcal' : key === 'sodium' ? ' mg' : ' g'}</strong><i><b style={{ width: `${Math.min(Number(value) / (key === 'calories' ? 600 : key === 'sodium' ? 500 : 40) * 100, 100)}%` }} /></i></div>)}</div></section><section className="analysis-block"><h2>AI nutrition summary</h2><p className="ai-summary">{summary}</p></section><section className="analysis-block"><h2>Nutrition highlights</h2>
-  <div className="highlight-list">{highlights.length ? highlights.map((item) => <span key={item}>{item}</span>) : <p>No qualifying highlights for the listed values.</p>}</div></section><section className="analysis-block"><h2>Healthier alternatives</h2><div className="alternative-list">{alternatives.map((item) => <article key={item.id}>
-    <img src={item.image} alt={item.name} /><div><strong>{item.name}</strong><small>{item.calories} kcal - {item.protein}g protein - {item.fiber}g fibre</small>
-    <button onClick={() => onSelect(item)}>View Analysis</button></div></article>)}</div></section></main></div>
+  <div className="highlight-list">{highlights.length ? highlights.map((item) => <span key={item}>{item}</span>) : <p>No qualifying highlights for the listed values.</p>}</div></section><section className="analysis-block"><h2>Healthier alternatives</h2>{alternatives.length ? <div className="alternative-list">{alternatives.map((item) => <article key={item.id}>
+    {item.image && <img src={item.image} alt={item.name} />}<div><strong>{item.name}</strong><small>{item.calories} kcal - {item.protein}g protein - {item.fiber}g fibre</small>
+    <button onClick={() => onSelect(item)}>View Analysis</button></div></article>)}</div> : <p>No healthier alternatives have been selected for this product.</p>}</section></main></div>
 }
 
 function Products() {
   const [category, setCategory] = useState('All items')
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState(loadSavedCart)
+  const [productCatalog, setProductCatalog] = useState([])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [packageSelections, setPackageSelections] = useState({})
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+  useEffect(() => {
+    apiRequest('/api/products')
+      .then(({ products: savedProducts }) => {
+        const mappedProducts = savedProducts.map(mapApiProduct)
+        setProductCatalog(mappedProducts)
+        setCart((current) => current.map((item) => {
+          const oldProduct = catalog.find((product) => product.id === item.id)
+          const product = (oldProduct && mappedProducts.find((entry) => entry.name === oldProduct.name)) ||
+            mappedProducts.find((entry) => entry.id === item.id)
+          return product
+            ? { ...item, id: product.id, packageId: packageFor(product, item.packageId).id }
+            : null
+        }).filter(Boolean))
+        setSelectedProduct((current) => current ? mappedProducts.find((product) => product.id === current.id) || null : null)
+      })
+      .catch((error) => setCatalogError(error.message))
+      .finally(() => setCatalogLoading(false))
+  }, [])
   const cartProducts = cart.map((item) => {
-    const product = catalog.find((entry) => entry.id === item.id)
+    const product = productCatalog.find((entry) => entry.id === item.id)
     return product ? { ...product, quantity: item.quantity, packageId: packageFor(product, item.packageId).id } : null
   }).filter(Boolean)
-  const visibleProducts = catalog.filter((product) => (category === 'All items' || product.category === category) && (!search.trim() || `${product.name} ${product.brand}`.toLowerCase().includes(search.trim().toLowerCase())))
+  const visibleProducts = productCatalog.filter((product) => (category === 'All items' || product.category === category) && (!search.trim() || `${product.name} ${product.brand}`.toLowerCase().includes(search.trim().toLowerCase())))
   const nutrition = useMemo(() => cartProducts.reduce((totals, product) => { const factor = packageFor(product, product.packageId).factor; Object.keys(totals).forEach((key) => { totals[key] += product[key] * product.quantity * factor }); return totals }, { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }), [cartProducts])
   const retailerTotals = retailerNames.map((name) => ({ name, total: cartProducts.reduce((sum, product) => sum + priceForPackage(product, product.retailers.find((retailer) => retailer.name === name), product.packageId) * product.quantity, 0) }))
   const cheapestTotal = Math.min(...retailerTotals.map((retailer) => retailer.total))
@@ -157,14 +227,21 @@ function Products() {
   const recommendedRetailer = retailerTotals.find((retailer) => retailer.total === cheapestTotal)?.name
   const addToCart = (product, packageId = product.packageOptions[0].id) => setCart((current) => current.some((item) => item.id === product.id && item.packageId === packageId) ? current.map((item) => item.id === product.id && item.packageId === packageId ? { ...item, quantity: item.quantity + 1 } : item) : [...current, { id: product.id, packageId, quantity: 1 }])
   const changeQuantity = (id, packageId, delta) => setCart((current) => current.map((item) => item.id === id && item.packageId === packageId ? { ...item, quantity: item.quantity + delta } : item).filter((item) => item.quantity > 0))
-  //const removeFromCart = (id, packageId) => setCart((current) => current.filter((item) => item.id !== id || item.packageId !== packageId))
   const changePackage = (product, packageId) => setPackageSelections((current) => ({ ...current, [product.id]: packageId }))
   useEffect(() => { localStorage.setItem(SMART_CART_STORAGE_KEY, JSON.stringify(cart)) }, [cart])
-  if (selectedProduct) { const selectedPackageId = packageSelections[selectedProduct.id] || selectedProduct.packageOptions[0].id; return <ProductAnalysis product={selectedProduct} alternatives={catalog.filter((product) => product.category === selectedProduct.category && product.id !== selectedProduct.id).slice(0, 4)} onBack={() => setSelectedProduct(null)} onAdd={addToCart} onChangeQuantity={changeQuantity} quantity={cart.find((item) => item.id === selectedProduct.id && item.packageId === selectedPackageId)?.quantity} packageId={selectedPackageId} onChangePackage={changePackage} onSelect={setSelectedProduct} /> }
+  if (catalogLoading) return <div className="products-page"><Navbar /><main className="products-main"><p>Loading Product Analysis…</p></main></div>
+  if (catalogError) return <div className="products-page"><Navbar /><main className="products-main"><p className="catalog-error" role="alert">{catalogError}</p></main></div>
+  if (selectedProduct) {
+    const selectedPackageId = packageSelections[selectedProduct.id] || selectedProduct.packageOptions[0].id
+    const alternatives = selectedProduct.healthierAlternatives
+      .map((id) => productCatalog.find((product) => product.id === id))
+      .filter(Boolean)
+    return <ProductAnalysis product={selectedProduct} alternatives={alternatives} onBack={() => setSelectedProduct(null)} onAdd={addToCart} onChangeQuantity={changeQuantity} quantity={cart.find((item) => item.id === selectedProduct.id && item.packageId === selectedPackageId)?.quantity} packageId={selectedPackageId} onChangePackage={changePackage} onSelect={setSelectedProduct} />
+  }
   return <div className="products-page"><Navbar />
   <main className="products-main">
     <section className="products-intro">
-      <div><p className="eyebrow">PRODUCT ANALYSIS LIBRARY <span> | </span> {products.length} PRODUCTS</p>
+      <div><p className="eyebrow">PRODUCT ANALYSIS LIBRARY <span> | </span> {productCatalog.length} PRODUCTS</p>
       <h1>Understand your basket.</h1>
       <p className="intro-copy">Browse food products, add items for nutrition analysis, and compare their estimated prices across Indian retailers.</p></div>
       <div className="basket-note"><span className="basket-icon">Cart</span>
@@ -183,7 +260,7 @@ function Products() {
               const activeCartItem = cart.find((item) => item.id === product.id && item.packageId === selectedPackageId) || cartItem
               const quantity = activeCartItem?.quantity || 0
               return <article className="product-card" key={product.id}>
-              <div className="product-art"><img src={product.image} alt={product.name} loading="lazy" /><small>{product.category}</small></div>
+              <div className="product-art">{product.image ? <img src={product.image} alt={product.name} loading="lazy" /> : <span className="analysis-image-placeholder" aria-hidden="true">◈</span>}<small>{product.category}</small></div>
               <div className="product-body"><p className="product-brand">{product.brand}</p>
               <div className="product-name-row"><h2>{product.name}</h2>
               <strong className="product-price">{formatINR(priceForPackage(product, product.retailers[0], selectedPackageId))}</strong></div>
@@ -193,7 +270,7 @@ function Products() {
                 <aside className="basket-panel"><div className="panel-heading"><div>
                   <p className="eyebrow">YOUR BASKET</p><h2>Nutrition & value</h2></div>{cart.length > 0 && <button className="clear-button" onClick={() => setCart([])}>Clear</button>}</div>{cartProducts.length === 0 ? <div className="empty-basket"><span>Empty</span><h3>Your analysis list is empty</h3>
                   <p>Add products to see a live nutrition summary and compare estimated prices across Indian retailers.</p></div> : <><div className="basket-items">{cartProducts.map((product) => <div className="basket-item" key={cartItemKey(product.id, product.packageId)}>
-                    <img className="mini-art" src={product.image} alt="" /><div className="basket-item-info"><strong>{product.name}</strong><small>{product.quantity} qty · {totalPackageLabel(product, product.packageId, product.quantity)}</small><span className="basket-item-price">{product.quantity === 1 ? formatINR(priceForPackage(product, product.retailers[0], product.packageId)) : `${formatINR(priceForPackage(product, product.retailers[0], product.packageId))} each · ${formatINR(priceForPackage(product, product.retailers[0], product.packageId) * product.quantity)}`}</span></div>
+                    {product.image && <img className="mini-art" src={product.image} alt="" />}<div className="basket-item-info"><strong>{product.name}</strong><small>{product.quantity} qty · {totalPackageLabel(product, product.packageId, product.quantity)}</small><span className="basket-item-price">{product.quantity === 1 ? formatINR(priceForPackage(product, product.retailers[0], product.packageId)) : `${formatINR(priceForPackage(product, product.retailers[0], product.packageId))} each · ${formatINR(priceForPackage(product, product.retailers[0], product.packageId) * product.quantity)}`}</span></div>
                     <QuantityStepper product={product} packageId={product.packageId} quantity={product.quantity} onChange={changeQuantity} /></div>)}</div>
                     <div className="nutrition-box"><div className="summary-title"><h3>Basket nutrition</h3><span>total serving size</span></div>
                     <div className="calorie-row"><strong>{Number(nutrition.calories).toFixed(2)}</strong><span>kcal</span>

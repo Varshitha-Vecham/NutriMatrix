@@ -92,7 +92,7 @@ export default function AdminDashboard() {
     setAdmin(a.user)
     setProducts(p.products)
     setUsers(u.users)
-    setStats({ ...d.stats, products: p.products.length })
+    setStats({ ...d.stats, products: p.products.filter((product) => product.isActive).length })
     setActivity(d.activity)
   }
 
@@ -136,23 +136,6 @@ export default function AdminDashboard() {
       ...x,
       prices: x.prices.map((p, n) => (n === i ? { ...p, price: v } : p)),
     }))
-
-  const createAlternative = async (alternative) => {
-    try {
-      const result = await apiRequest('/api/admin/products', {
-        method: 'POST',
-        body: JSON.stringify({ ...alternative, prices: [] }),
-      })
-      const product = { ...alternative, id: result.id, prices: [] }
-      setProducts((current) => [product, ...current])
-      setStats((current) => ({ ...current, products: current.products + 1 }))
-      setError('')
-      return product
-    } catch (e) {
-      setError(e.message)
-      throw e
-    }
-  }
 
   const image = (e) => {
     const file = e.target.files?.[0]
@@ -218,7 +201,17 @@ export default function AdminDashboard() {
     try {
       await apiRequest(`/api/admin/products/${id}`, { method: 'DELETE' })
       await load()
-      setMessage('Product deleted successfully.')
+      setMessage('Product deleted from Product Analysis. You can restore it from Product Management.')
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function restore(id) {
+    try {
+      await apiRequest(`/api/admin/products/${id}/restore`, { method: 'POST' })
+      await load()
+      setMessage('Product restored to Product Analysis.')
     } catch (e) {
       setError(e.message)
     }
@@ -303,8 +296,8 @@ export default function AdminDashboard() {
         {error && <div className="toast error">{error}</div>}
 
         {page === 'Dashboard' && <Overview stats={stats} activity={activity} onProducts={() => go('Product Management')} />}
-        {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} />}
-        {page === 'Add Product' && <Form form={form} products={products} editing={editing} change={change} price={price} image={image} save={save} createAlternative={createAlternative} back={() => go('Product Management')} />}
+        {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} restore={restore} />}
+        {page === 'Add Product' && <Form form={form} products={products.filter((product) => product.isActive)} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
         {page === 'Admin Profile' && <Profile admin={admin} setAdmin={setAdmin} notify={setMessage} fail={setError} />}
       </main>
@@ -359,19 +352,38 @@ function Overview({ stats, activity, onProducts }) {
   )
 }
 
-function ProductList({ products, add, edit, remove }) {
+function ProductList({ products, add, edit, remove, restore }) {
+  const [search, setSearch] = useState('')
+  const [showDeleted, setShowDeleted] = useState(false)
+  const activeProducts = products.filter((product) => product.isActive)
+  const deletedProducts = products.filter((product) => !product.isActive)
+  const query = search.trim().toLowerCase()
+  const visibleProducts = activeProducts.filter((product) =>
+    `${product.productName} ${product.category}`.toLowerCase().includes(query)
+  )
+
   return (
     <section className="panel">
       <div className="toolbar">
         <div>
           <h2>Product management</h2>
-          <p className="muted">All products are shown below.</p>
+          <p className="muted">{activeProducts.length} active products are published to Product Analysis.</p>
         </div>
-        <button className="primary" onClick={add}>＋ Add New Product</button>
+        <div className="product-management-actions">
+          <button className="primary" onClick={add}>＋ Add New Product</button>
+          <button type="button" className="restore-toggle" onClick={() => setShowDeleted((current) => !current)}>
+            {showDeleted ? 'Hide deleted products' : `Restore products${deletedProducts.length ? ` (${deletedProducts.length})` : ''}`}
+          </button>
+        </div>
       </div>
 
+      <label className="product-management-search">
+        <span>Search products</span>
+        <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by product name or category" />
+      </label>
+
       <Table heads={['Product', 'Category', 'Calories', 'Protein', 'Carbohydrates', 'Fat', 'Actions']}>
-        {products.map((p) => (
+        {visibleProducts.map((p) => (
           <tr key={p.id}>
             <td className="product">
               {p.image ? <img src={p.image} alt="" /> : <i>◈</i>}
@@ -388,17 +400,33 @@ function ProductList({ products, add, edit, remove }) {
             </td>
           </tr>
         ))}
-        {!products.length && (
+        {!visibleProducts.length && (
           <tr>
-            <td colSpan="7" className="empty">No products yet. Add one to publish it in Product Analysis.</td>
+            <td colSpan="7" className="empty">{activeProducts.length ? 'No products match your search.' : 'No products yet. Add one to publish it in Product Analysis.'}</td>
           </tr>
         )}
       </Table>
+      {showDeleted && (
+        <div className="deleted-products">
+          <h3>Deleted products</h3>
+          {deletedProducts.length ? (
+            <Table heads={['Product', 'Category', 'Actions']}>
+              {deletedProducts.map((product) => (
+                <tr key={product.id}>
+                  <td><strong>{product.productName}</strong></td>
+                  <td>{product.category}</td>
+                  <td className="actions"><button type="button" onClick={() => restore(product.id)}>Restore</button></td>
+                </tr>
+              ))}
+            </Table>
+          ) : <p className="muted">There are no deleted products to restore.</p>}
+        </div>
+      )}
     </section>
   )
 }
 
-function Form({ form, products, editing, change, price, image, save, createAlternative, back }) {
+function Form({ form, products, editing, change, price, image, save, back }) {
   const changeAlternative = (index, productId) => {
     const alternatives = [...form.healthierAlternatives]
     alternatives[index] = productId
@@ -472,7 +500,7 @@ function Form({ form, products, editing, change, price, image, save, createAlter
             </label>
           </div>
           <div className="alternative-pickers">
-            <p className="muted">Choose up to three products from Product Analysis, or add a missing alternative with its nutrition details.</p>
+            <p className="muted">Select up to three existing products as healthier alternatives. Manage product details from Product Management.</p>
             {[0, 1, 2].map((index) => (
               <AlternativePicker
                 key={index}
@@ -481,7 +509,6 @@ function Form({ form, products, editing, change, price, image, save, createAlter
                 excludedIds={[editing, ...form.healthierAlternatives.filter((id, itemIndex) => itemIndex !== index)]}
                 value={form.healthierAlternatives[index] || ''}
                 onChange={(productId) => changeAlternative(index, productId)}
-                onCreate={createAlternative}
               />
             ))}
           </div>
@@ -511,22 +538,8 @@ function Form({ form, products, editing, change, price, image, save, createAlter
   )
 }
 
-function AlternativePicker({ index, products, excludedIds, value, onChange, onCreate }) {
+function AlternativePicker({ index, products, excludedIds, value, onChange }) {
   const [search, setSearch] = useState('')
-  const [adding, setAdding] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [details, setDetails] = useState({
-    productName: '',
-    category: '',
-    calories: '',
-    protein: '',
-    carbohydrates: '',
-    fat: '',
-    fiber: '',
-    sugar: '',
-    sodium: '',
-    healthBenefits: '',
-  })
   const selected = products.find((product) => String(product.id) === String(value))
   const query = search || selected?.productName || ''
   const normalizedQuery = query.trim().toLowerCase()
@@ -539,27 +552,6 @@ function AlternativePicker({ index, products, excludedIds, value, onChange, onCr
         !excludedIds.some((id) => id != null && String(id) === String(product.id))
       ).slice(0, 8)
 
-  const updateDetails = (key, nextValue) => setDetails((current) => ({ ...current, [key]: nextValue }))
-
-  const beginAdding = () => {
-    setDetails((current) => ({ ...current, productName: query.trim() }))
-    setAdding(true)
-  }
-
-  const saveAlternative = async () => {
-    setSaving(true)
-    try {
-      const product = await onCreate(details)
-      onChange(product.id)
-      setSearch('')
-      setAdding(false)
-    } catch {
-      // The dashboard surfaces the API error in its main error banner.
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
     <div className="alternative-picker">
       <label htmlFor={`alternative-search-${index}`}>Alternative {index + 1}</label>
@@ -569,7 +561,6 @@ function AlternativePicker({ index, products, excludedIds, value, onChange, onCr
         value={query}
         onChange={(event) => {
           setSearch(event.target.value)
-          setAdding(false)
           onChange('')
         }}
         placeholder="Search Product Analysis products"
@@ -584,7 +575,6 @@ function AlternativePicker({ index, products, excludedIds, value, onChange, onCr
               onClick={() => {
                 onChange(product.id)
                 setSearch('')
-                setAdding(false)
               }}
             >
               {product.productName} · {product.category}
@@ -592,55 +582,7 @@ function AlternativePicker({ index, products, excludedIds, value, onChange, onCr
           ))}
         </span>
       )}
-      {!selected && matches.length === 0 && normalizedQuery && !adding && (
-        nameMatches.length === 0
-          ? <span className="alternative-suggestions">
-              <button type="button" onClick={beginAdding}>＋ Add “{query.trim()}” as a new product</button>
-            </span>
-          : <small>No available matching products.</small>
-      )}
-      {adding && (
-        <div className="alternative-new-product">
-          <strong>New alternative product details</strong>
-          <label>
-            Product name
-            <input required value={details.productName} onChange={(event) => updateDetails('productName', event.target.value)} />
-          </label>
-          <label>
-            Category
-            <select required value={details.category} onChange={(event) => updateDetails('category', event.target.value)}>
-              <option value="">Select category</option>
-              {categories.map((category) => <option key={category}>{category}</option>)}
-            </select>
-          </label>
-          <div className="alternative-nutrients">
-            {[
-              ['calories', 'Calories (kcal)'],
-              ['protein', 'Protein (g)'],
-              ['carbohydrates', 'Carbohydrates (g)'],
-              ['fat', 'Fat (g)'],
-              ['fiber', 'Fiber (g)'],
-              ['sugar', 'Sugar (g)'],
-              ['sodium', 'Sodium (mg)'],
-            ].map(([key, label]) => (
-              <label key={key}>
-                {label}
-                <input min="0" type="number" step="0.1" value={details[key]} onChange={(event) => updateDetails(key, event.target.value)} />
-              </label>
-            ))}
-          </div>
-          <label>
-            Health benefits
-            <textarea value={details.healthBenefits} onChange={(event) => updateDetails('healthBenefits', event.target.value)} />
-          </label>
-          <div className="alternative-new-actions">
-            <button type="button" onClick={() => setAdding(false)}>Cancel</button>
-            <button type="button" className="primary" disabled={saving || !details.productName.trim() || !details.category} onClick={saveAlternative}>
-              {saving ? 'Adding…' : 'Add alternative'}
-            </button>
-          </div>
-        </div>
-      )}
+      {!selected && matches.length === 0 && normalizedQuery && <small>No available matching products.</small>}
       {!query && <small>Optional — choose an existing analysis product.</small>}
     </div>
   )

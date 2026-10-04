@@ -33,6 +33,55 @@
   justify-content: flex-end;
 }
 
+.product-management-actions {
+  display: grid;
+  justify-items: stretch;
+  gap: 8px;
+}
+
+.restore-toggle {
+  padding: 9px 12px;
+  border: 1px solid #d9e5da;
+  border-radius: 7px;
+  background: #fff;
+  color: #356243;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.product-management-search {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 16px;
+  color: #4b6452;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.product-management-search input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d9e5da;
+  border-radius: 7px;
+  background: #fff;
+  color: #344b3b;
+  font: inherit;
+}
+
+.deleted-products {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid #e9efea;
+}
+
+.deleted-products h3 {
+  margin: 0 0 12px;
+  color: #244c32;
+  font: 700 1rem 'Space Grotesk', sans-serif;
+}
+
 .alternative-pickers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -54,8 +103,7 @@
   font-weight: 700;
 }
 
-.alternative-picker > label,
-.alternative-new-product label {
+.alternative-picker > label {
   display: grid;
   gap: 7px;
 }
@@ -68,67 +116,6 @@
   background: #fff;
   color: #344b3b;
   font: inherit;
-}
-
-.alternative-new-product {
-  display: grid;
-  grid-column: 1 / -1;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #d9e5da;
-  border-radius: 8px;
-  background: #f8fbf8;
-  color: #4b6452;
-  font-weight: 500;
-}
-
-.alternative-new-product > strong {
-  color: #244c32;
-}
-
-.alternative-new-product input,
-.alternative-new-product select,
-.alternative-new-product textarea {
-  width: 100%;
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid #d9e5da;
-  border-radius: 6px;
-  background: #fff;
-  color: #344b3b;
-  font: inherit;
-}
-
-.alternative-new-product textarea {
-  min-height: 70px;
-  resize: vertical;
-}
-
-.alternative-nutrients {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
-}
-
-.alternative-new-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.alternative-new-actions button {
-  padding: 8px 10px;
-  border: 1px solid #d9e5da;
-  border-radius: 6px;
-  background: #fff;
-  color: #356243;
-  font: inherit;
-  cursor: pointer;
-}
-
-.alternative-new-actions .primary:disabled {
-  cursor: wait;
-  opacity: 0.7;
 }
 
 .alternative-picker small {
@@ -174,7 +161,7 @@
     grid-template-columns: 1fr;
   }
 
-  .alternative-nutrients {
-    grid-template-columns: 1fr;
+  .product-management-actions {
+    width: 100%;
   }
 }
