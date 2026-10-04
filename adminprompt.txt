@@ -9,3 +9,8 @@
 >Remove Reports&Analytics page
 >In Admin Profile page, edit profile and change password buttons are not working, it should work 
 >On top right side remove notifications options 
+
+>For healthier alternatives also it should show to enter details of healthier 
+alternative product as 3 options,  already if product is in product analysis page 
+it should show that option and ask which product u want to add and search button to 
+serach any one in 100 products 

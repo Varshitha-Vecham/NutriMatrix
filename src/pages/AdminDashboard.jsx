@@ -19,15 +19,25 @@ const blank = () => ({
   sugar: '',
   sodium: '',
   healthBenefits: '',
-  healthierAlternatives: '',
+  healthierAlternatives: [],
   prices: retailers.map((retailer) => ({ retailer, price: '' })),
 })
+
+function parseAlternativeIds(value) {
+  if (Array.isArray(value)) return value.map(Number).filter(Number.isInteger).slice(0, 3)
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isInteger).slice(0, 3) : []
+  } catch {
+    return []
+  }
+}
 
 const nav = [
   ['Dashboard', '▦'],
   ['Product Management', '◈'],
   ['User Management', '♙'],
-  ['Price Management', '₹'],
   ['Admin Profile', '◉'],
 ]
 
@@ -108,6 +118,7 @@ export default function AdminDashboard() {
     setEditing(p.id)
     setForm({
       ...p,
+      healthierAlternatives: parseAlternativeIds(p.healthierAlternatives),
       prices: retailers.map((retailer) => p.prices?.find((x) => x.retailer === retailer) || { retailer, price: '' }),
     })
     go('Add Product')
@@ -125,13 +136,15 @@ export default function AdminDashboard() {
     if (!file) return
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      setError('Please upload a JPG, PNG or WEBP image smaller than 5 MB.')
+      e.target.value = ''
+      setError('Product images must be JPG, PNG or WEBP and smaller than 5 MB. PDF files are not supported.')
       return
     }
 
     setError('')
     const reader = new FileReader()
     reader.onload = () => change('image', reader.result)
+    reader.onerror = () => setError('Unable to read this image. Please choose a valid JPG, PNG or WEBP file.')
     reader.readAsDataURL(file)
   }
 
@@ -141,7 +154,10 @@ export default function AdminDashboard() {
     try {
       const result = await apiRequest(editing ? `/api/admin/products/${editing}` : '/api/admin/products', {
         method: editing ? 'PUT' : 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          healthierAlternatives: JSON.stringify(form.healthierAlternatives.filter(Boolean).slice(0, 3)),
+        }),
       })
 
       const savedProduct = {
@@ -265,9 +281,8 @@ export default function AdminDashboard() {
 
         {page === 'Dashboard' && <Overview stats={stats} activity={activity} onProducts={() => go('Product Management')} />}
         {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} />}
-        {page === 'Add Product' && <Form form={form} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
+        {page === 'Add Product' && <Form form={form} products={products} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
-        {page === 'Price Management' && <Prices products={products} edit={edit} />}
         {page === 'Admin Profile' && <Profile admin={admin} setAdmin={setAdmin} notify={setMessage} fail={setError} />}
       </main>
     </div>
@@ -334,7 +349,7 @@ function ProductList({ products, add, edit, remove }) {
         <button className="primary" onClick={add}>＋ Add New Product</button>
       </div>
 
-      <Table heads={['Product', 'Category', 'Calories', 'Protein', 'Carbohydrates', 'Fat', 'Status', 'Actions']}>
+      <Table heads={['Product', 'Category', 'Calories', 'Protein', 'Carbohydrates', 'Fat', 'Actions']}>
         {products.map((p) => (
           <tr key={p.id}>
             <td className="product">
@@ -346,7 +361,6 @@ function ProductList({ products, add, edit, remove }) {
             <td>{p.protein || 0} g</td>
             <td>{p.carbohydrates || 0} g</td>
             <td>{p.fat || 0} g</td>
-            <td><em>Active</em></td>
             <td className="actions">
               <button onClick={() => edit(p)}>Edit</button>
               <button className="danger" onClick={() => remove(p.id)}>Delete</button>
@@ -355,7 +369,7 @@ function ProductList({ products, add, edit, remove }) {
         ))}
         {!products.length && (
           <tr>
-            <td colSpan="8" className="empty">No products yet. Add one to publish it in Product Analysis.</td>
+            <td colSpan="7" className="empty">No products yet. Add one to publish it in Product Analysis.</td>
           </tr>
         )}
       </Table>
@@ -363,7 +377,13 @@ function ProductList({ products, add, edit, remove }) {
   )
 }
 
-function Form({ form, editing, change, price, image, save, back }) {
+function Form({ form, products, editing, change, price, image, save, back }) {
+  const changeAlternative = (index, productId) => {
+    const alternatives = [...form.healthierAlternatives]
+    alternatives[index] = productId
+    change('healthierAlternatives', alternatives)
+  }
+
   return (
     <>
       <button className="back-button" onClick={back}>← Back to products</button>
@@ -429,10 +449,19 @@ function Form({ form, editing, change, price, image, save, back }) {
               Health benefits
               <textarea value={form.healthBenefits || ''} onChange={(e) => change('healthBenefits', e.target.value)} />
             </label>
-            <label>
-              Healthier alternatives
-              <textarea value={form.healthierAlternatives || ''} onChange={(e) => change('healthierAlternatives', e.target.value)} />
-            </label>
+          </div>
+          <div className="alternative-pickers">
+            <p className="muted">Choose up to three products from Product Analysis. Search by product name.</p>
+            {[0, 1, 2].map((index) => (
+              <AlternativePicker
+                key={index}
+                index={index}
+                products={products}
+                excludedIds={[editing, ...form.healthierAlternatives.filter((id, itemIndex) => itemIndex !== index)]}
+                value={form.healthierAlternatives[index] || ''}
+                onChange={(productId) => changeAlternative(index, productId)}
+              />
+            ))}
           </div>
         </Section>
 
@@ -457,6 +486,52 @@ function Form({ form, editing, change, price, image, save, back }) {
         </div>
       </form>
     </>
+  )
+}
+
+function AlternativePicker({ index, products, excludedIds, value, onChange }) {
+  const [search, setSearch] = useState('')
+  const selected = products.find((product) => String(product.id) === String(value))
+  const query = search || selected?.productName || ''
+  const matches = query.trim()
+    ? products.filter((product) =>
+        !excludedIds.some((id) => id != null && String(id) === String(product.id)) &&
+        product.productName.toLowerCase().includes(query.trim().toLowerCase())
+      ).slice(0, 8)
+    : []
+
+  return (
+    <label className="alternative-picker">
+      Alternative {index + 1}
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => {
+          setSearch(event.target.value)
+          onChange('')
+        }}
+        placeholder="Search Product Analysis products"
+        aria-label={`Search healthier alternative ${index + 1}`}
+      />
+      {matches.length > 0 && (
+        <span className="alternative-suggestions">
+          {matches.map((product) => (
+            <button
+              type="button"
+              key={product.id}
+              onClick={() => {
+                onChange(product.id)
+                setSearch('')
+              }}
+            >
+              {product.productName} · {product.category}
+            </button>
+          ))}
+        </span>
+      )}
+      {!query && <small>Optional — choose an existing analysis product.</small>}
+      {query && !selected && matches.length === 0 && <small>No matching products found.</small>}
+    </label>
   )
 }
 
@@ -498,84 +573,27 @@ function Users({ users }) {
   )
 }
 
-function Prices({ products, edit }) {
-  const [search, setSearch] = useState('')
-  const filteredProducts = products.filter((product) =>
-    `${product.productName} ${product.category}`.toLowerCase().includes(search.trim().toLowerCase())
-  )
-
-  return (
-    <section className="panel">
-      <div className="heading">
-        <div>
-          <h2>Price management</h2>
-          <p>Edit any product to change its retailer prices.</p>
-        </div>
-        <label className="price-search">
-          <span>Search</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Product or category"
-          />
-        </label>
-      </div>
-
-      <Table heads={['Product', 'Retailer prices', 'Action']}>
-        {filteredProducts.map((p) => (
-          <tr key={p.id}>
-            <td>
-              <strong>{p.productName}</strong>
-              <small>{p.category}</small>
-            </td>
-            <td>
-              {p.prices?.length
-                ? p.prices.map((x) => `${x.retailer}: ₹${Number(x.price).toLocaleString('en-IN')}`).join(' · ')
-                : 'No prices entered'}
-            </td>
-            <td className="actions">
-              <button onClick={() => edit(p)}>Edit prices</button>
-            </td>
-          </tr>
-        ))}
-        {!filteredProducts.length && (
-          <tr>
-            <td colSpan="3" className="empty">{products.length ? 'No matching products.' : 'No products available.'}</td>
-          </tr>
-        )}
-      </Table>
-    </section>
-  )
-}
-
 function Profile({ admin, setAdmin, notify, fail }) {
   const [mode, setMode] = useState('')
   const [name, setName] = useState(admin.name)
   const [email, setEmail] = useState(admin.email)
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
 
   async function submit(e) {
     e.preventDefault()
 
     try {
-      const data =
-        mode === 'edit'
-          ? await apiRequest('/api/admin/profile', {
-              method: 'PUT',
-              body: JSON.stringify({ name, email }),
-            })
-          : await apiRequest('/api/admin/password', {
-              method: 'PUT',
-              body: JSON.stringify({ currentPassword, newPassword }),
-            })
+      const data = await apiRequest('/api/admin/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ name, email }),
+      })
 
-      if (data.user) setAdmin(data.user)
+      if (data.user) {
+        setAdmin(data.user)
+        setName(data.user.name)
+        setEmail(data.user.email)
+      }
       notify(data.message)
       setMode('')
-      setCurrentPassword('')
-      setNewPassword('')
     } catch (e) {
       fail(e.message)
     }
@@ -601,31 +619,15 @@ function Profile({ admin, setAdmin, notify, fail }) {
       {!mode ? (
         <div className="form-actions">
           <button onClick={() => setMode('edit')}>Edit Profile</button>
-          <button className="primary" onClick={() => setMode('password')}>Change Password</button>
         </div>
       ) : (
         <form className="profile-form" onSubmit={submit}>
-          {mode === 'edit' ? (
-            <>
-              <label>
-                Name <input required value={name} onChange={(e) => setName(e.target.value)} />
-              </label>
-              <label>
-                Email <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </label>
-            </>
-          ) : (
-            <>
-              <label>
-                Current password
-                <input required type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-              </label>
-              <label>
-                New password
-                <input required minLength="8" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-              </label>
-            </>
-          )}
+          <label>
+            Name <input required value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label>
+            Email <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
 
           <div className="form-actions">
             <button type="button" onClick={() => setMode('')}>Cancel</button>

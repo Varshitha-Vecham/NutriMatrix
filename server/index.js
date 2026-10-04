@@ -388,16 +388,11 @@ app.get('/api/admin/dashboard', requireAuth, requireAdmin, async (req, res) => {
   try {
     const [[productCount]] = await pool.query('SELECT COUNT(*) AS total FROM products')
     const [[userCount]] = await pool.query("SELECT COUNT(*) AS total FROM users WHERE role != 'admin'")
-    // Pantry storage is not present in older installations; return truthful zeroes until users add pantry data.
-    let pantryItems = 0, expiryAlerts = 0
-    const [tables] = await pool.query("SHOW TABLES LIKE 'pantry_items'")
-    if (tables.length) {
-      const [[pantry]] = await pool.query('SELECT COUNT(*) AS total FROM pantry_items')
-      const [[alerts]] = await pool.query("SELECT COUNT(*) AS total FROM pantry_items WHERE expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)")
-      pantryItems = pantry.total; expiryAlerts = alerts.total
-    }
+    const [[pantry]] = await pool.query('SELECT COUNT(*) AS total FROM receipt_products')
+    const [[alerts]] = await pool.query(`SELECT COUNT(*) AS total FROM receipt_products
+      WHERE expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)`)
     const [activity] = await pool.query("SELECT 'Product updated' AS activity, product_name AS detail, updated_at AS occurredAt, 'Admin' AS actor FROM products UNION ALL SELECT 'User registered', name, created_at, 'User' FROM users WHERE role != 'admin' ORDER BY occurredAt DESC LIMIT 8")
-    res.json({ stats: { products: productCount.total, users: userCount.total, pantryItems, expiryAlerts }, activity })
+    res.json({ stats: { products: productCount.total, users: userCount.total, pantryItems: pantry.total, expiryAlerts: alerts.total }, activity })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load dashboard data.' }) }
 })
 async function persistProduct(req,res,id) { try { const b=req.body, values=validateProduct(b); let productId=id; if (id) await pool.execute('UPDATE products SET product_name=?,category=?,image=?,calories=?,protein=?,carbohydrates=?,fat=?,fiber=?,sugar=?,sodium=?,health_benefits=?,healthier_alternatives=? WHERE id=?',[b.productName.trim(),b.category,b.image||null,...values,b.healthBenefits||null,b.healthierAlternatives||null,id]); else { const [result]=await pool.execute('INSERT INTO products (product_name,category,image,calories,protein,carbohydrates,fat,fiber,sugar,sodium,health_benefits,healthier_alternatives) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',[b.productName.trim(),b.category,b.image||null,...values,b.healthBenefits||null,b.healthierAlternatives||null]); productId=result.insertId }; await pool.execute('DELETE FROM product_prices WHERE product_id=?',[productId]); for(const p of b.prices||[]) if(p.price !== '' && p.price != null) await pool.execute('INSERT INTO product_prices (product_id,retailer,price,updated_at) VALUES (?,?,?,?)',[productId,p.retailer,Number(p.price),p.updatedAt||null]); res.status(id?200:201).json({message:id?'Product updated successfully.':'Product added successfully.',id:productId}) } catch(error) { console.error(error); res.status(error.message?.includes('required')||error.message?.includes('negative')?400:500).json({message:error.message||'Unable to save product.'}) } }
