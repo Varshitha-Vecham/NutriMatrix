@@ -40,7 +40,7 @@ function Register() {
       setError('Please fill in all the fields.')
       return
     }
-    if (!email.includes('@') || !email.includes('.')) {
+    if (!email.includes('@') || email.startsWith('@') || email.endsWith('@') || email.split('@').length !== 2 || /\s/.test(email)) {
       setError('Please enter a valid email address.')
       return
     }
@@ -137,7 +137,7 @@ function Register() {
                 <span className="input-icon">📧</span>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   placeholder="[EMAIL]"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

@@ -27,7 +27,7 @@ function Login() {
       return
     }
 
-    if (!email.includes('@')) {
+    if (!email.includes('@') || email.startsWith('@') || email.endsWith('@') || email.split('@').length !== 2 || /\s/.test(email)) {
       setError('Please enter a valid email address.')
       return
     }
@@ -106,7 +106,7 @@ function Login() {
                 <span className="input-icon">📧</span>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   placeholder="[EMAIL]"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

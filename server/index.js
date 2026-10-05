@@ -305,21 +305,42 @@ function requireAdmin(req, res, next) {
   next()
 }
 
+function normalizeEmail(value = '') {
+  return String(value).trim().toLowerCase()
+}
+
+function isValidEmailAddress(value = '') {
+  const normalized = normalizeEmail(value)
+  return normalized.includes('@') && normalized.split('@').length === 2 && !normalized.startsWith('@') && !normalized.endsWith('@') && !/\s/.test(normalized)
+}
+
 app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password } = req.body
+  const name = String(req.body.name || '').trim()
+  const email = normalizeEmail(req.body.email)
+  const password = String(req.body.password || '')
+
   if (!name || !email || !password) return res.status(400).json({ message: 'All fields are required.' })
+  if (!isValidEmailAddress(email)) return res.status(400).json({ message: 'Please enter a valid email address.' })
+
   try {
-    const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email])
+    const [existing] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', [email])
     if (existing.length) return res.status(409).json({ message: 'An account with this email already exists.' })
-    await pool.execute('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)', [name, email, await bcrypt.hash(password, 12)])
+
+    await pool.execute(
+      'INSERT INTO users (name, email, password_hash, email_verified, email_verified_at, otp_code, otp_expires_at, otp_attempts, otp_last_sent_at) VALUES (?, ?, ?, TRUE, NOW(), NULL, NULL, 0, NULL)',
+      [name, email, await bcrypt.hash(password, 12)]
+    )
+
     res.status(201).json({ message: 'Account created successfully.' })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to create account.' }) }
 })
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body
+  const email = normalizeEmail(req.body.email)
+  const password = String(req.body.password || '')
+
   try {
-    const [users] = await pool.execute('SELECT id, name, email, password_hash, role FROM users WHERE email = ?', [email])
+    const [users] = await pool.execute('SELECT id, name, email, password_hash, role, email_verified FROM users WHERE LOWER(TRIM(email)) = ?', [email])
     const user = users[0]
     if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ message: 'Incorrect email or password.' })
     setAuthCookie(res, user)

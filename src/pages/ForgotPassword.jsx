@@ -24,7 +24,7 @@ function ForgotPassword({ admin = false }) {
       setError('Please fill in all the fields.')
       return
     }
-    if (!email.includes('@') || !email.includes('.')) {
+    if (!email.includes('@') || email.startsWith('@') || email.endsWith('@') || email.split('@').length !== 2 || /\s/.test(email)) {
       setError('Please enter a valid email address.')
       return
     }
@@ -99,7 +99,7 @@ function ForgotPassword({ admin = false }) {
                 <span className="input-icon">&#9993;</span>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

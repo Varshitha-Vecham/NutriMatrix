@@ -1,0 +1,45 @@
+.verification-card {
+  align-self: center;
+}
+
+.verification-card .card-header p strong {
+  color: #374151;
+  overflow-wrap: anywhere;
+}
+
+.verification-expiry {
+  color: #6b7280;
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.verification-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.verification-resend {
+  color: #15803d;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.verification-resend:disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.verification-change-email {
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.verification-change-email:hover {
+  color: #15803d;
+  text-decoration: underline;
+}
