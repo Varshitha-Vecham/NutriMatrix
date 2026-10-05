@@ -4,6 +4,9 @@ flask-backend
 .pnp
 .pnp.js
 
+#validemail
+Flask-Mail
+
 # Production
 dist
 build

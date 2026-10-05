@@ -1,0 +1,142 @@
+I am developing a project called **NutriMatrix**.
+
+Currently, users can register and login using any dummy email address such as [abc@gmail.com](mailto:abc@gmail.com), [test@gmail.com](mailto:test@gmail.com), etc.
+
+I want to change the authentication system so that users can register only after verifying that they actually have access to the email address they entered.
+
+### Main Requirement
+
+Implement **real email verification using OTP** during user registration.
+
+Do not only check whether the email has a valid format. The system must send a verification OTP to the entered email address, and the user must enter the correct OTP before their account is considered verified.
+
+### Registration Flow
+
+The registration process should work as follows:
+
+Register Page → User enters name, email, password and other existing fields → Validate the details → Check whether the email is already registered → Send a 6-digit OTP to the entered email → Open an Email Verification screen → User enters the OTP → Verify the OTP → If correct, verify/activate the account → Redirect the user to Login.
+
+If the user enters an email that they cannot access, they should not be able to complete registration because they cannot receive and verify the OTP.
+
+### Email Verification
+
+Create a clean Email Verification interface that matches the existing NutriMatrix authentication design.
+
+It should display:
+
+* A message saying that a verification code was sent to the entered email.
+* OTP input field.
+* Verify button.
+* Resend OTP option.
+* Countdown before another OTP can be requested.
+* Option to go back and change the email if necessary.
+
+The OTP should expire after a limited period, such as 5 minutes.
+
+The user should not be able to use an expired OTP.
+
+The previous OTP should become invalid when a new OTP is generated.
+
+### Security
+
+Use secure OTP generation.
+
+Limit the number of incorrect OTP attempts.(4)
+
+Limit how frequently a user can request a new OTP.(2 minutes)
+
+Do not display the OTP anywhere in the application.
+
+Do not return the OTP to the frontend.
+
+Do not store passwords as plain text.
+
+Keep email credentials or API keys secure using environment variables.
+
+### MySQL
+
+I am using **MySQL** as the database.
+
+Add the required email verification status and any temporary OTP information needed for the verification process.
+
+Existing users should not be accidentally deleted.
+
+Users who have not verified their email should not be treated as verified.
+
+### Login
+
+Update the existing Login functionality.
+
+A user should be allowed to login only after successfully verifying their email.
+
+If an unverified user tries to login, display a clear message asking them to verify their email.
+
+Do not change the existing successful login flow for verified users.
+
+### Existing Authentication
+
+My current authentication pages and flow are already implemented.
+
+Do not redesign or replace the entire authentication system.
+
+Inspect my existing project first and integrate email verification into the current Register and Login functionality.
+
+Keep the existing:
+
+* Welcome page
+* Register page
+* Login page
+* Forgot Password functionality
+* Password validation
+* Password visibility/eye icon
+* Existing navigation
+* Existing NutriMatrix design
+
+Only make the changes required for real email verification.
+
+### Forgot Password
+
+Update Forgot Password so that password recovery also uses the user's verified email.
+
+The user should receive a verification code through their email before being allowed to reset their password.
+
+### Email Service
+
+Use a **free or suitable option for a college project/demo**.
+
+Do not introduce a paid email verification service unless it is absolutely necessary.
+
+The system must actually send the OTP to the user's email rather than using a dummy OTP.
+
+### Error Messages
+
+Provide clear messages for situations such as:
+
+* Invalid email format
+* Email already registered
+* OTP sent successfully
+* Incorrect OTP
+* Expired OTP
+* Too many OTP attempts
+* Resend OTP cooldown
+* Unable to send email
+* Email verification successful
+* Login attempted before email verification
+
+### Important
+
+Before making any changes, inspect my existing project structure, frontend registration/login implementation, Flask backend, and MySQL database structure.
+
+Use my existing files and architecture wherever possible.
+
+Do not unnecessarily create duplicate authentication systems.
+
+Do not change unrelated NutriMatrix features or pages.
+
+The final registration flow should be:
+
+**Register → Receive OTP → Verify Email → Account Activated → Login → Home**
+
+The most important requirement is:
+
+**A user must prove that they can access the entered email address before their NutriMatrix account can be used for login.**
