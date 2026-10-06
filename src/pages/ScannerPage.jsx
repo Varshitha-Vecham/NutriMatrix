@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BarcodeFormat, BrowserMultiFormatReader } from '@zxing/browser'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
-import { apiRequest, OCR_API_URL } from '../api.js'
+import { apiRequest } from '../api.js'
 import './Scanner.css'
 
 const barcodeFormats = [
@@ -16,45 +16,6 @@ const barcodeFormats = [
   BarcodeFormat.ITF,
   BarcodeFormat.CODABAR
 ]
-
-function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.92) {
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => {
-    if (blob) resolve(blob)
-    else reject(new Error('Unable to prepare the image for expiry-date detection.'))
-  }, type, quality))
-}
-
-async function detectExpiryDate(imageSource) {
-  const imageBlob = imageSource instanceof Blob
-    ? imageSource
-    : imageSource instanceof HTMLCanvasElement
-      ? await canvasToBlob(imageSource)
-      : await (await fetch(imageSource)).blob()
-  const formData = new FormData()
-  formData.append('image', imageBlob, imageSource.name || 'expiry-date.jpg')
-  let response
-  try {
-    response = await fetch(`${OCR_API_URL}/api/scan-expiry`, { method: 'POST', body: formData })
-  } catch (serviceError) {
-    if (serviceError instanceof TypeError) {
-      throw new Error(`Expiry scanning service is unavailable at ${OCR_API_URL}. Start the Flask service and try again.`)
-    }
-    throw serviceError
-  }
-  const responseText = await response.text()
-  let result
-  try {
-    result = JSON.parse(responseText)
-  } catch {
-    throw new Error(`Expiry service returned an unexpected response (${response.status}). Check the Flask service at ${OCR_API_URL}.`)
-  }
-  if (!response.ok) {
-    const detectionError = new Error(result.message || 'Unable to detect an expiry date.')
-    detectionError.status = response.status
-    throw detectionError
-  }
-  return result.expiry_date || ''
-}
 
 async function decodeBarcodeImage(file) {
   const reader = new BrowserMultiFormatReader()
@@ -131,7 +92,6 @@ function ScannerPage() {
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
-  const [dateSource, setDateSource] = useState('')
   const [pantryMessage, setPantryMessage] = useState('')
   const [history, setHistory] = useState([])
   const [historyError, setHistoryError] = useState('')
@@ -158,13 +118,12 @@ function ScannerPage() {
     setScanning(false)
   }
 
-  async function lookupBarcode(barcode, imageSource = null) {
+  async function lookupBarcode(barcode) {
     stopScanner()
     setProduct(null)
     setLoading(true)
     setError('')
     setExpiryDate('')
-    setDateSource('')
     setPantryMessage('')
     try {
       const cleanedBarcode = String(barcode || '').replace(/\D/g, '')
@@ -184,17 +143,6 @@ function ScannerPage() {
         setError('')
       }
 
-      if (imageSource) {
-        try {
-          const detectedExpiryDate = await detectExpiryDate(imageSource)
-          if (detectedExpiryDate) {
-            setExpiryDate(detectedExpiryDate)
-            setDateSource('package image OCR')
-          }
-        } catch (ocrError) {
-          setError(`Product identified. Expiry date was not readable: ${ocrError.message}`)
-        }
-      }
     } catch (lookupError) {
       setProduct(null)
       setError(lookupError.message || 'Unable to identify this product.')
@@ -211,41 +159,6 @@ function ScannerPage() {
       return
     }
     await lookupBarcode(cleanedBarcode)
-  }
-
-  async function handleExpiryUpload(event) {
-    const files = [...(event.target.files || [])]
-    if (!files.length) return
-
-    setLoading(true)
-    setError('')
-    setExpiryDate('')
-    setDateSource('')
-
-    try {
-      const detectedDates = new Map()
-      for (const file of files) {
-        try {
-          const detectedExpiryDate = await detectExpiryDate(file)
-          if (detectedExpiryDate) detectedDates.set(detectedExpiryDate, (detectedDates.get(detectedExpiryDate) || 0) + 1)
-        } catch (detectionError) {
-          if (detectionError.status !== 422) throw detectionError
-        }
-      }
-      const detectedExpiryDate = [...detectedDates.entries()]
-        .sort(([firstDate, firstCount], [secondDate, secondCount]) => secondCount - firstCount || secondDate.localeCompare(firstDate))[0]?.[0]
-      if (detectedExpiryDate) {
-        setExpiryDate(detectedExpiryDate)
-        setDateSource(files.length > 1 ? `OCR detection (${files.length} images checked)` : 'OCR detection')
-      } else {
-        setError(`Expiry date could not be detected in the uploaded image${files.length === 1 ? '' : 's'}. Try a close-up of the printed date or enter it manually.`)
-      }
-    } catch (uploadError) {
-      setError(uploadError.message || 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
-    } finally {
-      setLoading(false)
-      event.target.value = ''
-    }
   }
 
   async function handleAddToPantry() {
@@ -305,7 +218,6 @@ function ScannerPage() {
     setBarcodeInput('')
     setFileName('')
     setExpiryDate('')
-    setDateSource('')
     setPantryMessage('')
     scanActiveRef.current = true
     const scanGeneration = ++scanGenerationRef.current
@@ -321,11 +233,7 @@ function ScannerPage() {
         if (result && scanActiveRef.current && scanGenerationRef.current === scanGeneration) {
           scanActiveRef.current = false
           playScanBeep()
-          const canvas = document.createElement('canvas')
-          canvas.width = videoRef.current.videoWidth || videoRef.current.clientWidth || 1280
-          canvas.height = videoRef.current.videoHeight || videoRef.current.clientHeight || 720
-          canvas.getContext('2d').drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
-          lookupBarcode(result.getText(), canvas)
+          lookupBarcode(result.getText())
         }
         if (scanError?.name === 'NotAllowedError' && scanActiveRef.current && scanGenerationRef.current === scanGeneration) {
           stopScanner()
@@ -356,7 +264,7 @@ function ScannerPage() {
     try {
       const result = await decodeBarcodeImage(file)
       playScanBeep()
-      await lookupBarcode(result.getText(), file)
+      await lookupBarcode(result.getText())
     } catch {
       setLoading(false)
       setError('No supported barcode could be read from this image. Try a sharper, straight-on photo or enter the barcode number.')
@@ -391,7 +299,6 @@ function ScannerPage() {
     setProduct(null)
     setBarcodeInput('')
     setExpiryDate('')
-    setDateSource('')
     setFileName('')
     setError('')
     setPantryMessage('')
@@ -402,7 +309,6 @@ function ScannerPage() {
     setProduct(null)
     setBarcodeInput('')
     setExpiryDate('')
-    setDateSource('')
     setFileName('')
     setError('')
     setPantryMessage('')
@@ -471,12 +377,9 @@ function ScannerPage() {
 
               <div className="expiry-controls">
                 <label htmlFor="barcode-expiry">Expiry date</label>
-                <input id="barcode-expiry" type="date" value={expiryDate} onChange={(event) => { setExpiryDate(event.target.value); setDateSource('manual entry') }} />
-                <label className="expiry-upload-button" htmlFor="expiry-upload-input">📤 Upload Expiry Image</label>
-                <input id="expiry-upload-input" type="file" accept="image/*" multiple hidden onChange={handleExpiryUpload} />
+                <input id="barcode-expiry" type="date" value={expiryDate} onChange={(event) => setExpiryDate(event.target.value)} required />
               </div>
 
-              {dateSource && <p className="expiry-auto">Expiry date detected from {dateSource}.</p>}
               {pantryMessage && <p className="barcode-success" role="status">{pantryMessage}</p>}
               <button className="barcode-action cancel-detected-product" type="button" onClick={cancelDetectedProduct} disabled={loading}>Cancel</button>
               <button className="barcode-action pantry-submit" type="button" onClick={handleAddToPantry} disabled={!expiryDate || loading}>Save to Digital Pantry</button>
