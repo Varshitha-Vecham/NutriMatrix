@@ -92,6 +92,20 @@ const sampleProductCatalog = [
     image: '',
     nutrition: { calories: 486, protein: 5.7, carbs: 67, fat: 22, fiber: 1.5 },
     description: 'Chocolate sandwich biscuits with a cream filling. Package-specific batch and date details are read by NutriMatrix OCR.'
+  },
+  {
+    id: 8,
+    name: 'Cadbury Bournville Cranberry Dark Chocolate',
+    brand: 'Cadbury Bournville',
+    category: 'Chocolate and confectionery',
+    // Keep distinctive pack-front words here. OCR can miss a line of stylised text,
+    // so a clear brand match must still be enough to identify this catalogue item.
+    scanTerms: ['bournville', 'cranberry', 'cadbury'],
+    barcode: '7622201132764',
+    price: 120,
+    image: '',
+    nutrition: { calories: 534, protein: 6, carbs: 57, fat: 31, fiber: 4 },
+    description: 'Cranberry dark chocolate bar with a rich cocoa flavour.'
   }
 ]
 
@@ -103,6 +117,21 @@ function matchProducts(query) {
     const haystack = [product.name, product.brand, product.category, product.description].join(' ').toLowerCase()
     return haystack.includes(trimmed)
   })
+}
+
+function findOcrProductName(text) {
+  const packagingText = /\b(?:ingredients?|nutrition|energy|protein|carbohydrates?|sugars?|fats?|allergen|serving|per\s+\d+|best\s+before|use\s+by|manufactured|packed|net\s+wt|mrp|fssai)\b/i
+  const candidates = String(text || '').split(/\r?\n/).map((line) => {
+    const name = line.replace(/[^a-z0-9&' -]/gi, ' ').replace(/\s+/g, ' ').trim()
+    const words = name.match(/[a-z]{3,}/gi) || []
+    return { name, words }
+  }).filter(({ name, words }) => name.length >= 4 && name.length <= 70 && words.length > 0 && words.length <= 8 && !packagingText.test(name))
+
+  candidates.sort((a, b) => {
+    const score = ({ name, words }) => Math.min(words.length, 4) * 3 + Math.min(name.length, 40) / 20
+    return score(b) - score(a)
+  })
+  return candidates[0]?.name || ''
 }
 
 function productFromCatalog(product) {
@@ -357,6 +386,45 @@ app.post('/api/scanner/search', (req, res) => {
     products: products.length ? products : sampleProductCatalog.slice(0, 3),
     source: 'mock-backend'
   })
+})
+
+// Prefer catalogue matches, but let users review OCR-only names for other products.
+app.post('/api/scanner/product-match', (req, res) => {
+  const text = String(req.body?.text || '').toLowerCase().replace(/\s+/g, ' ').trim()
+  if (!text) return res.status(400).json({ message: 'Product text is required.' })
+  const ranked = sampleProductCatalog.map((product) => {
+    const name = product.name.toLowerCase()
+    const brand = product.brand.toLowerCase()
+    const nameWords = name.split(/\s+/).filter((word) => word.length > 3)
+    const matchedWords = nameWords.filter((word) => text.includes(word)).length
+    const scanTermMatches = (product.scanTerms || []).filter((term) => text.includes(term)).length
+    return { product, score: Number(text.includes(name)) * 3 + Number(text.includes(brand)) * 2 + (matchedWords >= 2 ? 1 : 0) + scanTermMatches }
+  }).sort((a, b) => b.score - a.score)
+  if (!ranked[0] || ranked[0].score < 1) {
+    const name = findOcrProductName(req.body?.text)
+    if (name) {
+      return res.json({
+        product: {
+          id: null,
+          name,
+          brand: '',
+          category: 'Uncategorized',
+          barcode: '',
+          price: null,
+          image: '',
+          expiryDate: null,
+          manufacturingDate: null,
+          batchNumber: null,
+          nutrition: null,
+          description: 'Product name was read from package text. Please review it before saving.',
+          source: 'ocr'
+        },
+        needsReview: true
+      })
+    }
+    return res.status(422).json({ message: 'Product text could not be read clearly enough. Please try a sharper image.' })
+  }
+  res.json({ product: productFromCatalog(ranked[0].product) })
 })
 
 app.get('/api/scanner/barcode/:barcode', async (req, res) => {
