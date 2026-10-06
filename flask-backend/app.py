@@ -1,5 +1,7 @@
+import json
 import re
 from pathlib import Path
+from urllib import parse, request
 
 import pytesseract
 from flask import Flask, jsonify, request
@@ -150,9 +152,162 @@ def parse_package_details(text):
         "batchNumber": batch_match.group(1) if batch_match else "",
     }
 
+def normalize_country(country):
+    value = (country or "India").strip()
+    return value or "India"
+
+
+def clean_barcode(value):
+    return re.sub(r"\D", "", str(value or ""))
+
+
+def valid_date_string(value):
+    if not value or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return False
+    try:
+        from datetime import date
+        date(int(value[0:4]), int(value[5:7]), int(value[8:10]))
+        return True
+    except ValueError:
+        return False
+
+
+def extract_expiry_date_from_text(text):
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not text:
+        return ""
+
+    patterns = [
+        r"(?:EXP(?:IRY)?\s*[:\-]?\s*|USE\s*BY\s*|BEST\s*BEFORE\s*|SELL\s*BY\s*)(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{2,4})",
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{2,4})",
+    ]
+
+    for pattern in patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for raw_match in matches:
+            normalized = re.sub(r"\s+", "", str(raw_match)).replace('.', '/').strip()
+            if re.fullmatch(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", normalized):
+                parts = re.split(r"[./-]", normalized)
+                if len(parts) != 3:
+                    continue
+                if int(parts[0]) > 31:
+                    year, month, day = parts
+                else:
+                    day, month, year = parts
+                if int(year) < 100:
+                    year = str(int(year) + 2000)
+                iso = f"{year.zfill(4)}-{month.zfill(2)}-{day.zfill(2)}"
+                if valid_date_string(iso):
+                    return iso
+            elif re.fullmatch(r"\d{1,2}[./-]\d{2,4}", normalized):
+                month, year = re.split(r"[./-]", normalized)
+                if int(month) <= 12:
+                    iso = f"{int(year) + 2000 if int(year) < 100 else int(year):04d}-{int(month):02d}-01"
+                    if valid_date_string(iso):
+                        return iso
+    return ""
+
+
+def fetch_open_food_facts(path, params=None):
+    api_url = f"https://world.openfoodfacts.org{path}"
+    if params:
+        api_url = f"{api_url}?{parse.urlencode(params)}"
+
+    req = request.Request(api_url, headers={"User-Agent": "NutriMatrix/1.0 (contact: support@nutrimatrix.local)", "Accept": "application/json"})
+    with request.urlopen(req, timeout=15) as response:
+        payload = response.read()
+    return json.loads(payload.decode('utf-8'))
+
+
+def map_open_food_facts_product(product):
+    if not product:
+        return None
+    name = product.get("product_name") or product.get("product_name_en") or product.get("generic_name") or "Unknown product"
+    image = product.get("image_url") or product.get("image_front_url") or product.get("image_front_small_url") or ""
+    nutriments = product.get("nutriments") or {}
+    return {
+        "id": product.get("_id") or product.get("code") or "off-product",
+        "name": name,
+        "brand": product.get("brands") or "",
+        "category": product.get("categories") or product.get("category") or "",
+        "barcode": product.get("code") or product.get("barcode") or "",
+        "image": image,
+        "nutrition": {
+            "calories": nutriments.get("energy-kcal_100g") or nutriments.get("energy_100g"),
+            "protein": nutriments.get("proteins_100g"),
+            "carbs": nutriments.get("carbohydrates_100g"),
+            "fat": nutriments.get("fat_100g"),
+            "fiber": nutriments.get("fiber_100g"),
+        },
+        "description": product.get("generic_name") or name,
+    }
+
+
 @app.get("/")
 def home():
     return {"message": "Flask backend is running"}
+
+
+@app.post("/api/product/barcode")
+def product_by_barcode():
+    barcode = clean_barcode(request.json.get("barcode") if request.is_json else request.form.get("barcode"))
+    if not re.fullmatch(r"\d{8,14}", barcode):
+        return jsonify({"message": "Please provide a valid barcode."}), 400
+
+    try:
+        payload = fetch_open_food_facts(f"/api/v2/product/{barcode}.json")
+        if not payload.get("product"):
+            return jsonify({"message": "This barcode was not found in Open Food Facts. Try searching by product name."}), 404
+        return jsonify({"product": map_open_food_facts_product(payload["product"]), "source": "open-food-facts"})
+    except Exception:
+        return jsonify({"message": "Unable to connect to Open Food Facts. Please check your internet connection and try again."}), 503
+
+
+@app.get("/api/product/search")
+@app.post("/api/product/search")
+def product_search():
+    query = request.args.get("query") or (request.json or {}).get("query") or request.form.get("query") or ""
+    country = normalize_country(request.args.get("country") or (request.json or {}).get("country") or request.form.get("country") or "India")
+    query = query.strip()
+    if not query:
+        return jsonify({"message": "Please enter a product name to search."}), 400
+
+    try:
+        payload = fetch_open_food_facts("/cgi/search.pl", {
+            "search_terms": query,
+            "search_simple": 1,
+            "action": "process",
+            "json": 1,
+            "countries_tags_en": country.lower(),
+        })
+        products = [map_open_food_facts_product(product) for product in payload.get("products", [])]
+        products = [product for product in products if product and product.get("name")]
+        if not products:
+            return jsonify({"message": "No matching product was found. Try another product name."}), 404
+        return jsonify({"query": query, "country": country, "products": products, "source": "open-food-facts"})
+    except Exception:
+        return jsonify({"message": "Unable to connect to Open Food Facts. Please check your internet connection and try again."}), 503
+
+
+@app.post("/api/expiry/detect")
+def expiry_detect():
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"message": "Expiry date image is required."}), 400
+    if not uploaded.mimetype or not uploaded.mimetype.startswith("image/"):
+        return jsonify({"message": "Only JPG, JPEG, and PNG images are supported."}), 400
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(uploaded.stream)).convert("RGB")
+        image = image.resize((image.width * 2, image.height * 2))
+        text = pytesseract.image_to_string(image, config="--psm 6")
+        expiry_date = extract_expiry_date_from_text(text)
+        if not expiry_date:
+            return jsonify({"message": "Expiry date could not be detected clearly. Please scan again or upload a clearer image."}), 422
+        return jsonify({"success": True, "expiry_date": expiry_date, "detected_text": text})
+    except Exception as error:
+        app.logger.exception("Expiry OCR failed")
+        return jsonify({"message": f"Unable to read the expiry image: {error}"}), 500
 
 
 @app.post("/api/scanner/receipt")

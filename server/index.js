@@ -4,7 +4,9 @@ import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import multer from 'multer'
 import mysql from 'mysql2/promise'
+import { createWorker } from 'tesseract.js'
 
 const app = express()
 const port = process.env.API_PORT || 3001
@@ -103,6 +105,120 @@ function matchProducts(query) {
     const haystack = [product.name, product.brand, product.category, product.description].join(' ').toLowerCase()
     return haystack.includes(trimmed)
   })
+}
+
+function normalizeCountry(country) {
+  const value = String(country || 'India').trim()
+  if (!value) return 'India'
+  return value
+}
+
+function normalizeBarcodeInput(value) {
+  const cleaned = String(value || '').replace(/\D/g, '')
+  return cleaned
+}
+
+function validDateString(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
+function extractExpiryDateFromText(text) {
+  const cleaned = String(text || '').replace(/\s+/g, ' ').trim()
+  if (!cleaned) return ''
+
+  const patterns = [
+    /(?:EXP(?:IRY)?\s*[:\-]?\s*|USE\s*BY\s*|BEST\s*BEFORE\s*|BEST BEFORE\s*|SELL\s*BY\s*)(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{2,4})/gi,
+    /(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{2,4})/g,
+  ]
+
+  for (const pattern of patterns) {
+    const matches = cleaned.match(pattern)
+    for (const value of matches || []) {
+      const normalized = value.replace(/\s+/g, '').replace(/(?<=\d)\.(?=\d)/g, '/').trim()
+      const digits = normalized.replace(/[^0-9]/g, '')
+      if (!digits) continue
+      let year = ''
+      let month = ''
+      let day = ''
+
+      if (/^\d{4}[./-]\d{1,2}[./-]\d{1,2}$/.test(normalized)) {
+        [year, month, day] = normalized.split(/[./-]/)
+      } else if (/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(normalized)) {
+        const parts = normalized.split(/[./-]/)
+        if (parts.length === 3) {
+          if (Number(parts[0]) > 31) {
+            [year, month, day] = parts
+          } else {
+            [day, month, year] = parts
+          }
+        }
+      } else if (/^\d{1,2}[./-]\d{2,4}$/.test(normalized)) {
+        const parts = normalized.split(/[./-]/)
+        month = parts[0]
+        year = parts[1]
+        day = '01'
+      }
+
+      if (year && month && day) {
+        if (Number(year) < 100) year = String(Number(year) + 2000)
+        if (Number(month) > 12 || Number(day) > 31) continue
+        const iso = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        if (validDateString(iso)) return iso
+      }
+    }
+  }
+
+  return ''
+}
+
+async function fetchOpenFoodFacts(path, params = {}) {
+  const url = new URL(path, 'https://world.openfoodfacts.org')
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    url.searchParams.set(key, String(value))
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'NutriMatrix/1.0 (contact: support@nutrimatrix.local)',
+      Accept: 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to connect to Open Food Facts.')
+  }
+
+  return response.json()
+}
+
+function mapOpenFoodFactsProduct(product = {}) {
+  const productName = product.product_name || product.product_name_en || product.generic_name || product.name || 'Unknown product'
+  const brand = product.brands || product.brand || ''
+  const category = product.categories || product.category || product.categories_hierarchy?.[0] || ''
+  const barcode = product.code || product.barcode || ''
+  const image = product.image_url || product.image_front_url || product.image_front_small_url || product.selected_images?.front?.display?.fr || ''
+  const nutriments = product.nutriments || {}
+
+  return {
+    id: product._id || barcode || `off-${Date.now()}`,
+    name: productName,
+    brand,
+    category,
+    barcode,
+    image,
+    nutrition: {
+      calories: nutriments['energy-kcal_100g'] ?? nutriments.energy_100g ?? null,
+      protein: nutriments.proteins_100g ?? null,
+      carbs: nutriments.carbohydrates_100g ?? null,
+      fat: nutriments.fat_100g ?? null,
+      fiber: nutriments.fiber_100g ?? null
+    },
+    description: product.generic_name || product.product_name || 'Product information retrieved from Open Food Facts.'
+  }
 }
 
 function productFromCatalog(product) {
@@ -632,6 +748,110 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to update password.' }) }
 })
 
+app.post('/api/product/barcode', async (req, res) => {
+  const rawBarcode = normalizeBarcodeInput(req.body?.barcode || req.body?.code || '')
+  if (!/^\d{8,14}$/.test(rawBarcode)) {
+    return res.status(400).json({ message: 'Please provide a valid barcode.' })
+  }
+
+  try {
+    const payload = await fetchOpenFoodFacts(`/api/v2/product/${rawBarcode}.json`)
+    const productData = payload?.product ? mapOpenFoodFactsProduct(payload.product) : null
+
+    if (!productData) {
+      return res.status(404).json({
+        message: 'This barcode was not found in Open Food Facts. Try searching by product name.'
+      })
+    }
+
+    return res.json({
+      product: productData,
+      source: 'open-food-facts'
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(503).json({
+      message: 'Unable to connect to Open Food Facts. Please check your internet connection and try again.'
+    })
+  }
+})
+
+app.get('/api/product/search', async (req, res) => {
+  const query = String(req.query?.query || '').trim()
+  const country = normalizeCountry(req.query?.country || 'India')
+
+  if (!query) {
+    return res.status(400).json({ message: 'Please enter a product name to search.' })
+  }
+
+  try {
+    const payload = await fetchOpenFoodFacts('/cgi/search.pl', {
+      search_terms: query,
+      search_simple: 1,
+      action: 'process',
+      json: 1,
+      countries_tags_en: country.toLowerCase()
+    })
+
+    const products = (payload?.products || []).map((product) => mapOpenFoodFactsProduct(product)).filter((product) => product.name)
+    if (!products.length) {
+      return res.status(404).json({
+        message: 'No matching product was found. Try another product name.'
+      })
+    }
+
+    return res.json({
+      query,
+      country,
+      products,
+      source: 'open-food-facts'
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(503).json({
+      message: 'Unable to connect to Open Food Facts. Please check your internet connection and try again.'
+    })
+  }
+})
+
+app.post('/api/product/search', async (req, res) => {
+  const query = String(req.body?.query || '').trim()
+  const country = normalizeCountry(req.body?.country || 'India')
+
+  if (!query) {
+    return res.status(400).json({ message: 'Please enter a product name to search.' })
+  }
+
+  try {
+    const payload = await fetchOpenFoodFacts('/cgi/search.pl', {
+      search_terms: query,
+      search_simple: 1,
+      action: 'process',
+      json: 1,
+      countries_tags_en: country.toLowerCase()
+    })
+
+    const products = (payload?.products || []).map((product) => mapOpenFoodFactsProduct(product)).filter((product) => product.name)
+    if (!products.length) {
+      return res.status(404).json({
+        message: 'No matching product was found. Try another product name.'
+      })
+    }
+
+    return res.json({
+      query,
+      country,
+      products,
+      source: 'open-food-facts'
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(503).json({
+      message: 'Unable to connect to Open Food Facts. Please check your internet connection and try again.'
+    })
+  }
+})
+
 app.post('/api/scanner/search', (req, res) => {
   const { query } = req.body || {}
   const products = matchProducts(query)
@@ -644,6 +864,100 @@ app.post('/api/scanner/search', (req, res) => {
     query: String(query).trim(),
     products: products.length ? products : sampleProductCatalog.slice(0, 3),
     source: 'mock-backend'
+  })
+})
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (!file || !file.mimetype || !file.mimetype.startsWith('image/')) {
+      return callback(new Error('Only JPG, JPEG, PNG images are supported.'))
+    }
+    callback(null, true)
+  }
+})
+
+app.post('/api/expiry/detect', upload.single('image'), async (req, res) => {
+  const imageFile = req.file
+  if (!imageFile) {
+    return res.status(400).json({ message: 'Expiry date image is required.' })
+  }
+
+  try {
+    const worker = await createWorker('eng')
+    const result = await worker.recognize(imageFile.buffer)
+    await worker.terminate()
+    const expiryDate = extractExpiryDateFromText(result.data?.text || '')
+
+    if (!expiryDate) {
+      return res.status(422).json({
+        message: 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.'
+      })
+    }
+
+    return res.json({
+      expiry_date: expiryDate,
+      detected_text: result.data?.text || '',
+      success: true
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(503).json({
+      message: 'Unable to connect to Open Food Facts. Please check your internet connection and try again.'
+    })
+  }
+})
+
+app.post('/api/pantry', requireAuth, async (req, res) => {
+  const payload = req.body || {}
+  const product = payload.product || {}
+  const expiryDate = payload.expiryDate || payload.expiry_date || ''
+
+  if (!product.name || !product.barcode) {
+    return res.status(400).json({ message: 'Product details are missing.' })
+  }
+
+  if (!validDateString(expiryDate)) {
+    return res.status(400).json({ message: 'Please provide a valid expiry date.' })
+  }
+
+  try {
+    const receiptFileName = `barcode-${Date.now()}`
+    const [result] = await pool.execute(`INSERT INTO receipt_products
+      (user_id, receipt_file_name, product_name, brand, category, barcode, image, source, expiry_date, purchased_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      req.user.id,
+      receiptFileName,
+      product.name,
+      product.brand || null,
+      product.category || null,
+      product.barcode || null,
+      product.image || null,
+      'barcode',
+      expiryDate,
+      new Date().toISOString().slice(0, 10)
+    ])
+
+    return res.status(201).json({
+      message: 'Item added to Digital Pantry.',
+      itemId: result.insertId
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ message: 'Unable to save the pantry item.' })
+  }
+})
+
+app.get('/api/scanner/barcode/:barcode', async (req, res) => {
+  const barcode = String(req.params.barcode || '').replace(/\D/g, '')
+  if (!/^\d{8,14}$/.test(barcode)) return res.status(400).json({ message: 'Please provide a valid barcode.' })
+
+  const localProduct = sampleProductCatalog.find((product) => product.barcode === barcode)
+  if (localProduct) return res.json({ product: productFromCatalog(localProduct) })
+  res.json({
+    product: unknownBarcodeProduct(barcode),
+    warning: 'Barcode detected. This barcode is not yet in the NutriMatrix product database; packaging OCR will still read its dates and batch number.'
   })
 })
 
