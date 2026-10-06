@@ -129,17 +129,31 @@ function extractExpiryDateFromText(text) {
   const cleaned = String(text || '').replace(/\s+/g, ' ').trim()
   if (!cleaned) return ''
 
+  const monthIndexes = {
+    JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6,
+    JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12
+  }
+  const namedMonthMatch = cleaned.match(/\b(?:EXP(?:IRY)?|USE\s*BY|BEST\s*BEFORE|SELL\s*BY)\s*[:\-]?\s*(JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|SEP(?:TEMBER)?|OCT(?:OBER)?|NOV(?:EMBER)?|DEC(?:EMBER)?)\.?\s*,?\s*(\d{2,4})\b/i)
+  if (namedMonthMatch) {
+    const monthName = namedMonthMatch[1].slice(0, 3).toUpperCase()
+    let year = Number(namedMonthMatch[2])
+    if (year < 100) year += 2000
+    const month = monthIndexes[monthName]
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  }
+
+  const numericDate = String.raw`(?:[0-9OIl]{1,2}[./-][0-9OIl]{1,2}[./-][0-9OIl]{2,4}|[0-9OIl]{4}[./-][0-9OIl]{1,2}[./-][0-9OIl]{1,2}|[0-9OIl]{1,2}[./-][0-9OIl]{2,4})`
   const patterns = [
-    /(?:EXP(?:IRY)?\s*[:\-]?\s*|USE\s*BY\s*|BEST\s*BEFORE\s*|BEST BEFORE\s*|SELL\s*BY\s*)(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{2,4})/gi,
-    /(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{2,4})/g,
+    new RegExp(String.raw`\b(?:EXP(?:IRY)?|USE\s*BY|BEST\s*BEFORE|SELL\s*BY)\s*[:\-]?\s*(${numericDate})`, 'gi'),
+    new RegExp(numericDate, 'g'),
   ]
 
   for (const pattern of patterns) {
-    const matches = cleaned.match(pattern)
-    for (const value of matches || []) {
+    const matches = cleaned.matchAll(pattern)
+    for (const match of matches) {
+      const value = (match[1] || match[0]).replace(/[Oo]/g, '0').replace(/[Il]/g, '1')
       const normalized = value.replace(/\s+/g, '').replace(/(?<=\d)\.(?=\d)/g, '/').trim()
-      const digits = normalized.replace(/[^0-9]/g, '')
-      if (!digits) continue
       let year = ''
       let month = ''
       let day = ''
@@ -159,7 +173,7 @@ function extractExpiryDateFromText(text) {
         const parts = normalized.split(/[./-]/)
         month = parts[0]
         year = parts[1]
-        day = '01'
+        day = String(new Date(Date.UTC(Number(year) < 100 ? Number(year) + 2000 : Number(year), Number(month), 0)).getUTCDate())
       }
 
       if (year && month && day) {
@@ -605,10 +619,19 @@ app.post('/api/expiry/detect', upload.single('image'), async (req, res) => {
 
   try {
     const worker = await createWorker('eng')
-    const result = await worker.recognize(imageFile.buffer)
-    await worker.terminate()
-    const expiryDate = extractExpiryDateFromText(result.data?.text || '')
+    let recognizedText = ''
 
+    try {
+      for (const pageSegmentationMode of ['11', '6']) {
+        await worker.setParameters({ tessedit_pageseg_mode: pageSegmentationMode })
+        const result = await worker.recognize(imageFile.buffer)
+        recognizedText += ` ${result.data?.text || ''}`
+      }
+    } finally {
+      await worker.terminate()
+    }
+
+    const expiryDate = extractExpiryDateFromText(recognizedText)
     if (!expiryDate) {
       return res.status(422).json({
         message: 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.'
@@ -617,13 +640,12 @@ app.post('/api/expiry/detect', upload.single('image'), async (req, res) => {
 
     return res.json({
       expiry_date: expiryDate,
-      detected_text: result.data?.text || '',
       success: true
     })
   } catch (error) {
     console.error(error)
     return res.status(503).json({
-      message: 'Unable to connect to Open Food Facts. Please check your internet connection and try again.'
+      message: 'Unable to read package details. Please try uploading the image again.'
     })
   }
 })
