@@ -69,7 +69,7 @@
 .inline-search button:disabled { cursor: wait; opacity: .6; }
 .barcode-file,
 .barcode-error { max-width: 1140px; margin-right: auto; margin-left: auto; }
-.barcode-result { grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); align-items: start; gap: 30px; width: 100%; max-width: 1060px; margin: 38px auto 0; padding: 30px; }
+.barcode-result { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); align-items: start; gap: 30px; width: 100%; max-width: 1060px; margin: 38px auto 0; padding: 30px; }
 .barcode-result > img,
 .barcode-result-image-placeholder { width: 100%; height: 360px; min-height: 300px; max-height: 480px; object-fit: contain; border-radius: 14px; background: #f3f8f3; }
 .barcode-result-image-placeholder { display: grid; place-items: center; color: #75a27f; font-size: 4rem; }
@@ -84,8 +84,10 @@
 .expiry-upload-button:hover { color: #126d3c; text-decoration: underline; }
 .expiry-auto { margin-top: 12px !important; color: #21804a !important; font-size: .84rem; font-weight: 700; }
 .barcode-success { margin: 14px 0 0 !important; padding: 12px; border-radius: 9px; background: #eaf7ec; color: #1d7040 !important; font-size: .86rem; font-weight: 700; }
-.barcode-result .pantry-submit { width: 100%; margin-top: 14px; background: #19834b; }
+.barcode-result .pantry-submit { width: 100%; margin-top: 14px; background: #21ce63; color:white}
 .barcode-result .pantry-submit:disabled { cursor: not-allowed; opacity: .55; }
+.barcode-result .cancel-detected-product { width: 100%; margin-top: 14px; border: 1px solid #e3c3bf; background: #f8c3bb; color: #b45148; }
+.barcode-result .cancel-detected-product:hover { background: #ffe6e1; }
 .barcode-history { width: 100%; max-width: 1060px; margin: 36px auto 0; padding: 24px 28px; border: 1px solid #dceade; border-radius: 16px; background: rgba(255, 255, 255, .88); }
 .barcode-history h2 { margin: 5px 0 0; color: #194a2b; font-size: 1.35rem; }
 .barcode-history-empty { margin: 16px 0 0 !important; color: #718177 !important; font-size: .86rem; }

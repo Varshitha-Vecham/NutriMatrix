@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken'
 import multer from 'multer'
 import mysql from 'mysql2/promise'
 import { createWorker } from 'tesseract.js'
+import { extractExpiryDateFromText, validDateString } from './expiry-detection.js'
 
 const app = express()
 const port = process.env.API_PORT || 3001
@@ -116,76 +117,6 @@ function normalizeCountry(country) {
 function normalizeBarcodeInput(value) {
   const cleaned = String(value || '').replace(/\D/g, '')
   return cleaned
-}
-
-function validDateString(value) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const [year, month, day] = value.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-}
-
-function extractExpiryDateFromText(text) {
-  const cleaned = String(text || '').replace(/\s+/g, ' ').trim()
-  if (!cleaned) return ''
-
-  const monthIndexes = {
-    JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6,
-    JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12
-  }
-  const namedMonthMatch = cleaned.match(/\b(?:EXP(?:IRY)?|USE\s*BY|BEST\s*BEFORE|SELL\s*BY)\s*[:\-]?\s*(JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|SEP(?:TEMBER)?|OCT(?:OBER)?|NOV(?:EMBER)?|DEC(?:EMBER)?)\.?\s*,?\s*(\d{2,4})\b/i)
-  if (namedMonthMatch) {
-    const monthName = namedMonthMatch[1].slice(0, 3).toUpperCase()
-    let year = Number(namedMonthMatch[2])
-    if (year < 100) year += 2000
-    const month = monthIndexes[monthName]
-    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
-    return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-  }
-
-  const numericDate = String.raw`(?:[0-9OIl]{1,2}[./-][0-9OIl]{1,2}[./-][0-9OIl]{2,4}|[0-9OIl]{4}[./-][0-9OIl]{1,2}[./-][0-9OIl]{1,2}|[0-9OIl]{1,2}[./-][0-9OIl]{2,4})`
-  const patterns = [
-    new RegExp(String.raw`\b(?:EXP(?:IRY)?|USE\s*BY|BEST\s*BEFORE|SELL\s*BY)\s*[:\-]?\s*(${numericDate})`, 'gi'),
-    new RegExp(numericDate, 'g'),
-  ]
-
-  for (const pattern of patterns) {
-    const matches = cleaned.matchAll(pattern)
-    for (const match of matches) {
-      const value = (match[1] || match[0]).replace(/[Oo]/g, '0').replace(/[Il]/g, '1')
-      const normalized = value.replace(/\s+/g, '').replace(/(?<=\d)\.(?=\d)/g, '/').trim()
-      let year = ''
-      let month = ''
-      let day = ''
-
-      if (/^\d{4}[./-]\d{1,2}[./-]\d{1,2}$/.test(normalized)) {
-        [year, month, day] = normalized.split(/[./-]/)
-      } else if (/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(normalized)) {
-        const parts = normalized.split(/[./-]/)
-        if (parts.length === 3) {
-          if (Number(parts[0]) > 31) {
-            [year, month, day] = parts
-          } else {
-            [day, month, year] = parts
-          }
-        }
-      } else if (/^\d{1,2}[./-]\d{2,4}$/.test(normalized)) {
-        const parts = normalized.split(/[./-]/)
-        month = parts[0]
-        year = parts[1]
-        day = String(new Date(Date.UTC(Number(year) < 100 ? Number(year) + 2000 : Number(year), Number(month), 0)).getUTCDate())
-      }
-
-      if (year && month && day) {
-        if (Number(year) < 100) year = String(Number(year) + 2000)
-        if (Number(month) > 12 || Number(day) > 31) continue
-        const iso = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-        if (validDateString(iso)) return iso
-      }
-    }
-  }
-
-  return ''
 }
 
 async function fetchOpenFoodFacts(path, params = {}) {
@@ -899,27 +830,31 @@ const upload = multer({
   }
 })
 
-app.post('/api/expiry/detect', upload.single('image'), async (req, res) => {
-  const imageFile = req.file
-  if (!imageFile) {
+app.post('/api/expiry/detect', upload.array('image', 4), async (req, res) => {
+  const imageFiles = req.files || []
+  if (!imageFiles.length) {
     return res.status(400).json({ message: 'Expiry date image is required.' })
   }
 
   try {
     const worker = await createWorker('eng')
-    let recognizedText = ''
+    const detections = new Map()
 
     try {
-      for (const pageSegmentationMode of ['11', '6']) {
-        await worker.setParameters({ tessedit_pageseg_mode: pageSegmentationMode })
-        const result = await worker.recognize(imageFile.buffer)
-        recognizedText += ` ${result.data?.text || ''}`
+      for (const imageFile of imageFiles) {
+        for (const pageSegmentationMode of ['11', '6']) {
+          await worker.setParameters({ tessedit_pageseg_mode: pageSegmentationMode })
+          const result = await worker.recognize(imageFile.buffer)
+          const expiryDate = extractExpiryDateFromText(result.data?.text || '')
+          if (expiryDate) detections.set(expiryDate, (detections.get(expiryDate) || 0) + 1)
+        }
       }
     } finally {
       await worker.terminate()
     }
 
-    const expiryDate = extractExpiryDateFromText(recognizedText)
+    const expiryDate = [...detections.entries()]
+      .sort(([firstDate, firstCount], [secondDate, secondCount]) => secondCount - firstCount || secondDate.localeCompare(firstDate))[0]?.[0] || ''
     if (!expiryDate) {
       return res.status(422).json({
         message: 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.'
