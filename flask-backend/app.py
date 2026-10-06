@@ -10,8 +10,11 @@ from PIL import Image, ImageOps
 import cv2
 import numpy as np
 
+from smart_scanner import smart_scanner
+
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:5173", "http://localhost:5174"], supports_credentials=True)
+app.register_blueprint(smart_scanner)
 
 if Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe").exists():
     pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
