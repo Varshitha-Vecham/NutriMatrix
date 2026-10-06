@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BarcodeFormat, BrowserMultiFormatReader } from '@zxing/browser'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
-import { apiRequest, OCR_API_URL } from '../api.js'
+import { apiRequest } from '../api.js'
 import './Scanner.css'
 
 async function detectExpiryDate(imageSource) {
@@ -16,15 +16,7 @@ async function detectExpiryDate(imageSource) {
       : await (await fetch(imageSource)).blob()
   const formData = new FormData()
   formData.append('image', blob, imageSource.name || 'expiry-date.jpg')
-  const response = await fetch(`${OCR_API_URL}/api/scan-expiry`, { method: 'POST', body: formData })
-  const responseText = await response.text()
-  let result
-  try {
-    result = JSON.parse(responseText)
-  } catch {
-    throw new Error(`Expiry detection service returned an unexpected response (${response.status}).`)
-  }
-  if (!response.ok) throw new Error(result.message || 'Unable to read package details.')
+  const result = await apiRequest('/api/expiry/detect', { method: 'POST', body: formData })
   return result.expiry_date || ''
 }
 
@@ -58,7 +50,7 @@ function ScannerPage() {
   const scanGenerationRef = useRef(0)
   const [scanning, setScanning] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [country, setCountry] = useState('India')
+  const country = 'India'
   const [barcodeInput, setBarcodeInput] = useState('')
   const [productNameInput, setProductNameInput] = useState('')
   const [product, setProduct] = useState(null)
@@ -67,6 +59,18 @@ function ScannerPage() {
   const [expiryDate, setExpiryDate] = useState('')
   const [dateSource, setDateSource] = useState('')
   const [pantryMessage, setPantryMessage] = useState('')
+  const [history, setHistory] = useState([])
+  const [historyError, setHistoryError] = useState('')
+
+  async function loadHistory() {
+    try {
+      const result = await apiRequest('/api/expiry-products')
+      setHistory((result.products || []).filter((item) => item.source === 'barcode'))
+      setHistoryError('')
+    } catch (historyLoadError) {
+      if (historyLoadError.message !== 'Not authenticated.') setHistoryError(historyLoadError.message)
+    }
+  }
 
   function stopScanner() {
     scanGenerationRef.current += 1
@@ -101,7 +105,8 @@ function ScannerPage() {
 
       const resolvedProduct = result.product || null
       setProduct(resolvedProduct)
-      setBarcodeInput(cleanedBarcode)
+      setBarcodeInput('')
+      setProductNameInput('')
       if (resolvedProduct) {
         setError('')
       }
@@ -161,7 +166,8 @@ function ScannerPage() {
         return
       }
       setProduct(foundProduct)
-      setBarcodeInput(foundProduct.barcode || '')
+      setBarcodeInput('')
+      setProductNameInput('')
     } catch (searchError) {
       setProduct(null)
       setError(searchError.message || 'No matching product was found. Try another product name.')
@@ -182,9 +188,10 @@ function ScannerPage() {
     try {
       const detectedExpiryDate = await detectExpiryDate(file)
       setExpiryDate(detectedExpiryDate)
-      setDateSource('OCR detection')
       if (!detectedExpiryDate) {
         setError('Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
+      } else {
+        setDateSource('OCR detection')
       }
     } catch (uploadError) {
       setError(uploadError.message || 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
@@ -216,11 +223,17 @@ function ScannerPage() {
           expiryDate
         })
       })
-      const { daysRemaining, status } = result.expiryAlert
-      const remainingText = daysRemaining < 0
-        ? `${Math.abs(daysRemaining)} days past expiry`
-        : `${daysRemaining} days remaining`
-      setPantryMessage(`${product.name} added to Digital Pantry. Expiry alert: ${status} — ${remainingText}.`)
+      const expiryAlert = result?.expiryAlert
+      if (expiryAlert && typeof expiryAlert === 'object') {
+        const { daysRemaining, status } = expiryAlert
+        const remainingText = daysRemaining < 0
+          ? `${Math.abs(daysRemaining)} days past expiry`
+          : `${daysRemaining} days remaining`
+        setPantryMessage(`${product.name} added to Digital Pantry. Expiry alert: ${status} — ${remainingText}.`)
+      } else {
+        setPantryMessage(`${product.name} added to Digital Pantry.`)
+      }
+      await loadHistory()
     } catch (pantryError) {
       setError(pantryError.message || 'Unable to save this item to the Digital Pantry.')
     } finally {
@@ -228,12 +241,26 @@ function ScannerPage() {
     }
   }
 
+  async function deleteHistoryItem(item) {
+    if (!window.confirm(`Delete ${item.name} from barcode history?`)) return
+    try {
+      await apiRequest(`/api/expiry-products/${item.id}`, { method: 'DELETE' })
+      setHistory((current) => current.filter((historyItem) => historyItem.id !== item.id))
+    } catch (deleteError) {
+      setHistoryError(deleteError.message || 'Unable to delete this product from history.')
+    }
+  }
+
   async function startScanner() {
     if (scanActiveRef.current || !videoRef.current) return
     setError('')
     setProduct(null)
+    setBarcodeInput('')
+    setProductNameInput('')
+    setFileName('')
     setExpiryDate('')
     setDateSource('')
+    setPantryMessage('')
     scanActiveRef.current = true
     const scanGeneration = ++scanGenerationRef.current
     setScanning(true)
@@ -292,7 +319,7 @@ function ScannerPage() {
     try {
       const result = await new BrowserMultiFormatReader().decodeFromImageUrl(imageUrl)
       playScanBeep()
-      await lookupBarcode(result.getText(), imageUrl)
+      await lookupBarcode(result.getText(), file)
     } catch {
       setLoading(false)
       setError('No barcode was detected. Upload a clear package image with the barcode and date text visible.')
@@ -319,6 +346,22 @@ function ScannerPage() {
     }
   }, [])
 
+  useEffect(() => {
+    loadHistory()
+  }, [])
+
+  function prepareBarcodeUpload() {
+    stopScanner()
+    setProduct(null)
+    setBarcodeInput('')
+    setProductNameInput('')
+    setExpiryDate('')
+    setDateSource('')
+    setFileName('')
+    setError('')
+    setPantryMessage('')
+  }
+
   return (
     <div className="barcode-page">
       <Navbar />
@@ -338,7 +381,7 @@ function ScannerPage() {
 
             <div className="barcode-actions">
               <button className={`barcode-action ${scanning ? 'stop-scanner' : ''}`} type="button" onClick={scanning ? stopScanner : startScanner}>{scanning ? '■ Stop Barcode Scanner' : '◉ Scan Barcode'}</button>
-              <button className="barcode-action barcode-upload" type="button" onClick={() => fileInputRef.current?.click()} disabled={loading}>↑ Upload Barcode Image</button>
+              <button className="barcode-action barcode-upload" type="button" onClick={() => { prepareBarcodeUpload(); fileInputRef.current?.click() }} disabled={loading}>↑ Upload Barcode Image</button>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleUpload} />
             </div>
           </section>
@@ -346,13 +389,7 @@ function ScannerPage() {
           <section className="barcode-search-panel" aria-label="Search product">
             <div className="barcode-field">
               <label htmlFor="country-select">Country</label>
-              <select id="country-select" value={country} onChange={(event) => setCountry(event.target.value)}>
-                <option>India</option>
-                <option>United States</option>
-                <option>United Kingdom</option>
-                <option>Australia</option>
-                <option>Canada</option>
-              </select>
+              <output id="country-select" className="country-fixed">India</output>
             </div>
 
             <form onSubmit={handleManualBarcodeSearch} className="barcode-field">
@@ -391,10 +428,6 @@ function ScannerPage() {
                 <div><dt>Brand</dt><dd>{product.brand || 'Not available'}</dd></div>
                 <div><dt>Category</dt><dd>{product.category || 'Not available'}</dd></div>
                 <div><dt>Barcode</dt><dd>{product.barcode || barcodeInput || 'Not available'}</dd></div>
-                <div><dt>Calories</dt><dd>{product.nutrition?.calories == null ? 'Not available' : `${product.nutrition.calories} kcal`}</dd></div>
-                <div><dt>Protein</dt><dd>{product.nutrition?.protein == null ? 'Not available' : `${product.nutrition.protein} g`}</dd></div>
-                <div><dt>Carbs</dt><dd>{product.nutrition?.carbs == null ? 'Not available' : `${product.nutrition.carbs} g`}</dd></div>
-                <div><dt>Fat</dt><dd>{product.nutrition?.fat == null ? 'Not available' : `${product.nutrition.fat} g`}</dd></div>
               </dl>
 
               <div className="expiry-controls">
@@ -406,10 +439,22 @@ function ScannerPage() {
 
               {dateSource && <p className="expiry-auto">Expiry date detected from {dateSource}.</p>}
               {pantryMessage && <p className="barcode-success" role="status">{pantryMessage}</p>}
-              <button className="barcode-action pantry-submit" type="button" onClick={handleAddToPantry} disabled={!expiryDate || loading}>Add to Digital Pantry</button>
+              <button className="barcode-action pantry-submit" type="button" onClick={handleAddToPantry} disabled={!expiryDate || loading}>Save to Digital Pantry</button>
             </div>
           </section>
         )}
+        <section className="barcode-history" aria-labelledby="barcode-history-title">
+          <div><span className="method-kicker">Saved products</span><h2 id="barcode-history-title">Barcode history</h2></div>
+          {historyError && <p className="barcode-error" role="alert">{historyError}</p>}
+          {history.length === 0
+            ? <p className="barcode-history-empty">Products saved from barcode detection will appear here.</p>
+            : <div className="barcode-history-list">{history.map((item) => (
+              <article className="barcode-history-item" key={item.id}>
+                <div><strong>{item.name}</strong><span>{item.brand || 'Barcode product'}{item.barcode ? ` · ${item.barcode}` : ''}</span><small>{item.expiryDate ? `Expires ${item.expiryDate}` : 'No expiry date'}</small></div>
+                <button type="button" onClick={() => deleteHistoryItem(item)}>Delete</button>
+              </article>
+            ))}</div>}
+        </section>
       </main>
     </div>
   )
