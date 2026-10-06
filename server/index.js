@@ -466,13 +466,20 @@ app.post('/api/product/barcode', async (req, res) => {
     return res.status(400).json({ message: 'Please provide a valid barcode.' })
   }
 
+  const localProduct = sampleProductCatalog.find((product) => product.barcode === rawBarcode)
+  if (localProduct) {
+    return res.json({ product: productFromCatalog(localProduct), source: 'local-catalog' })
+  }
+
   try {
     const payload = await fetchOpenFoodFacts(`/api/v2/product/${rawBarcode}.json`)
     const productData = payload?.product ? mapOpenFoodFactsProduct(payload.product) : null
 
     if (!productData) {
-      return res.status(404).json({
-        message: 'This barcode was not found in Open Food Facts. Try searching by product name.'
+      return res.json({
+        product: unknownBarcodeProduct(rawBarcode),
+        source: 'barcode',
+        warning: 'The barcode was detected, but product details are not available yet. Add the product name if you want to search for more details.'
       })
     }
 
@@ -653,7 +660,8 @@ app.post('/api/pantry', requireAuth, async (req, res) => {
 
     return res.status(201).json({
       message: 'Item added to Digital Pantry.',
-      itemId: result.insertId
+      itemId: result.insertId,
+      expiryAlert: expiryStatus(expiryDate)
     })
   } catch (error) {
     console.error(error)
