@@ -2,22 +2,98 @@ import { useEffect, useRef, useState } from 'react'
 import { BarcodeFormat, BrowserMultiFormatReader } from '@zxing/browser'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
-import { apiRequest } from '../api.js'
+import { apiRequest, OCR_API_URL } from '../api.js'
 import './Scanner.css'
 
+const barcodeFormats = [
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.EAN_8,
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+  BarcodeFormat.CODE_128,
+  BarcodeFormat.CODE_39,
+  BarcodeFormat.CODE_93,
+  BarcodeFormat.ITF,
+  BarcodeFormat.CODABAR
+]
+
+function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.92) {
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+    if (blob) resolve(blob)
+    else reject(new Error('Unable to prepare the image for expiry-date detection.'))
+  }, type, quality))
+}
+
 async function detectExpiryDate(imageSource) {
-  const blob = imageSource instanceof Blob
+  const imageBlob = imageSource instanceof Blob
     ? imageSource
     : imageSource instanceof HTMLCanvasElement
-      ? await new Promise((resolve, reject) => imageSource.toBlob((canvasBlob) => {
-        if (canvasBlob) resolve(canvasBlob)
-        else reject(new Error('Unable to prepare the image for expiry-date detection.'))
-      }, 'image/jpeg', 0.92))
+      ? await canvasToBlob(imageSource)
       : await (await fetch(imageSource)).blob()
   const formData = new FormData()
-  formData.append('image', blob, imageSource.name || 'expiry-date.jpg')
-  const result = await apiRequest('/api/expiry/detect', { method: 'POST', body: formData })
+  formData.append('image', imageBlob, imageSource.name || 'expiry-date.jpg')
+  let response
+  try {
+    response = await fetch(`${OCR_API_URL}/api/scan-expiry`, { method: 'POST', body: formData })
+  } catch (serviceError) {
+    if (serviceError instanceof TypeError) {
+      throw new Error(`Expiry scanning service is unavailable at ${OCR_API_URL}. Start the Flask service and try again.`)
+    }
+    throw serviceError
+  }
+  const responseText = await response.text()
+  let result
+  try {
+    result = JSON.parse(responseText)
+  } catch {
+    throw new Error(`Expiry service returned an unexpected response (${response.status}). Check the Flask service at ${OCR_API_URL}.`)
+  }
+  if (!response.ok) {
+    const detectionError = new Error(result.message || 'Unable to detect an expiry date.')
+    detectionError.status = response.status
+    throw detectionError
+  }
   return result.expiry_date || ''
+}
+
+async function decodeBarcodeImage(file) {
+  const reader = new BrowserMultiFormatReader()
+  reader.possibleFormats = barcodeFormats
+  const imageUrl = URL.createObjectURL(file)
+  try {
+    try {
+      return await reader.decodeFromImageUrl(imageUrl)
+    } catch {
+      const image = await createImageBitmap(file)
+      try {
+        const scale = Math.min(2, 2000 / Math.max(image.width, image.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+        const context = canvas.getContext('2d', { willReadFrequently: true })
+        if (!context) throw new Error('Unable to prepare the barcode image.')
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        try {
+          return reader.decodeFromCanvas(canvas)
+        } catch {
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
+          for (let index = 0; index < pixels.data.length; index += 4) {
+            const gray = pixels.data[index] * 0.299 + pixels.data[index + 1] * 0.587 + pixels.data[index + 2] * 0.114
+            const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.7 + 128))
+            pixels.data[index] = contrast
+            pixels.data[index + 1] = contrast
+            pixels.data[index + 2] = contrast
+          }
+          context.putImageData(pixels, 0, 0)
+          return reader.decodeFromCanvas(canvas)
+        }
+      } finally {
+        image.close()
+      }
+    }
+  } finally {
+    URL.revokeObjectURL(imageUrl)
+  }
 }
 
 function playScanBeep() {
@@ -50,9 +126,7 @@ function ScannerPage() {
   const scanGenerationRef = useRef(0)
   const [scanning, setScanning] = useState(false)
   const [loading, setLoading] = useState(false)
-  const country = 'India'
   const [barcodeInput, setBarcodeInput] = useState('')
-  const [productNameInput, setProductNameInput] = useState('')
   const [product, setProduct] = useState(null)
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
@@ -106,7 +180,6 @@ function ScannerPage() {
       const resolvedProduct = result.product || null
       setProduct(resolvedProduct)
       setBarcodeInput('')
-      setProductNameInput('')
       if (resolvedProduct) {
         setError('')
       }
@@ -140,45 +213,9 @@ function ScannerPage() {
     await lookupBarcode(cleanedBarcode)
   }
 
-  async function handleProductNameSearch(event) {
-    event.preventDefault()
-    const query = productNameInput.trim()
-    if (!query) {
-      setError('Please enter a product name to search.')
-      return
-    }
-
-    setProduct(null)
-    setExpiryDate('')
-    setDateSource('')
-    setLoading(true)
-    setError('')
-    setPantryMessage('')
-    try {
-      const result = await apiRequest('/api/product/search', {
-        method: 'POST',
-        body: JSON.stringify({ query, country })
-      })
-      const foundProduct = result.products?.[0] || null
-      if (!foundProduct) {
-        setProduct(null)
-        setError('No matching product was found. Try another product name.')
-        return
-      }
-      setProduct(foundProduct)
-      setBarcodeInput('')
-      setProductNameInput('')
-    } catch (searchError) {
-      setProduct(null)
-      setError(searchError.message || 'No matching product was found. Try another product name.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   async function handleExpiryUpload(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const files = [...(event.target.files || [])]
+    if (!files.length) return
 
     setLoading(true)
     setError('')
@@ -186,12 +223,22 @@ function ScannerPage() {
     setDateSource('')
 
     try {
-      const detectedExpiryDate = await detectExpiryDate(file)
-      setExpiryDate(detectedExpiryDate)
-      if (!detectedExpiryDate) {
-        setError('Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
+      const detectedDates = new Map()
+      for (const file of files) {
+        try {
+          const detectedExpiryDate = await detectExpiryDate(file)
+          if (detectedExpiryDate) detectedDates.set(detectedExpiryDate, (detectedDates.get(detectedExpiryDate) || 0) + 1)
+        } catch (detectionError) {
+          if (detectionError.status !== 422) throw detectionError
+        }
+      }
+      const detectedExpiryDate = [...detectedDates.entries()]
+        .sort(([firstDate, firstCount], [secondDate, secondCount]) => secondCount - firstCount || secondDate.localeCompare(firstDate))[0]?.[0]
+      if (detectedExpiryDate) {
+        setExpiryDate(detectedExpiryDate)
+        setDateSource(files.length > 1 ? `OCR detection (${files.length} images checked)` : 'OCR detection')
       } else {
-        setDateSource('OCR detection')
+        setError(`Expiry date could not be detected in the uploaded image${files.length === 1 ? '' : 's'}. Try a close-up of the printed date or enter it manually.`)
       }
     } catch (uploadError) {
       setError(uploadError.message || 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
@@ -256,7 +303,6 @@ function ScannerPage() {
     setError('')
     setProduct(null)
     setBarcodeInput('')
-    setProductNameInput('')
     setFileName('')
     setExpiryDate('')
     setDateSource('')
@@ -268,15 +314,7 @@ function ScannerPage() {
       delayBetweenScanAttempts: 100,
       delayBetweenScanSuccess: 250
     })
-    reader.possibleFormats = [
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.ITF
-    ]
+    reader.possibleFormats = barcodeFormats
     readerRef.current = reader
     try {
       const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result, scanError) => {
@@ -315,16 +353,14 @@ function ScannerPage() {
     setLoading(true)
     setError('')
     setProduct(null)
-    const imageUrl = URL.createObjectURL(file)
     try {
-      const result = await new BrowserMultiFormatReader().decodeFromImageUrl(imageUrl)
+      const result = await decodeBarcodeImage(file)
       playScanBeep()
       await lookupBarcode(result.getText(), file)
     } catch {
       setLoading(false)
-      setError('No barcode was detected. Upload a clear package image with the barcode and date text visible.')
+      setError('No supported barcode could be read from this image. Try a sharper, straight-on photo or enter the barcode number.')
     } finally {
-      URL.revokeObjectURL(imageUrl)
       event.target.value = ''
     }
   }
@@ -354,7 +390,17 @@ function ScannerPage() {
     stopScanner()
     setProduct(null)
     setBarcodeInput('')
-    setProductNameInput('')
+    setExpiryDate('')
+    setDateSource('')
+    setFileName('')
+    setError('')
+    setPantryMessage('')
+  }
+
+  function cancelDetectedProduct() {
+    stopScanner()
+    setProduct(null)
+    setBarcodeInput('')
     setExpiryDate('')
     setDateSource('')
     setFileName('')
@@ -369,7 +415,7 @@ function ScannerPage() {
         <button className="method-back" onClick={() => navigate('/scanner')}>← Back to Scanner</button>
         <span className="method-kicker">Product detection</span>
         <h1>Barcode <em>Scanner</em></h1>
-        <p>Choose the country, scan a barcode, or search by product name, then confirm the expiry date before saving it to your Digital Pantry.</p>
+        <p>Scan a barcode or enter its number, confirm the expiry date, then save the product to your Digital Pantry.</p>
 
         <div className="barcode-workspace">
           <section className="barcode-scanner-column" aria-label="Barcode camera scanner">
@@ -400,13 +446,6 @@ function ScannerPage() {
               </div>
             </form>
 
-            <form onSubmit={handleProductNameSearch} className="barcode-field">
-              <label htmlFor="product-name-input">Product Name <span>(optional)</span></label>
-              <div className="inline-search">
-                <input id="product-name-input" value={productNameInput} onChange={(event) => setProductNameInput(event.target.value)} placeholder="Milk" />
-                <button type="submit" disabled={loading}>Search Product</button>
-              </div>
-            </form>
           </section>
         </div>
 
@@ -434,11 +473,12 @@ function ScannerPage() {
                 <label htmlFor="barcode-expiry">Expiry date</label>
                 <input id="barcode-expiry" type="date" value={expiryDate} onChange={(event) => { setExpiryDate(event.target.value); setDateSource('manual entry') }} />
                 <label className="expiry-upload-button" htmlFor="expiry-upload-input">📤 Upload Expiry Image</label>
-                <input id="expiry-upload-input" type="file" accept="image/*" hidden onChange={handleExpiryUpload} />
+                <input id="expiry-upload-input" type="file" accept="image/*" multiple hidden onChange={handleExpiryUpload} />
               </div>
 
               {dateSource && <p className="expiry-auto">Expiry date detected from {dateSource}.</p>}
               {pantryMessage && <p className="barcode-success" role="status">{pantryMessage}</p>}
+              <button className="barcode-action cancel-detected-product" type="button" onClick={cancelDetectedProduct} disabled={loading}>Cancel</button>
               <button className="barcode-action pantry-submit" type="button" onClick={handleAddToPantry} disabled={!expiryDate || loading}>Save to Digital Pantry</button>
             </div>
           </section>
