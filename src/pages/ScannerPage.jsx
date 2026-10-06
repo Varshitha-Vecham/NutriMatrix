@@ -120,6 +120,9 @@ function ScannerPage() {
   const scanGenerationRef = useRef(0)
   const [scanning, setScanning] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [country, setCountry] = useState('India')
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [productNameInput, setProductNameInput] = useState('')
   const [product, setProduct] = useState(null)
   const [fileName, setFileName] = useState('')
   const [error, setError] = useState('')
@@ -128,6 +131,7 @@ function ScannerPage() {
   const [batchNumber, setBatchNumber] = useState('')
   const [expiryConfirmed, setExpiryConfirmed] = useState(false)
   const [dateSource, setDateSource] = useState('')
+  const [pantryMessage, setPantryMessage] = useState('')
 
   function stopScanner() {
     scanGenerationRef.current += 1
@@ -149,45 +153,36 @@ function ScannerPage() {
     setManufacturingDate('')
     setBatchNumber('')
     setDateSource('')
+    setPantryMessage('')
     try {
-      const result = await apiRequest(`/api/scanner/barcode/${encodeURIComponent(barcode)}`)
-      setProduct(result.product)
-      const gs1Data = parseGs1Barcode(barcode)
-      const databaseData = {
-        expiryDate: result.product.expiryDate || '',
-        manufacturingDate: result.product.manufacturingDate || '',
-        batchNumber: result.product.batchNumber || ''
+      const cleanedBarcode = String(barcode || '').replace(/\D/g, '')
+      if (!/^\d{8,14}$/.test(cleanedBarcode)) {
+        throw new Error('Please provide a valid barcode.')
       }
-      const initialData = {
-        expiryDate: gs1Data.expiryDate || databaseData.expiryDate,
-        manufacturingDate: gs1Data.manufacturingDate || databaseData.manufacturingDate,
-        batchNumber: gs1Data.batchNumber || databaseData.batchNumber
+
+      const result = await apiRequest('/api/product/barcode', {
+        method: 'POST',
+        body: JSON.stringify({ barcode: cleanedBarcode })
+      })
+
+      const resolvedProduct = result.product || null
+      setProduct(resolvedProduct)
+      setBarcodeInput(cleanedBarcode)
+      setBatchNumber('')
+      setManufacturingDate('')
+      if (resolvedProduct) {
+        setError('')
       }
-      if (result.warning) setError(result.warning)
-      setExpiryDate(initialData.expiryDate)
-      setManufacturingDate(initialData.manufacturingDate)
-      setBatchNumber(initialData.batchNumber)
-      setDateSource(gs1Data.expiryDate || gs1Data.manufacturingDate || gs1Data.batchNumber ? 'GS1 barcode' : databaseData.expiryDate || databaseData.manufacturingDate || databaseData.batchNumber ? 'product database' : '')
 
       if (imageSource) {
         try {
-          const [backendData, browserData] = await Promise.all([
-            detectPackageData(imageSource).catch(() => ({ expiryDate: '', manufacturingDate: '', batchNumber: '' })),
-            detectPackageDataWithTesseract(imageSource).catch(() => ({ expiryDate: '', manufacturingDate: '', batchNumber: '' }))
-          ])
-          const scannedData = {
-            expiryDate: backendData.expiryDate || browserData.expiryDate,
-            manufacturingDate: backendData.manufacturingDate || browserData.manufacturingDate,
-            batchNumber: backendData.batchNumber || browserData.batchNumber
+          const packageData = await detectPackageData(imageSource)
+          if (packageData.expiryDate || packageData.manufacturingDate || packageData.batchNumber) {
+            setExpiryDate(packageData.expiryDate || '')
+            setManufacturingDate(packageData.manufacturingDate || '')
+            setBatchNumber(packageData.batchNumber || '')
+            setDateSource('package image OCR')
           }
-          const nextExpiry = gs1Data.expiryDate || scannedData.expiryDate || databaseData.expiryDate
-          const nextManufacturing = gs1Data.manufacturingDate || scannedData.manufacturingDate || databaseData.manufacturingDate
-          const nextBatch = gs1Data.batchNumber || scannedData.batchNumber || databaseData.batchNumber
-          setManufacturingDate(nextManufacturing || 'Upload a clear package-details image')
-          setBatchNumber(nextBatch || 'Upload a clear package-details image')
-          setExpiryDate(nextExpiry || 'Upload a clear package-details image')
-          if (gs1Data.expiryDate || gs1Data.manufacturingDate || gs1Data.batchNumber) setDateSource('GS1 barcode')
-          else if (scannedData.expiryDate || scannedData.manufacturingDate || scannedData.batchNumber) setDateSource('package image OCR')
         } catch {
           setError('Product identified. Packaging dates were not readable in this frame.')
         }
@@ -195,6 +190,106 @@ function ScannerPage() {
     } catch (lookupError) {
       setProduct(null)
       setError(lookupError.message || 'Unable to identify this product.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleManualBarcodeSearch(event) {
+    event.preventDefault()
+    const cleanedBarcode = String(barcodeInput || '').replace(/\D/g, '')
+    if (!/^\d{8,14}$/.test(cleanedBarcode)) {
+      setError('Please provide a valid barcode.')
+      return
+    }
+    await lookupBarcode(cleanedBarcode)
+  }
+
+  async function handleProductNameSearch(event) {
+    event.preventDefault()
+    const query = productNameInput.trim()
+    if (!query) {
+      setError('Please enter a product name to search.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setPantryMessage('')
+    try {
+      const result = await apiRequest('/api/product/search', {
+        method: 'POST',
+        body: JSON.stringify({ query, country })
+      })
+      const foundProduct = result.products?.[0] || null
+      if (!foundProduct) {
+        setProduct(null)
+        setError('No matching product was found. Try another product name.')
+        return
+      }
+      setProduct(foundProduct)
+      setBarcodeInput(foundProduct.barcode || '')
+    } catch (searchError) {
+      setProduct(null)
+      setError(searchError.message || 'No matching product was found. Try another product name.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleExpiryUpload(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setLoading(true)
+    setError('')
+    const formData = new FormData()
+    formData.append('image', file)
+
+    try {
+      const result = await apiRequest('/api/expiry/detect', {
+        method: 'POST',
+        body: formData
+      })
+      setExpiryDate(result.expiry_date || '')
+      setDateSource('OCR detection')
+      if (!result.expiry_date) {
+        setError('Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
+      }
+    } catch (uploadError) {
+      setError(uploadError.message || 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
+    } finally {
+      setLoading(false)
+      event.target.value = ''
+    }
+  }
+
+  async function handleAddToPantry() {
+    if (!product || !expiryDate) {
+      setError('Please confirm the product and expiry date before saving to the Digital Pantry.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    try {
+      await apiRequest('/api/pantry', {
+        method: 'POST',
+        body: JSON.stringify({
+          product: {
+            name: product.name,
+            brand: product.brand,
+            category: product.category,
+            barcode: product.barcode,
+            image: product.image
+          },
+          expiryDate
+        })
+      })
+      setPantryMessage('Item added to Digital Pantry.')
+      setExpiryConfirmed(true)
+    } catch (pantryError) {
+      setError(pantryError.message || 'Unable to save this item to the Digital Pantry.')
     } finally {
       setLoading(false)
     }
@@ -307,7 +402,96 @@ function ScannerPage() {
     }
   }, [])
 
-  return <div className="barcode-page"><Navbar /><main className="barcode-content"><button className="method-back" onClick={() => navigate('/scanner')}>← Back to Scanner</button><span className="method-kicker">Barcode identification</span><h1>Barcode <em>Scanner</em></h1><p>Point your camera at the barcode and keep the expiry, manufacturing, and batch text visible.</p><div className="barcode-preview"><video ref={videoRef} className={scanning ? 'barcode-video visible' : 'barcode-video'} muted playsInline /><div className="barcode-frame" /><small>{loading ? 'Reading product details and dates...' : scanning ? 'Scanning automatically...' : product ? 'Product identified' : 'Camera is stopped'}</small></div><div className="barcode-actions"><button className={`barcode-action ${scanning ? 'stop-scanner' : ''}`} onClick={scanning ? stopScanner : startScanner}>{scanning ? '■ Stop Barcode Scanner' : '◉ Start Barcode Scanner'}</button><button className="barcode-action barcode-upload" onClick={() => fileInputRef.current?.click()} disabled={loading}>↑ Upload Barcode Image</button><input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleUpload} /></div>{fileName && <p className="barcode-file">Uploaded: {fileName}</p>}{error && <p className="barcode-error" role="alert">{error}</p>}{product && <section className="barcode-result" aria-live="polite">{product.image && <img src={product.image} alt={product.name} />}<div><span className="method-kicker">Product identified</span><h2>{product.name}</h2><p>{product.brand} · {product.category}</p><dl><div><dt>Barcode</dt><dd>{product.barcode}</dd></div><div><dt>Batch / lot</dt><dd>{batchNumber || 'Not detected'}</dd></div><div><dt>Manufacturing date</dt><dd>{manufacturingDate || 'Not detected'}</dd></div><div><dt>Expiry date</dt><dd>{expiryDate || 'Not detected'}</dd></div><div><dt>Serving</dt><dd>{product.serving || 'Not available'}</dd></div><div><dt>Calories</dt><dd>{product.nutrition?.calories == null ? 'Not available' : `${product.nutrition.calories} kcal`}</dd></div><div><dt>Protein</dt><dd>{product.nutrition?.protein == null ? 'Not available' : `${product.nutrition.protein} g`}</dd></div><div><dt>Carbs</dt><dd>{product.nutrition?.carbs == null ? 'Not available' : `${product.nutrition.carbs} g`}</dd></div><div><dt>Fat</dt><dd>{product.nutrition?.fat == null ? 'Not available' : `${product.nutrition.fat} g`}</dd></div></dl><p>{product.description}</p>{dateSource && <p className="expiry-auto">Dates and batch details detected from {dateSource}.</p>}{!expiryDate && <p className="expiry-unavailable">Expiry text was not visible to the camera. Show the package date text for automatic detection.</p>}<div className="expiry-required"><label htmlFor="barcode-expiry">Expiry date <span>(required only if not detected)</span></label><input id="barcode-expiry" type="date" value={expiryDate} onChange={(event) => { setExpiryDate(event.target.value); setExpiryConfirmed(false); setDateSource('manual entry') }} /><button type="button" disabled={!expiryDate} onClick={() => setExpiryConfirmed(true)}>Confirm Expiry Date</button>{expiryConfirmed && <small role="status">Expiry date confirmed: {expiryDate}</small>}</div></div></section>}</main></div>
+  return (
+    <div className="barcode-page">
+      <Navbar />
+      <main className="barcode-content">
+        <button className="method-back" onClick={() => navigate('/scanner')}>← Back to Scanner</button>
+        <span className="method-kicker">Product detection</span>
+        <h1>Barcode <em>Scanner</em></h1>
+        <p>Choose the country, scan a barcode, or search by product name, then confirm the expiry date before saving it to your Digital Pantry.</p>
+
+        <div className="barcode-preview">
+          <video ref={videoRef} className={scanning ? 'barcode-video visible' : 'barcode-video'} muted playsInline />
+          <div className="barcode-frame" />
+          <small>{loading ? 'Reading product details and dates...' : scanning ? 'Scanning automatically...' : product ? 'Product identified' : 'Camera is stopped'}</small>
+        </div>
+
+        <div className="barcode-actions">
+          <button className={`barcode-action ${scanning ? 'stop-scanner' : ''}`} onClick={scanning ? stopScanner : startScanner}>{scanning ? '■ Stop Barcode Scanner' : '◉ Scan Barcode'}</button>
+          <button className="barcode-action barcode-upload" onClick={() => fileInputRef.current?.click()} disabled={loading}>↑ Upload Barcode Image</button>
+          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleUpload} />
+        </div>
+
+        <div className="barcode-search-panel">
+          <div className="barcode-field">
+            <label htmlFor="country-select">Country</label>
+            <select id="country-select" value={country} onChange={(event) => setCountry(event.target.value)}>
+              <option>India</option>
+              <option>United States</option>
+              <option>United Kingdom</option>
+              <option>Australia</option>
+              <option>Canada</option>
+            </select>
+          </div>
+
+          <form onSubmit={handleManualBarcodeSearch} className="barcode-field">
+            <label htmlFor="barcode-input">Barcode Number</label>
+            <div className="inline-search">
+              <input id="barcode-input" value={barcodeInput} onChange={(event) => setBarcodeInput(event.target.value)} placeholder="8901234567890" />
+              <button type="submit">Search Product</button>
+            </div>
+          </form>
+
+          <form onSubmit={handleProductNameSearch} className="barcode-field">
+            <label htmlFor="product-name-input">Product Name</label>
+            <div className="inline-search">
+              <input id="product-name-input" value={productNameInput} onChange={(event) => setProductNameInput(event.target.value)} placeholder="Milk" />
+              <button type="submit">Search Product</button>
+            </div>
+          </form>
+        </div>
+
+        {fileName && <p className="barcode-file">Uploaded: {fileName}</p>}
+        {error && <p className="barcode-error" role="alert">{error}</p>}
+
+        {product && (
+          <section className="barcode-result" aria-live="polite">
+            {product.image && <img src={product.image} alt={product.name} />}
+            <div>
+              <span className="method-kicker">Product detected</span>
+              <h2>{product.name}</h2>
+              <p>{product.brand || 'Brand not available'} · {product.category || 'Category not available'}</p>
+              <dl>
+                <div><dt>Product</dt><dd>{product.name}</dd></div>
+                <div><dt>Brand</dt><dd>{product.brand || 'Not available'}</dd></div>
+                <div><dt>Category</dt><dd>{product.category || 'Not available'}</dd></div>
+                <div><dt>Barcode</dt><dd>{product.barcode || barcodeInput || 'Not available'}</dd></div>
+                <div><dt>Batch / lot</dt><dd>{batchNumber || 'Not detected'}</dd></div>
+                <div><dt>Manufacturing date</dt><dd>{manufacturingDate || 'Not detected'}</dd></div>
+                <div><dt>Expiry date</dt><dd>{expiryDate || 'Not detected'}</dd></div>
+                <div><dt>Calories</dt><dd>{product.nutrition?.calories == null ? 'Not available' : `${product.nutrition.calories} kcal`}</dd></div>
+                <div><dt>Protein</dt><dd>{product.nutrition?.protein == null ? 'Not available' : `${product.nutrition.protein} g`}</dd></div>
+                <div><dt>Carbs</dt><dd>{product.nutrition?.carbs == null ? 'Not available' : `${product.nutrition.carbs} g`}</dd></div>
+                <div><dt>Fat</dt><dd>{product.nutrition?.fat == null ? 'Not available' : `${product.nutrition.fat} g`}</dd></div>
+              </dl>
+
+              <div className="expiry-controls">
+                <label htmlFor="barcode-expiry">Expiry date</label>
+                <input id="barcode-expiry" type="date" value={expiryDate} onChange={(event) => { setExpiryDate(event.target.value); setExpiryConfirmed(false); setDateSource('manual entry') }} />
+                <button type="button" onClick={() => document.getElementById('expiry-upload-input')?.click()}>📤 Upload Expiry Image</button>
+                <input id="expiry-upload-input" type="file" accept="image/*" hidden onChange={handleExpiryUpload} />
+              </div>
+
+              {dateSource && <p className="expiry-auto">Dates and batch details detected from {dateSource}.</p>}
+              {pantryMessage && <p className="barcode-success">{pantryMessage}</p>}
+              <button className="barcode-action" type="button" onClick={handleAddToPantry} disabled={!expiryDate || loading}>Add to Digital Pantry</button>
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  )
 }
 
 export default ScannerPage
