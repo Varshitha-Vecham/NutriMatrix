@@ -18,6 +18,7 @@ const ScannerPage = lazy(() => import('./pages/ScannerPage.jsx'))
 const ReceiptScanner = lazy(() => import('./pages/ReceiptScanner.jsx'))
 const Products = lazy(() => import('./pages/Products.jsx'))
 const MealPlanner = lazy(() => import('./pages/MealPlanner.jsx'))
+const RecipeGenerator = lazy(() => import('./pages/RecipeGenerator.jsx'))
 const DigitalPantry = lazy(() => import('./pages/DigitalPantry.jsx'))
 const Notifications = lazy(() => import('./pages/Notifications.jsx'))
 const AdminLogin = lazy(() => import('./pages/AdminLogin.jsx'))
@@ -37,6 +38,7 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/meal-planner" element={<MealPlanner />} />
+        <Route path="/recipe-generator" element={<RecipeGenerator />} />
         <Route path="/digital-pantry" element={<DigitalPantry />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/about" element={<AboutUs />} />

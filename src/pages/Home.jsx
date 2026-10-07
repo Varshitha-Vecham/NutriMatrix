@@ -55,7 +55,8 @@ function Home() {
       title: 'Recipe Generator',
       description: 'Create and discover meal ideas that match your nutrition goals and preferences.',
       color: '#14b8a6',
-      accent: '#0f766e'
+      accent: '#0f766e',
+      path: '/recipe-generator'
     }
   ]
 

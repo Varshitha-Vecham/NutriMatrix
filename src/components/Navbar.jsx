@@ -11,10 +11,12 @@ function Navbar() {
   const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   useEffect(() => {
+    const isPublicRoute = window.location.pathname === '/recipe-generator'
+
     apiRequest('/api/auth/me')
       .then(({ user: currentUser }) => setUser(currentUser))
       .catch((requestError) => {
-        if (requestError.message === 'Not authenticated.') navigate('/login')
+        if (requestError.message === 'Not authenticated.' && !isPublicRoute) navigate('/login')
       })
   }, [navigate])
 

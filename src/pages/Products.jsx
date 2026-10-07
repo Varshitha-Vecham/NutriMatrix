@@ -125,6 +125,24 @@ function loadSavedCart() {
   } catch { return [] }
 }
 
+export function addIngredientsToSmartCart(names) {
+  let cart = loadSavedCart()
+  let added = 0
+  const unavailable = []
+  for (const name of names) {
+    const normalized = String(name || '').trim().toLocaleLowerCase()
+    const product = catalog.find((entry) => entry.name.toLocaleLowerCase() === normalized)
+    if (!product) { unavailable.push(String(name)); continue }
+    const packageId = product.packageOptions[0].id
+    const existing = cart.find((item) => item.id === product.id && item.packageId === packageId)
+    if (existing) cart = cart.map((item) => item === existing ? { ...item, quantity: item.quantity + 1 } : item)
+    else cart = [...cart, { id: product.id, packageId, quantity: 1 }]
+    added += 1
+  }
+  localStorage.setItem(SMART_CART_STORAGE_KEY, JSON.stringify(cart))
+  return { added, unavailable }
+}
+
 function parseAlternativeIds(value) {
   if (Array.isArray(value)) return value.map(Number).filter(Number.isInteger)
   if (typeof value !== 'string' || !value.trim()) return []
