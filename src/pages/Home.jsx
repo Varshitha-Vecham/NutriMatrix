@@ -58,7 +58,7 @@ function Home() {
       description: 'Create and discover meal ideas that match your nutrition goals and preferences.',
       color: '#14b8a6',
       accent: '#0f766e',
-      path: '/meal-planner'
+      path: '/recipe-generator'
     },
     {
       icon: '⏰',
