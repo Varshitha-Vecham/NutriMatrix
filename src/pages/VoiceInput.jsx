@@ -47,7 +47,7 @@ function VoiceHistory({ products, loading, onDelete }) {
   if (!products.length) return <p className="voice-history-empty">Items you add with Voice Input will appear here.</p>
 
   return <div className="voice-history-list">{products.map((product) => <article className="voice-history-item" key={product.id}>
-    <div><strong>{product.name}</strong><small>{product.quantity ? `${product.quantity}${product.unit ? ` ${product.unit}` : ''}` : 'Quantity not entered'}</small><small>{product.expiryDate ? `Expires ${product.expiryDate}` : 'No expiry date entered'}</small></div>
+    <div className="voice-history-product"><strong>{product.name}</strong><div className="voice-history-meta"><small>{product.quantity ? `${product.quantity}${product.unit ? ` ${product.unit}` : ''}` : 'Quantity not entered'}</small><small>{product.expiryDate ? `Expires ${product.expiryDate}` : 'No expiry date entered'}</small></div></div>
     <button type="button" onClick={() => onDelete(product.id)} aria-label={`Delete ${product.name} from voice history`}>Delete</button>
   </article>)}</div>
 }

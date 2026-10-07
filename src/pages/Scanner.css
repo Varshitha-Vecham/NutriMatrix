@@ -36,6 +36,19 @@
 .method-card.receipt { border-top: 3px solid #31d82e; }
 .steps-section { margin-bottom: 102px; }
 .manual-history-expiry { color: #28583a !important; }
+.voice-history { margin-top: 26px; padding-top: 22px; border-top: 1px solid #e1ece3; }
+.voice-history-heading h3 { margin: 5px 0 3px; color: #194a2b; font-size: 1.22rem; }
+.voice-history-heading p { margin: 0; color: #718177; font-size: .84rem; }
+.voice-history-list { display: grid; gap: 10px; margin-top: 15px; }
+.voice-history-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 13px 14px; border: 1px solid #dceade; border-radius: 11px; background: #fbfefb; }
+.voice-history-product { min-width: 0; }
+.voice-history-product strong { display: block; overflow-wrap: anywhere; color: #28583a; font-size: .9rem; }
+.voice-history-meta { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 5px; }
+.voice-history-meta small { color: #718177; font-size: .76rem; }
+.voice-history-item button { justify-self: end; padding: 8px 11px; border: 1px solid #f0c8c3; border-radius: 8px; background: #fff4f2; color: #a43d34; font-size: .75rem; font-weight: 800; white-space: nowrap; }
+.voice-history-item button:hover { background: #ffe7e3; }
+.voice-history-empty { margin: 15px 0 0; color: #718177; font-size: .84rem; }
+@media (max-width: 450px) { .voice-history-item { gap: 10px; padding: 12px; }.voice-history-meta { gap: 4px 10px; }.voice-history-item button { padding: 7px 9px; } }
 
 .barcode-content { max-width: 1240px; }
 .barcode-content > .method-kicker,

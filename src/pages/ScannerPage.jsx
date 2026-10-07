@@ -472,7 +472,7 @@ function ScannerPage() {
               <div className="expiry-controls">
                 <label htmlFor="barcode-expiry">Expiry date</label>
                 <input id="barcode-expiry" type="date" value={expiryDate} onChange={(event) => { setExpiryDate(event.target.value); setDateSource('manual entry') }} />
-                <label className="expiry-upload-button" htmlFor="expiry-upload-input">📤 Upload Expiry Image</label>
+                {/* <label className="expiry-upload-button" htmlFor="expiry-upload-input">📤 Upload Expiry Image</label> */}
                 <input id="expiry-upload-input" type="file" accept="image/*" multiple hidden onChange={handleExpiryUpload} />
               </div>
 
