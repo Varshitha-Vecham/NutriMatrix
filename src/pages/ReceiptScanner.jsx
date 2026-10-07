@@ -10,6 +10,10 @@ function formatDateOnly(dateValue) {
   return new Date(year, month - 1, day).toLocaleDateString()
 }
 
+function isReceiptScanProduct(product) {
+  return product.source === 'receipt' && product.receiptFileName !== 'Manual entry'
+}
+
 function ReceiptScanner() {
   const navigate = useNavigate()
   const inputRef = useRef(null)
@@ -32,9 +36,7 @@ function ReceiptScanner() {
     async function loadReceiptHistory() {
       try {
         const result = await apiRequest('/api/expiry-products')
-        // Manual products have their own history on the Manual Entry page.
-        // Keep this view reserved for uploaded receipts.
-        setTrackedProducts(result.products.filter((product) => product.receiptFileName !== 'Manual entry'))
+        setTrackedProducts(result.products.filter(isReceiptScanProduct))
       } catch (historyError) {
         if (historyError.message !== 'Not authenticated.') setError(historyError.message)
       }
@@ -126,7 +128,7 @@ function ReceiptScanner() {
         body: JSON.stringify({ receiptFileName: fileName, products })
       })
       const result = await apiRequest('/api/expiry-products')
-      setTrackedProducts(result.products.filter((product) => product.receiptFileName !== 'Manual entry'))
+      setTrackedProducts(result.products.filter(isReceiptScanProduct))
       setCurrentReceiptSaved(true)
       setScanned(false)
       setProducts([])
@@ -148,7 +150,7 @@ function ReceiptScanner() {
     try {
       await apiRequest(`/api/expiry-products/${productId}`, { method: 'PUT', body: JSON.stringify({ expiryDate: editingExpiry }) })
       const result = await apiRequest('/api/expiry-products')
-      setTrackedProducts(result.products.filter((product) => product.receiptFileName !== 'Manual entry'))
+      setTrackedProducts(result.products.filter(isReceiptScanProduct))
       setEditingHistoryId(null)
       setMessage('Expiry date updated.')
     } catch (editError) {
