@@ -2,7 +2,7 @@
 .receipt-content { max-width: 1300px; margin: auto; padding: 48px 28px 90px; }
 .receipt-back { display: block; margin-bottom: 54px; padding: 0; background: transparent; color: #267646; font-weight: 800; }
 .receipt-content h1 { margin: 14px 0 10px; color: #16472b; font-size: clamp(2.5rem, 5vw, 4.5rem); letter-spacing: -.06em; }
-.receipt-content h1 em { color: #df8c1d; font-style: normal; }
+.receipt-content h1 em { color: #df8c1d; font-style: normal;font-size: 70px; }
 .receipt-subtitle { color: #687b6e; font-size: 1.04rem; }
 .receipt-box { max-width: 680px; margin-top: 38px; padding: 58px 30px; border: 1px dashed #b6d4ba; border-radius: 20px; background: rgba(255,255,255,.78); text-align: center; box-shadow: 0 18px 42px rgba(37,89,51,.07); }
 .receipt-icon { font-size: 2.7rem; }
