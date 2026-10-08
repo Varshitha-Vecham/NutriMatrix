@@ -26,6 +26,15 @@ let mailTransport
 
 class EmailDeliveryError extends Error {}
 
+// SMTP providers use recipient errors such as "550 5.1.1" when the receiving
+// server rejects a mailbox that does not exist.  Do not classify connection,
+// authentication, or sender-policy errors as a bad recipient address.
+function mailboxDoesNotExist(error) {
+  const responseCode = Number(error.responseCode)
+  const response = String(error.response || error.message || '')
+  return (error.code === 'EENVELOPE' && [550, 551, 553, 554].includes(responseCode)) || /\b5\.1\.[01]\b/.test(response)
+}
+
 function createMailTransport() {
   const port = Number(process.env.SMTP_PORT || 587)
   return nodemailer.createTransport({
@@ -51,7 +60,7 @@ async function sendVerificationEmail(email, otp) {
   try {
     const sender = process.env.SMTP_FROM.trim()
     const from = sender.includes('<') ? sender : `NutriMatrix <${sender}>`
-    await (mailTransport || (mailTransport = createMailTransport())).sendMail({
+    const delivery = await (mailTransport || (mailTransport = createMailTransport())).sendMail({
       from,
       to: email,
       subject: 'NutriMatrix',
@@ -79,6 +88,15 @@ async function sendVerificationEmail(email, otp) {
         </div>
       `
     })
+    // Some SMTP transports report a rejected recipient in the result instead
+    // of throwing. Treat it as a failed delivery before any OTP is persisted.
+    if (delivery.rejected?.length) {
+      const rejection = new Error('Recipient mailbox was rejected by the mail server.')
+      rejection.code = 'EENVELOPE'
+      rejection.responseCode = 550
+      rejection.response = '550 5.1.1 Recipient mailbox rejected'
+      throw rejection
+    }
   } catch (error) {
     console.error('OTP email failed:', {
       code: error.code,
@@ -86,6 +104,7 @@ async function sendVerificationEmail(email, otp) {
       response: error.response,
       message: error.message
     })
+    if (mailboxDoesNotExist(error)) throw new EmailDeliveryError("Email doesn't exist")
     throw new EmailDeliveryError('Unable to send verification code. Please try again.')
   }
 }
@@ -527,7 +546,7 @@ app.post('/api/auth/register', async (req, res) => {
 
   try {
     const [existing] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', [email])
-    if (existing[0]) return res.status(409).json({ message: 'An account with this email already exists. Please login.' })
+    if (existing[0]) return res.status(409).json({ message: 'Email already registered' })
     const [pendingRows] = await pool.execute('SELECT otp_last_sent_at FROM pending_registrations WHERE email = ?', [email])
     const pending = pendingRows[0]
     const elapsed = pending?.otp_last_sent_at ? Date.now() - new Date(pending.otp_last_sent_at).getTime() : Infinity
