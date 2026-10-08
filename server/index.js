@@ -19,8 +19,8 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root', password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'nutrimatrix', waitForConnections: true, connectionLimit: 10
 })
-const OTP_EXPIRY_MINUTES = 2
-const OTP_RESEND_COOLDOWN_SECONDS = 90
+const OTP_EXPIRY_SECONDS = 120
+const OTP_RESEND_COOLDOWN_SECONDS = 120
 const OTP_MAX_ATTEMPTS = 4
 let mailTransport
 
@@ -54,9 +54,30 @@ async function sendVerificationEmail(email, otp) {
     await (mailTransport || (mailTransport = createMailTransport())).sendMail({
       from,
       to: email,
-      subject: `NutriMatrix`,
-      //text: `Hello,\n\nUse this verification code to finish creating your NutriMatrix account:\n\n${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes. If you did not request this code, you can ignore this email. Do not share this code with anyone.\n\nNutriMatrix`,
-      html: `<div style="margin:0;padding:32px 16px;background:#f4f8f4;font-family:Arial,sans-serif;color:#25332a"><div style="max-width:480px;margin:0 auto;padding:32px;background:#fff;border:1px solid #e2ebe2;border-radius:12px"><h1 style="margin:0 0 20px;color:#168344;font-size:24px">NutriMatrix email</h1><p style="margin:0 0 20px;line-height:1.5">Use this code to finish creating your account:</p><p style="margin:0 0 20px;padding:16px;background:#f4f8f4;border-radius:8px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p><p style="margin:0 0 12px;line-height:1.5">This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.</p><p style="margin:0;color:#647067;font-size:13px;line-height:1.5">If you did not request this code, you can ignore this email.</p></div></div>`
+      subject: 'NutriMatrix',
+      html: `
+        <div style="margin:0;padding:32px 16px;background:#f4f8f4;font-family:Arial,sans-serif;color:#1f2d24;">
+          <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #dfeee3;border-radius:16px;overflow:hidden;box-shadow:0 4px 18px rgba(20, 107, 58, 0.06);">
+            <div style="background:linear-gradient(135deg,#edf9f0,#dff3e5);padding:24px 24px 12px;text-align:center;">
+              <div style="display:inline-block;background:#dfeee3;color:#146b3a;border-radius:999px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Welcome</div>
+              <h1 style="margin:18px 0 0;color:#168344;font-size:30px;line-height:1.2;">Welcome to NutriMatrix!🌱</h1>
+            </div>
+            <div style="padding:28px 24px 20px;">
+              <p style="margin:0 0 18px;font-size:16px;line-height:1.7;color:#2d3c34;">Thank you for registering with NutriMatrix. We're excited to have you with us! Please use the OTP below to verify your email address and complete your registration.</p>
+              <div style="margin:20px 0 18px;padding:24px 16px;background:#f4fbf6;border:1px solid #dfeee3;border-radius:12px;text-align:center;">
+                <div style="font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#0f6b3d;margin-bottom:12px;">Your verification code</div>
+                <div style="font-size:36px;font-weight:800;letter-spacing:12px;color:#168344;">${otp}</div>
+              </div>
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#2d3c34;">This code expires in 2 minutes. Please do not share this code with anyone.</p>
+              <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#647067;">If you did not create a NutriMatrix account, you can safely ignore this email.</p>
+              <div style="margin-top:24px;border-top:1px solid #e2ebe2;padding-top:18px;font-size:14px;line-height:1.7;color:#2d3c34;">
+                <p style="margin:0 0 4px;">Thank you for choosing NutriMatrix.</p>
+                <p style="margin:0;font-weight:700;color:#146b3a;">Make every choice count.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
     })
   } catch (error) {
     console.error('OTP email failed:', {
@@ -516,10 +537,10 @@ app.post('/api/auth/register', async (req, res) => {
     }
     const otpHash = await issueVerificationOtp(email)
     await pool.execute(`INSERT INTO pending_registrations (email, name, password_hash, otp_code, otp_expires_at, otp_attempts, otp_last_sent_at)
-      VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), 0, NOW())
+      VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND), 0, NOW())
       ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), otp_code = VALUES(otp_code),
-      otp_expires_at = VALUES(otp_expires_at), otp_attempts = 0, otp_last_sent_at = NOW()`,
-    [email, name, await bcrypt.hash(password, 12), otpHash, OTP_EXPIRY_MINUTES])
+      otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND), otp_attempts = 0, otp_last_sent_at = NOW()`,
+    [email, name, await bcrypt.hash(password, 12), otpHash, OTP_EXPIRY_SECONDS, OTP_EXPIRY_SECONDS])
     res.status(201).json({ message: 'Verification code sent successfully.', resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS })
   } catch (error) {
     if (error instanceof EmailDeliveryError) return res.status(503).json({ message: error.message })
@@ -541,8 +562,8 @@ app.post('/api/auth/resend-verification', async (req, res) => {
       return res.status(429).json({ message: `Please wait ${seconds} seconds before requesting another verification code.`, resendAfterSeconds: seconds })
     }
     const otpHash = await issueVerificationOtp(email)
-    await pool.execute(`UPDATE pending_registrations SET otp_code = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? MINUTE),
-      otp_attempts = 0, otp_last_sent_at = NOW() WHERE email = ?`, [otpHash, OTP_EXPIRY_MINUTES, email])
+    await pool.execute(`UPDATE pending_registrations SET otp_code = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND),
+      otp_attempts = 0, otp_last_sent_at = NOW() WHERE email = ?`, [otpHash, OTP_EXPIRY_SECONDS, email])
     res.json({ message: 'Verification code sent successfully.', resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS })
   } catch (error) {
     if (error instanceof EmailDeliveryError) return res.status(503).json({ message: error.message })

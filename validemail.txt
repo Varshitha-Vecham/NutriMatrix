@@ -1,601 +1,133 @@
-STOP making multiple unrelated changes.
+I need you to modify ONLY the NutriMatrix email OTP verification functionality. Do NOT break or change any existing registration, login, database, frontend, or OTP verification functionality.
 
-I need you to take ownership of fixing the NutriMatrix registration + Gmail OTP flow completely.
+First inspect the actual backend file/function that is currently sending the OTP email. Make sure you modify the ACTIVE code that is actually being used by the running backend, not an unused/duplicate email template.
 
-CURRENT PROBLEM:
-When a new user enters:
+REQUIREMENTS:
 
-Full Name
-Email Address
-Password
-Confirm Password
+1. EMAIL SUBJECT
+The current email subject is something like:
+"631106 is your NutriMatrix verification code"
 
-and clicks "Create Account", the button keeps loading for a long time.
+I do NOT want the OTP number in the subject.
 
-The OTP is not arriving at the user's real/valid email.
+Change the subject to exactly:
 
-The frontend eventually shows:
+"NutriMatrix "
 
-"⚠️ Unable to send verification code. Please try again."
+The OTP must appear only inside the email body.
 
-I already configured a real Gmail sender account with:
-- 2-Step Verification enabled
-- Gmail App Password created
-- SMTP credentials in .env
+2. EMAIL CONTENT
+Make the email professional and welcoming, similar to a real application verification email.
 
-DO NOT assume the problem.
-DO NOT keep changing random code.
-DO NOT redesign the UI.
-DO NOT break existing login, registration, MySQL, or other NutriMatrix features.
+Use this content:
 
-==================================================
-MAIN GOAL
-==================================================
+Heading:
+"Welcome to NutriMatrix!🌱"
 
-Make this exact flow work:
+Message:
+"Thank you for registering with NutriMatrix. We're excited to have you with us! Please use the OTP below to verify your email address and complete your registration."
 
-NEW USER:
+Display the 6-digit OTP clearly in a large highlighted box.
 
-Register
-↓
-Validate Name + Email + Password
-↓
-Check whether email already exists
-↓
-If not registered:
-Generate 6-digit OTP
-↓
-Send OTP to the user's REAL email
-↓
-Show OTP verification page
-↓
-User enters OTP
-↓
-Verify OTP
-↓
-Create account in MySQL
-↓
-Redirect to Login page
+Below the OTP write:
 
-EXISTING USER:
+"This code expires in 2 minutes. Please do not share this code with anyone."
 
-Login
-↓
-Email + Password
-↓
-Successful login
-↓
-Home
+Then write:
+
+"If you did not create a NutriMatrix account, you can safely ignore this email."
+
+At the bottom write:
+
+"Thank you for choosing NutriMatrix."
+
+"Make every choice count."
+
+Keep the existing NutriMatrix green/healthy visual style. Make the email clean, professional, and readable in Gmail.
+
+3. OTP EXPIRY
+The OTP must actually expire after exactly 2 minutes = 120 seconds.
+
+Do NOT only change the text in the email.
+
+Change the backend/database OTP expiry logic so the generated OTP becomes invalid after 120 seconds.
+
+Use one central configuration value, preferably:
+
+const OTP_EXPIRY_SECONDS = 120
+
+Make sure registration OTP creation, OTP verification, and resend OTP all use the same expiry value.
+
+If the current database query uses MINUTE, SECOND, or milliseconds, update it correctly so the actual expiry is exactly 120 seconds.
+
+4. RESEND OTP
+The user must be able to request/resend a new OTP only after 120 seconds.
+
+Use:
+
+const OTP_RESEND_COOLDOWN_SECONDS = 120
+
+The resend cooldown must actually be enforced by the backend.
+
+Do not only change the frontend countdown.
+
+5. RESEND OTP BEHAVIOR
+When a new OTP is requested after the 120-second cooldown:
+
+- Generate a new 6-digit OTP.
+- Replace/invalidate the previous OTP.
+- Set the new OTP expiry to 120 seconds from the time it was generated.
+- Send the new OTP to the user's registered email.
+- Start the 120-second resend cooldown again.
+
+6. IMPORTANT
+Search the entire backend project for:
+- "is your NutriMatrix verification code"
+- "verification code"
+- "sendMail"
+- "subject:"
+- "OTP_EXPIRY"
+- "expiresAt"
+- "OTP"
+- resend OTP logic
+
+If there are multiple email templates or OTP functions, identify which one is actually used by the registration flow and modify the active one.
+
+Do NOT leave an old subject such as:
+"${otp} is your NutriMatrix verification code"
+
+anywhere in the active registration OTP email code.
+
+7. DO NOT CHANGE
+Do NOT change:
+- registration form fields
+- login functionality
+- password hashing
+- MySQL structure unless absolutely required for the OTP expiry
+- existing user data
+- frontend design unrelated to OTP
+- authentication flow
+- email credentials/environment variables
+- Gmail SMTP configuration
+
+Only modify the OTP email subject/body, OTP expiry, and resend cooldown.
+
+8. AFTER MAKING CHANGES
+Check the final code and confirm:
+
+EMAIL SUBJECT:
+NutriMatrix - Verify Your Email
+
+OTP EXPIRY:
+120 seconds / 2 minutes
+
+RESEND COOLDOWN:
+120 seconds
+
+The email body must say:
+"This code expires in 2 minutes."
+
+Finally, tell me exactly which file(s) and lines/functions you changed.
 
 IMPORTANT:
-OTP must NOT be required every time an existing user logs in.
-
-OTP is required for NEW EMAIL VERIFICATION during registration only.
-
-==================================================
-FIRST: STOP AND DIAGNOSE
-==================================================
-
-Before changing code, inspect the COMPLETE existing implementation.
-
-Inspect:
-
-1. Register frontend component/page
-2. OTP verification component/page
-3. index.js / Express server
-4. package.json
-5. .env usage
-6. MySQL users table
-7. registration API
-8. OTP API
-9. resend OTP API
-10. login API
-11. Nodemailer configuration
-12. CORS configuration
-13. frontend API base URL
-
-Do not rewrite working code unnecessarily.
-
-Trace the actual request:
-
-Register button
-→ frontend fetch/axios
-→ POST /api/auth/register
-→ Express route
-→ MySQL
-→ OTP generation
-→ Nodemailer
-→ Gmail SMTP
-→ backend response
-→ frontend
-→ OTP page
-
-Find exactly where it gets stuck.
-
-==================================================
-SECOND: FIX SMTP PROPERLY
-==================================================
-
-Use Nodemailer and the existing environment variables.
-
-The .env variable names must match the backend exactly.
-
-Expected variables:
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=sender@gmail.com
-SMTP_PASSWORD=APP_PASSWORD
-SMTP_FROM=sender@gmail.com
-
-IMPORTANT:
-
-SMTP_PASSWORD must be the Gmail App Password, NOT the normal Gmail password.
-
-Do not expose SMTP credentials to the frontend.
-
-Do not hardcode SMTP credentials.
-
-For Gmail port 587 use:
-
-secure: false
-
-and allow STARTTLS.
-
-Create a reusable transporter.
-
-Use appropriate timeouts:
-
-connectionTimeout: 5000
-greetingTimeout: 5000
-socketTimeout: 8000
-
-==================================================
-THIRD: ADD SMTP DIAGNOSTICS
-==================================================
-
-Before trying to fix the registration UI, verify that the backend can actually connect to Gmail.
-
-Use transporter.verify().
-
-At backend startup, log:
-
-"SMTP connection successful"
-
-or, if it fails, log the REAL error:
-
-- error.code
-- error.command
-- error.response
-- error.message
-
-Do NOT hide the real SMTP error behind:
-
-"Unable to send verification code."
-
-The frontend can show the friendly message, but the backend terminal MUST show the technical error.
-
-==================================================
-FIFTH: FIX THE INFINITE LOADING
-==================================================
-
-The Create Account button MUST NEVER remain loading forever.
-
-Frontend registration code must always reset loading:
-
-try {
-    setLoading(true)
-
-    // request
-
-} catch (error) {
-
-    // show error
-
-} finally {
-
-    setLoading(false)
-}
-
-The loading state must stop when:
-
-- registration succeeds
-- email already exists
-- invalid email
-- invalid password
-- SMTP fails
-- backend fails
-- network fails
-- request times out
-
-Add a frontend request timeout.
-
-If the backend does not respond within a reasonable time:
-
-Stop loading and show:
-
-"Verification request timed out. Please try again."
-
-Never leave the user stuck on the spinner.
-
-==================================================
-SIXTH: DO NOT CREATE THE PERMANENT USER BEFORE OTP
-==================================================
-
-Fix the registration architecture.
-
-Current/undesired behavior:
-
-Register
-→ Insert user into users table
-→ Try to send OTP
-→ Email fails
-→ Unverified user remains in users table
-
-Instead use:
-
-Register
-→ Validate details
-→ Check existing email
-→ Generate OTP
-→ Send OTP successfully
-→ Store temporary/pending registration
-→ User enters OTP
-→ Verify OTP
-→ Create permanent users record
-
-If the existing project already has an OTP/pending-verification table, reuse it.
-
-Do not create duplicate tables unnecessarily.
-
-==================================================
-SEVENTH: EXISTING EMAIL
-==================================================
-
-If the email already exists in the users table:
-
-Do NOT create another account.
-
-Do NOT send registration OTP.
-
-Return:
-
-"An account with this email already exists. Please login."
-
-The frontend must stop loading.
-
-==================================================
-EIGHTH: OTP
-==================================================
-
-Generate a random 6-digit OTP.
-
-OTP must:
-
-- be different/random
-- expire after 5 minutes
-- be stored securely
-- not be exposed in the frontend
-- be invalid after successful verification
-
-When OTP is correct:
-
-Create the permanent user account.
-
-Hash the password using the existing bcrypt/bcryptjs implementation.
-
-Never store plain-text passwords.
-
-After successful verification:
-
-- create user
-- remove/invalidate OTP
-- clear pending registration
-- redirect to Login page
-
-==================================================
-NINTH: RESEND OTP
-==================================================
-
-Keep/add Resend OTP.
-
-When Resend OTP is clicked:
-
-- generate a new OTP
-- invalidate old OTP
-- send new OTP
-- reset expiry
-- prevent rapid repeated requests
-
-Add a reasonable resend cooldown.
-
-==================================================
-TENTH: FRONTEND NAVIGATION
-==================================================
-
-After the backend confirms that OTP was successfully sent:
-
-Register page
-→ OTP verification page
-
-Do NOT navigate to OTP page if email sending failed.
-
-If email sending failed:
-
-Stay on registration page.
-
-Stop loading.
-
-Show:
-
-"Unable to send verification code. Please try again."
-
-==================================================
-ELEVENTH: LOGIN
-==================================================
-
-Do not modify working login unnecessarily.
-
-Existing verified users should login using:
-
-Email
-Password
-
-No OTP should be required for normal login.
-
-Login should verify:
-
-- user exists
-- email is verified
-- password matches bcrypt hash
-
-Then redirect to Home.
-
-==================================================
-TWELFTH: DATABASE
-==================================================
-
-Inspect the existing MySQL schema before making changes.
-
-Do not delete existing users.
-
-Do not reset the database.
-
-Do not change unrelated tables.
-
-Use the existing users table.
-
-If a temporary verification table is required, inspect whether one already exists first.
-
-==================================================
-THIRTEENTH: CORS/API
-==================================================
-
-Verify that the frontend is actually calling the correct backend.
-
-Check:
-
-Frontend:
-http://localhost:5173
-
-Backend:
-http://localhost:3001
-
-Do not change ports unless the existing project requires it.
-
-Check:
-
-- CORS
-- API base URL
-- fetch/axios URL
-- JSON body
-- response handling
-
-==================================================
-FOURTEENTH: ERROR HANDLING
-==================================================
-
-Handle separately:
-
-Invalid email:
-"Please enter a valid email address."
-
-Existing account:
-"An account with this email already exists. Please login."
-
-SMTP failure:
-"Unable to send verification code. Please try again."
-
-Wrong OTP:
-"Invalid verification code. Please try again."
-
-Expired OTP:
-"Verification code has expired. Please request a new code."
-
-Network failure:
-"Unable to connect to the server. Please try again."
-
-Successful OTP:
-"Email verified successfully! Your account has been created."
-
-==================================================
-FIFTEENTH: DO NOT HIDE ERRORS
-==================================================
-
-This is extremely important.
-
-Do NOT write code like:
-
-catch (error) {
-    console.log("something went wrong")
-}
-
-Instead log the actual technical information in the backend:
-
-console.error("OTP email failed:", {
-    code: error.code,
-    command: error.command,
-    response: error.response,
-    message: error.message
-})
-
-The frontend should receive a clean user-friendly message.
-
-==================================================
-SIXTEENTH: TEST IN THIS ORDER
-==================================================
-
-Do NOT tell me "it should work".
-
-Actually test the implementation.
-
-TEST 1:
-Start backend.
-
-Confirm:
-
-SMTP connection successful
-NutriMatrix API running on port 3001
-
-TEST 2:
-Run SMTP test endpoint.
-
-Confirm test email arrives.
-
-TEST 3:
-Use a NEW real Gmail address on Register.
-
-Confirm:
-
-POST /api/auth/register
-
-returns successfully.
-
-Confirm OTP actually arrives.
-
-TEST 4:
-Enter OTP.
-
-Confirm account is created in MySQL.
-
-TEST 5:
-Redirect to Login.
-
-Login with the newly created email/password.
-
-Confirm Home opens.
-
-TEST 6:
-Try registering with the same email.
-
-Confirm:
-
-"An account with this email already exists. Please login."
-
-TEST 7:
-Wrong OTP.
-
-Confirm account is NOT created.
-
-TEST 8:
-Expired OTP.
-
-Confirm it is rejected.
-
-TEST 9:
-Resend OTP.
-
-Confirm new OTP works.
-
-TEST 10:
-Temporarily simulate SMTP failure.
-
-Confirm:
-
-- frontend stops loading
-- error is displayed
-- backend logs real SMTP error
-
-==================================================
-SEVENTEENTH: IMPORTANT DEBUGGING RULE
-==================================================
-
-If registration is still stuck on loading:
-
-DO NOT make another random modification.
-
-Check browser DevTools → Network.
-
-Find:
-
-POST /api/auth/register
-
-Determine whether it is:
-
-Pending
-200/201
-400
-401
-403
-500
-503
-Failed
-
-Then inspect the backend terminal at the same time.
-
-Identify the exact failing layer:
-
-Frontend
-→ API request
-→ Express
-→ MySQL
-→ OTP generation
-→ SMTP authentication
-→ SMTP send
-→ API response
-→ frontend navigation
-
-Fix that exact layer.
-
-==================================================
-FINAL REQUIREMENT
-==================================================
-
-Do not just modify code and say "done".
-
-After fixing, report:
-
-1. Root cause of the long loading.
-2. Root cause of OTP not arriving.
-3. Files changed.
-4. Exact changes made.
-5. SMTP test result.
-6. Registration test result.
-7. OTP verification test result.
-8. Login test result.
-9. Any .env variables required.
-10. Any database changes made.
-
-IMPORTANT:
-
-Do not change the NutriMatrix UI design.
-
-Do not remove existing working features.
-
-Do not create unnecessary duplicate APIs.
-
-Do not require OTP for every login.
-
-The final working flow MUST be:
-
-NEW USER:
-Register
-→ Real email OTP
-→ Verify OTP
-→ Account created
-→ Login
-
-EXISTING USER:
-Email + Password
-→ Login
-→ Home
+Do not just tell me what to change. Actually inspect the project and implement the changes in the correct active backend code.

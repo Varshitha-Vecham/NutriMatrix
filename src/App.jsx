@@ -1,28 +1,33 @@
 // App.jsx - sets up all the routes for NutriMatrix
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import Welcome from './pages/Welcome.jsx'
-import Register from './pages/Register.jsx'
-import EmailVerification from './pages/EmailVerification.jsx'
-import Login from './pages/Login.jsx'
-import ForgotPassword from './pages/ForgotPassword.jsx'
-import Home from './pages/Home.jsx'
-import AboutUs from './pages/AboutUs.jsx'
-import Profile from './pages/Profile.jsx'
-import Scanner from './pages/Scanner.jsx'
-import ScannerPage from './pages/ScannerPage.jsx'
-import ReceiptScanner from './pages/ReceiptScanner.jsx'
-import Products from './pages/Products.jsx'
-import MealPlanner from './pages/MealPlanner.jsx'
-import DigitalPantry from './pages/DigitalPantry.jsx'
-import Notifications from './pages/Notifications.jsx'
-import AdminLogin from './pages/AdminLogin.jsx'
-import AdminDashboard from './pages/AdminDashboard.jsx'
 import './App.css'
+
+// Load each screen only when its route is opened.  In particular, this keeps
+// the barcode-scanning library out of the initial application bundle.
+const Welcome = lazy(() => import('./pages/Welcome.jsx'))
+const Register = lazy(() => import('./pages/Register.jsx'))
+const EmailVerification = lazy(() => import('./pages/EmailVerification.jsx'))
+const Login = lazy(() => import('./pages/Login.jsx'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'))
+const Home = lazy(() => import('./pages/Home.jsx'))
+const AboutUs = lazy(() => import('./pages/AboutUs.jsx'))
+const Profile = lazy(() => import('./pages/Profile.jsx'))
+const Scanner = lazy(() => import('./pages/Scanner.jsx'))
+const ScannerPage = lazy(() => import('./pages/ScannerPage.jsx'))
+const ReceiptScanner = lazy(() => import('./pages/ReceiptScanner.jsx'))
+const Products = lazy(() => import('./pages/Products.jsx'))
+const MealPlanner = lazy(() => import('./pages/MealPlanner.jsx'))
+const DigitalPantry = lazy(() => import('./pages/DigitalPantry.jsx'))
+const Notifications = lazy(() => import('./pages/Notifications.jsx'))
+const AdminLogin = lazy(() => import('./pages/AdminLogin.jsx'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'))
 
 function App() {
   return (
     <div className="app">
-      <Routes>
+      <Suspense fallback={null}>
+        <Routes>
         <Route path="/" element={<Welcome />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<EmailVerification />} />
@@ -48,7 +53,8 @@ function App() {
         <Route path="/admin/users" element={<AdminDashboard />} />
         <Route path="/admin/prices" element={<AdminDashboard />} />
         <Route path="/admin/profile" element={<AdminDashboard />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </div>
   )
 }
