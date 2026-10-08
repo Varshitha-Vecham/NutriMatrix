@@ -86,7 +86,7 @@ function EmailVerification() {
           <div className="side-features">
             <div className="side-feat"><span>🔐</span> Your account stays secure</div>
             <div className="side-feat"><span>📧</span> A private, one-time code</div>
-            <div className="side-feat"><span>⏱️</span> Code expires in 5 minutes</div>
+            <div className="side-feat"><span>⏱️</span> Code expires in 2 minutes</div>
           </div>
         </div>
 
@@ -133,7 +133,7 @@ function EmailVerification() {
               </div>
             </div>
 
-            {codeSent && <p className="verification-expiry">The code expires 5 minutes after it was sent.</p>}
+            {codeSent && <p className="verification-expiry">The code expires 2 minutes after it was sent.</p>}
             <button type="submit" className="btn-register" disabled={loading}>
               {loading ? <span className="btn-loader"></span> : <>Verify Email <span className="btn-arrow">→</span></>}
             </button>

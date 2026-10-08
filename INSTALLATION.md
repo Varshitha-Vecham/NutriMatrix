@@ -12,7 +12,7 @@ These commands are for Windows PowerShell.
    py -m venv .venv
    .\.venv\Scripts\Activate.ps1
    python -m pip install --upgrade pip
-   python -m pip install Flask flask-cors Pillow opencv-python numpy pytesseract python-dotenv mysql-connector-python
+   python -m pip install Flask flask-cors Pillow opencv-python numpy pytesseract python-dotenv mysql-connector-python waitress
    ```
 
 3. **Install Tesseract OCR**

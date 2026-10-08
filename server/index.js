@@ -19,7 +19,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root', password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'nutrimatrix', waitForConnections: true, connectionLimit: 10
 })
-const OTP_EXPIRY_MINUTES = 5
+const OTP_EXPIRY_MINUTES = 2
 const OTP_RESEND_COOLDOWN_SECONDS = 120
 const OTP_MAX_ATTEMPTS = 4
 let mailTransport
@@ -54,9 +54,9 @@ async function sendVerificationEmail(email, otp) {
     await (mailTransport || (mailTransport = createMailTransport())).sendMail({
       from,
       to: email,
-      subject: `${otp} is your NutriMatrix verification code`,
-      text: `Hello,\n\nUse this verification code to finish creating your NutriMatrix account:\n\n${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes. If you did not request this code, you can ignore this email. Do not share this code with anyone.\n\nNutriMatrix`,
-      html: `<div style="margin:0;padding:32px 16px;background:#f4f8f4;font-family:Arial,sans-serif;color:#25332a"><div style="max-width:480px;margin:0 auto;padding:32px;background:#fff;border:1px solid #e2ebe2;border-radius:12px"><h1 style="margin:0 0 20px;color:#168344;font-size:24px">Verify your NutriMatrix email</h1><p style="margin:0 0 20px;line-height:1.5">Use this code to finish creating your account:</p><p style="margin:0 0 20px;padding:16px;background:#f4f8f4;border-radius:8px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p><p style="margin:0 0 12px;line-height:1.5">This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.</p><p style="margin:0;color:#647067;font-size:13px;line-height:1.5">If you did not request this code, you can ignore this email.</p></div></div>`
+      subject: `NutriMatrix`,
+      //text: `Hello,\n\nUse this verification code to finish creating your NutriMatrix account:\n\n${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes. If you did not request this code, you can ignore this email. Do not share this code with anyone.\n\nNutriMatrix`,
+      html: `<div style="margin:0;padding:32px 16px;background:#f4f8f4;font-family:Arial,sans-serif;color:#25332a"><div style="max-width:480px;margin:0 auto;padding:32px;background:#fff;border:1px solid #e2ebe2;border-radius:12px"><h1 style="margin:0 0 20px;color:#168344;font-size:24px">NutriMatrix email</h1><p style="margin:0 0 20px;line-height:1.5">Use this code to finish creating your account:</p><p style="margin:0 0 20px;padding:16px;background:#f4f8f4;border-radius:8px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p><p style="margin:0 0 12px;line-height:1.5">This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.</p><p style="margin:0;color:#647067;font-size:13px;line-height:1.5">If you did not request this code, you can ignore this email.</p></div></div>`
     })
   } catch (error) {
     console.error('OTP email failed:', {
