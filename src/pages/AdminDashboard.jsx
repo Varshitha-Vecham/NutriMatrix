@@ -472,7 +472,7 @@ function DeletedProducts({ products, restore, restoreAll, deleteAll }) {
 function Form({ form, editing, change, price, image, save, back }) {
   return (
     <>
-      <button className="back-button" onClick={back}>← Back to products</button>
+      <button className="back-button" type="button" onClick={back}>← <span>Back to products</span></button>
 
       <form onSubmit={save} className="form">
         <Section title="Product information">

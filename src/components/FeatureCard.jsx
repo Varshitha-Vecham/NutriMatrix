@@ -16,7 +16,12 @@ function FeatureCard({ icon, title, description, color, accent }) {
       return
     }
 
-    if (title === 'Meal Planner' || title === 'Recipe Generator') {
+    if (title === 'Recipe Generator') {
+      navigate('/recipe-generator')
+      return
+    }
+
+    if (title === 'Meal Planner') {
       navigate('/meal-planner')
       return
     }

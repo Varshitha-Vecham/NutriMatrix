@@ -11,7 +11,7 @@ function formatDateOnly(dateValue) {
 }
 
 function isReceiptScanProduct(product) {
-  return product.source === 'receipt' && product.receiptFileName !== 'Manual entry'
+  return String(product.source || '').startsWith('receipt') && product.receiptFileName !== 'Manual entry'
 }
 
 function ReceiptScanner() {
@@ -68,11 +68,21 @@ function ReceiptScanner() {
         throw new Error(`Receipt service returned an unexpected response (${response.status}). Restart Flask on port 5000 and try again.`)
       }
       if (!response.ok) throw new Error(result.message || 'Unable to analyze receipt.')
-      setProducts(result.products.map((product) => ({ ...product, expiryDate: product.expiryDate || '' })))
+      const detectedProducts = result.products.map((product) => ({ ...product, expiryDate: product.expiryDate || '' }))
+      // Persist completed OCR scans immediately. Expiry dates remain editable in
+      // the receipt details and are never guessed during this initial save.
+      await apiRequest('/api/expiry-products', {
+        method: 'POST',
+        body: JSON.stringify({ receiptFileName: file.name, products: detectedProducts })
+      })
+      const history = await apiRequest('/api/expiry-products')
+      setTrackedProducts(history.products.filter(isReceiptScanProduct))
+      setProducts([])
       setEditingProductIndex(null)
       setEditingProductName('')
-      setCurrentReceiptSaved(false)
-      setScanned(true)
+      setCurrentReceiptSaved(true)
+      setScanned(false)
+      setMessage('Receipt saved to history. Open it below to view products and add expiry dates.')
     } catch (uploadError) {
       setError(uploadError.name === 'TypeError' && uploadError.message === 'Failed to fetch'
         ? 'Receipt service is not running. Start Flask on http://localhost:5000, then try again.'

@@ -27,11 +27,53 @@
 .profile-form input {
   width: 100%;
   text-align: left;
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid #b9d5c0;
+  border-radius: 9px;
+  background: #fbfefb;
+  color: #244b31;
+  font: 500 0.95rem 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.profile-form input:focus {
+  border-color: #2d8a4c;
+  box-shadow: 0 0 0 3px rgba(45, 138, 76, .14);
 }
 
 .profile-form .form-actions {
   justify-content: flex-end;
 }
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid #b8d7bf;
+  border-radius: 9px;
+  background: #fff;
+  color: #1e6c3a;
+  font: 700 .82rem 'DM Sans', sans-serif;
+  box-shadow: 0 3px 10px rgba(25, 68, 42, .08);
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.back-button:hover {
+  transform: translateX(-2px);
+  background: #edf8ef;
+  box-shadow: 0 6px 14px rgba(25, 68, 42, .13);
+}
+
+.back-button:focus-visible {
+  outline: 3px solid #a7dcb2;
+  outline-offset: 2px;
+}
+
 
 .product-management-actions {
   display: grid;

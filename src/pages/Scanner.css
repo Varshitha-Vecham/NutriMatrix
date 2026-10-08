@@ -110,6 +110,9 @@
 .barcode-history-item strong { color: #28583a; font-size: .9rem; }
 .barcode-history-item span, .barcode-history-item small { margin-top: 3px; color: #7a897f; font-size: .76rem; }
 .barcode-history-item button { flex: 0 0 auto; padding: 8px 12px; border-radius: 8px; background: #fff0ed; color: #a43d34; font-size: .78rem; font-weight: 800; }
+/* Camera scanning is intentionally unavailable; use image upload or manual entry. */
+.barcode-scanner-column { display: none; }
+.barcode-workspace { grid-template-columns: minmax(0, 620px); justify-content: center; }
 @media (max-width: 800px) {
   .barcode-workspace { grid-template-columns: minmax(0, 1fr); max-width: 660px; }
   .barcode-search-panel { gap: 16px; }

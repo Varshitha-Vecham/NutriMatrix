@@ -185,15 +185,13 @@ function ScannerPage() {
       }
 
       if (imageSource) {
-        try {
+        
           const detectedExpiryDate = await detectExpiryDate(imageSource)
           if (detectedExpiryDate) {
             setExpiryDate(detectedExpiryDate)
             setDateSource('package image OCR')
           }
-        } catch (ocrError) {
-          setError(`Product identified. Expiry date was not readable: ${ocrError.message}`)
-        }
+        
       }
     } catch (lookupError) {
       setProduct(null)
@@ -415,7 +413,7 @@ function ScannerPage() {
         <button className="method-back" onClick={() => navigate('/scanner')}>← Back to Scanner</button>
         <span className="method-kicker">Product detection</span>
         <h1>Barcode <em>Scanner</em></h1>
-        <p>Scan a barcode or enter its number, confirm the expiry date, then save the product to your Digital Pantry.</p>
+        <p>Upload a barcode image or enter its number, confirm the expiry date, then save the product to your Digital Pantry.</p>
 
         <div className="barcode-workspace">
           <section className="barcode-scanner-column" aria-label="Barcode camera scanner">
@@ -433,6 +431,7 @@ function ScannerPage() {
           </section>
 
           <section className="barcode-search-panel" aria-label="Search product">
+            <button className="barcode-action barcode-upload" type="button" onClick={() => { prepareBarcodeUpload(); fileInputRef.current?.click() }} disabled={loading}>Upload barcode image</button>
             <div className="barcode-field">
               <label htmlFor="country-select">Country</label>
               <output id="country-select" className="country-fixed">India</output>
