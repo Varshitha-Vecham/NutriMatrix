@@ -39,13 +39,13 @@ These commands are for Windows PowerShell.
    API_PORT=3001
    CLIENT_URL=http://localhost:5173
    SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=465
+   SMTP_PORT=587
    SMTP_USER=your_email@gmail.com
    SMTP_PASSWORD=your_google_app_password
    SMTP_FROM=NutriMatrix <your_email@gmail.com>
    ```
 
-   Email verification uses SMTP through Nodemailer. For a free college/demo setup, use a Gmail account with 2-Step Verification enabled and create an App Password; use that App Password as `SMTP_PASSWORD` (not your normal Gmail password). Keep all mail credentials and secrets in `.env`, which is ignored by Git. The API sends 6-digit codes that expire after five minutes and never returns them to the frontend.
+   Email verification uses SMTP through Nodemailer. For a free college/demo setup, use a Gmail account with 2-Step Verification enabled and create an App Password; use that App Password as `SMTP_PASSWORD` (not your normal Gmail password). Gmail on port 587 uses STARTTLS (`secure: false`). Keep all mail credentials and secrets in `.env`, which is ignored by Git. At startup, the API logs whether the SMTP connection can be verified and logs technical details if it cannot. The API sends 6-digit codes that expire after five minutes and never returns them to the frontend.
 
 6. **Start the frontend, Node.js API, and Flask OCR service**
    ```powershell

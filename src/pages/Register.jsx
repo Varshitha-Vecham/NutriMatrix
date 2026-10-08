@@ -30,7 +30,7 @@ function Register() {
   const rules = passwordRules(password)
 
   // handle submit
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -40,7 +40,7 @@ function Register() {
       setError('Please fill in all the fields.')
       return
     }
-    if (!email.includes('@') || email.startsWith('@') || email.endsWith('@') || email.split('@').length !== 2 || /\s/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
       setError('Please enter a valid email address.')
       return
     }
@@ -54,17 +54,16 @@ function Register() {
     }
 
     setLoading(true)
-
-    apiRequest('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password })
-    }).then(() => {
-      setSuccess('Account created successfully! Redirecting to login...')
-      setTimeout(() => navigate('/login'), 1200)
-    }).catch((requestError) => {
+    try {
+      const response = await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password }),
+        timeout: 15000
+      })
+      navigate('/verify-email', { state: { email: email.trim().toLowerCase(), codeSent: true, resendAfterSeconds: response.resendAfterSeconds } })
+    } catch (requestError) {
       setError(requestError.message)
-      setLoading(false)
-    })
+    } finally { setLoading(false) }
   }
 
   return (
@@ -137,10 +136,11 @@ function Register() {
                 <span className="input-icon">📧</span>
                 <input
                   id="email"
-                  type="text"
+                  type="email"
                   placeholder="[EMAIL]"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                 />
               </div>
             </div>

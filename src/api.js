@@ -3,12 +3,36 @@ export const OCR_API_URL = import.meta.env.VITE_OCR_API_URL || 'http://localhost
 
 export async function apiRequest(path, options = {}) {
   const isFormData = options.body instanceof FormData
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...options.headers }
-  })
-  const responseText = response.status === 204 ? '' : await response.text()
+  const { timeout = 15000, signal, ...fetchOptions } = options
+  const controller = new AbortController()
+  let timedOut = false
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeout)
+  const abortWithRequest = () => controller.abort(signal?.reason)
+  if (signal?.aborted) abortWithRequest()
+  else signal?.addEventListener('abort', abortWithRequest, { once: true })
+
+  let response
+  let responseText
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...fetchOptions,
+      signal: controller.signal,
+      credentials: 'include',
+      headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...fetchOptions.headers }
+    })
+    responseText = response.status === 204 ? '' : await response.text()
+  } catch (error) {
+    if (timedOut) throw new Error('Verification request timed out. Please try again.')
+    if (signal?.aborted) throw new Error('Request was cancelled.')
+    throw new Error('Unable to connect to the server. Please try again.')
+  } finally {
+    window.clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', abortWithRequest)
+  }
+
   let data = null
   if (responseText) {
     try {

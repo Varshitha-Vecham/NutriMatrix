@@ -6,6 +6,8 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import multer from 'multer'
 import mysql from 'mysql2/promise'
+import nodemailer from 'nodemailer'
+import crypto from 'crypto'
 import { createWorker } from 'tesseract.js'
 import { extractExpiryDateFromText, validDateString } from './expiry-detection.js'
 
@@ -17,6 +19,55 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root', password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'nutrimatrix', waitForConnections: true, connectionLimit: 10
 })
+const OTP_EXPIRY_MINUTES = 5
+const OTP_RESEND_COOLDOWN_SECONDS = 120
+const OTP_MAX_ATTEMPTS = 4
+let mailTransport
+
+class EmailDeliveryError extends Error {}
+
+function createMailTransport() {
+  const port = Number(process.env.SMTP_PORT || 587)
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST?.trim(),
+    port,
+    // Gmail submission on 587 starts unencrypted and upgrades with STARTTLS.
+    secure: false,
+    auth: { user: process.env.SMTP_USER?.trim(), pass: process.env.SMTP_PASSWORD?.trim() },
+    // Do not leave the registration form waiting indefinitely when the SMTP
+    // server is unreachable or its credentials are rejected.
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 8000
+  })
+}
+
+function emailIsConfigured() {
+  return ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'].every((key) => process.env[key]?.trim())
+}
+
+async function sendVerificationEmail(email, otp) {
+  if (!emailIsConfigured()) throw new EmailDeliveryError('Email delivery is not configured.')
+  try {
+    const sender = process.env.SMTP_FROM.trim()
+    const from = sender.includes('<') ? sender : `NutriMatrix <${sender}>`
+    await (mailTransport || (mailTransport = createMailTransport())).sendMail({
+      from,
+      to: email,
+      subject: `${otp} is your NutriMatrix verification code`,
+      text: `Hello,\n\nUse this verification code to finish creating your NutriMatrix account:\n\n${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes. If you did not request this code, you can ignore this email. Do not share this code with anyone.\n\nNutriMatrix`,
+      html: `<div style="margin:0;padding:32px 16px;background:#f4f8f4;font-family:Arial,sans-serif;color:#25332a"><div style="max-width:480px;margin:0 auto;padding:32px;background:#fff;border:1px solid #e2ebe2;border-radius:12px"><h1 style="margin:0 0 20px;color:#168344;font-size:24px">Verify your NutriMatrix email</h1><p style="margin:0 0 20px;line-height:1.5">Use this code to finish creating your account:</p><p style="margin:0 0 20px;padding:16px;background:#f4f8f4;border-radius:8px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:8px">${otp}</p><p style="margin:0 0 12px;line-height:1.5">This code expires in ${OTP_EXPIRY_MINUTES} minutes. Do not share it with anyone.</p><p style="margin:0;color:#647067;font-size:13px;line-height:1.5">If you did not request this code, you can ignore this email.</p></div></div>`
+    })
+  } catch (error) {
+    console.error('OTP email failed:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      message: error.message
+    })
+    throw new EmailDeliveryError('Unable to send verification code. Please try again.')
+  }
+}
 
 const sampleProductCatalog = [
   {
@@ -311,6 +362,53 @@ async function ensureAdminAccess() {
   ])
 }
 
+async function ensureEmailVerificationColumns() {
+  const [columns] = await pool.query('SHOW COLUMNS FROM users')
+  const existingColumns = new Set(columns.map((column) => column.Field))
+  const requiredColumns = {
+    email_verified: 'BOOLEAN NOT NULL DEFAULT FALSE', email_verified_at: 'DATETIME NULL',
+    otp_code: 'VARCHAR(255) NULL', otp_expires_at: 'DATETIME NULL',
+    otp_attempts: 'TINYINT UNSIGNED NOT NULL DEFAULT 0', otp_last_sent_at: 'DATETIME NULL'
+  }
+  for (const [columnName, definition] of Object.entries(requiredColumns)) {
+    if (!existingColumns.has(columnName)) await pool.query(`ALTER TABLE users ADD COLUMN ${columnName} ${definition}`)
+  }
+}
+
+async function ensurePendingRegistrationsTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS pending_registrations (
+    email VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    otp_code VARCHAR(255) NOT NULL,
+    otp_expires_at DATETIME NOT NULL,
+    otp_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    otp_last_sent_at DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_pending_registrations_expiry (otp_expires_at)
+  )`)
+}
+
+async function verifySmtpConnection() {
+  if (!emailIsConfigured()) {
+    console.error('SMTP connection failed: required SMTP environment variables are missing.')
+    return
+  }
+  try {
+    mailTransport = createMailTransport()
+    await mailTransport.verify()
+    console.log('SMTP connection successful')
+  } catch (error) {
+    console.error('SMTP connection failed:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      message: error.message
+    })
+  }
+}
+
 async function ensureProductTables() {
   await pool.query(`CREATE TABLE IF NOT EXISTS products (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_name VARCHAR(255) NOT NULL, category VARCHAR(100) NOT NULL, image LONGTEXT NULL, calories DECIMAL(10,2) NULL, protein DECIMAL(10,2) NULL, carbohydrates DECIMAL(10,2) NULL, fat DECIMAL(10,2) NULL, fiber DECIMAL(10,2) NULL, sugar DECIMAL(10,2) NULL, sodium DECIMAL(10,2) NULL, health_benefits TEXT NULL, healthier_alternatives TEXT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`)
   await pool.query(`CREATE TABLE IF NOT EXISTS product_prices (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_id INT UNSIGNED NOT NULL, retailer VARCHAR(100) NOT NULL, price DECIMAL(10,2) NOT NULL, updated_at DATE NULL, CONSTRAINT fk_product_price FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`)
@@ -349,6 +447,21 @@ app.use(cors({ origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http
 app.use(express.json({ limit: '8mb' }))
 app.use(cookieParser())
 
+// Development-only diagnostic endpoint. It intentionally cannot be used in production.
+app.post('/api/auth/test-smtp', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(404).end()
+  const email = normalizeEmail(req.body?.email)
+  if (!isValidEmailAddress(email)) return res.status(400).json({ message: 'Please enter a valid email address.' })
+  try {
+    await sendVerificationEmail(email, '000000')
+    res.json({ message: 'SMTP test email sent successfully.' })
+  } catch (error) {
+    if (error instanceof EmailDeliveryError) return res.status(503).json({ message: error.message })
+    console.error('SMTP test failed:', error)
+    res.status(500).json({ message: 'Unable to send SMTP test email.' })
+  }
+})
+
 function setAuthCookie(res, user) {
   const token = jwt.sign({ id: user.id, name: user.name, email: user.email, role: user.role || 'user' }, jwtSecret, { expiresIn: '7d' })
   res.cookie('nutrimatrix_token', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 604800000 })
@@ -372,7 +485,15 @@ function normalizeEmail(value = '') {
 
 function isValidEmailAddress(value = '') {
   const normalized = normalizeEmail(value)
-  return normalized.includes('@') && normalized.split('@').length === 2 && !normalized.startsWith('@') && !normalized.endsWith('@') && !/\s/.test(normalized)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalized)
+}
+
+function generateOtp() { return String(crypto.randomInt(0, 1000000)).padStart(6, '0') }
+
+async function issueVerificationOtp(email) {
+  const otp = generateOtp()
+  await sendVerificationEmail(email, otp)
+  return bcrypt.hash(otp, 12)
 }
 
 app.post('/api/auth/register', async (req, res) => {
@@ -385,15 +506,80 @@ app.post('/api/auth/register', async (req, res) => {
 
   try {
     const [existing] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', [email])
-    if (existing.length) return res.status(409).json({ message: 'An account with this email already exists.' })
+    if (existing[0]) return res.status(409).json({ message: 'An account with this email already exists. Please login.' })
+    const [pendingRows] = await pool.execute('SELECT otp_last_sent_at FROM pending_registrations WHERE email = ?', [email])
+    const pending = pendingRows[0]
+    const elapsed = pending?.otp_last_sent_at ? Date.now() - new Date(pending.otp_last_sent_at).getTime() : Infinity
+    if (elapsed < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
+      const seconds = Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed / 1000)
+      return res.status(429).json({ message: `Please wait ${seconds} seconds before requesting another verification code.`, resendAfterSeconds: seconds })
+    }
+    const otpHash = await issueVerificationOtp(email)
+    await pool.execute(`INSERT INTO pending_registrations (email, name, password_hash, otp_code, otp_expires_at, otp_attempts, otp_last_sent_at)
+      VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), 0, NOW())
+      ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), otp_code = VALUES(otp_code),
+      otp_expires_at = VALUES(otp_expires_at), otp_attempts = 0, otp_last_sent_at = NOW()`,
+    [email, name, await bcrypt.hash(password, 12), otpHash, OTP_EXPIRY_MINUTES])
+    res.status(201).json({ message: 'Verification code sent successfully.', resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS })
+  } catch (error) {
+    if (error instanceof EmailDeliveryError) return res.status(503).json({ message: error.message })
+    console.error(error)
+    res.status(500).json({ message: 'Unable to create your pending account. Please try again.' })
+  }
+})
 
-    await pool.execute(
-      'INSERT INTO users (name, email, password_hash, email_verified, email_verified_at, otp_code, otp_expires_at, otp_attempts, otp_last_sent_at) VALUES (?, ?, ?, TRUE, NOW(), NULL, NULL, 0, NULL)',
-      [name, email, await bcrypt.hash(password, 12)]
-    )
+app.post('/api/auth/resend-verification', async (req, res) => {
+  const email = normalizeEmail(req.body.email)
+  if (!isValidEmailAddress(email)) return res.status(400).json({ message: 'Please enter a valid email address.' })
+  try {
+    const [pendingRows] = await pool.execute('SELECT otp_last_sent_at FROM pending_registrations WHERE email = ?', [email])
+    const pending = pendingRows[0]
+    if (!pending) return res.status(404).json({ message: 'No pending account was found for this email address.' })
+    const elapsed = pending.otp_last_sent_at ? Date.now() - new Date(pending.otp_last_sent_at).getTime() : Infinity
+    if (elapsed < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
+      const seconds = Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed / 1000)
+      return res.status(429).json({ message: `Please wait ${seconds} seconds before requesting another verification code.`, resendAfterSeconds: seconds })
+    }
+    const otpHash = await issueVerificationOtp(email)
+    await pool.execute(`UPDATE pending_registrations SET otp_code = ?, otp_expires_at = DATE_ADD(NOW(), INTERVAL ? MINUTE),
+      otp_attempts = 0, otp_last_sent_at = NOW() WHERE email = ?`, [otpHash, OTP_EXPIRY_MINUTES, email])
+    res.json({ message: 'Verification code sent successfully.', resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS })
+  } catch (error) {
+    if (error instanceof EmailDeliveryError) return res.status(503).json({ message: error.message })
+    console.error(error)
+    res.status(500).json({ message: 'Unable to send a new verification code. Please try again.' })
+  }
+})
 
-    res.status(201).json({ message: 'Account created successfully.' })
-  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to create account.' }) }
+app.post('/api/auth/verify-email', async (req, res) => {
+  const email = normalizeEmail(req.body.email)
+  const otp = String(req.body.otp || '')
+  if (!isValidEmailAddress(email) || !/^\d{6}$/.test(otp)) return res.status(400).json({ message: 'Enter the 6-digit verification code.' })
+  try {
+    const [pendingRows] = await pool.execute('SELECT name, password_hash, otp_code, otp_expires_at, otp_attempts FROM pending_registrations WHERE email = ?', [email])
+    const pending = pendingRows[0]
+    if (!pending) return res.status(404).json({ message: 'No pending account was found for this email address.' })
+    if (!pending.otp_code || new Date(pending.otp_expires_at).getTime() <= Date.now()) return res.status(400).json({ message: 'Verification code has expired. Please request a new code.' })
+    if (pending.otp_attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ message: 'Too many OTP attempts. Please request a new OTP.' })
+    if (!(await bcrypt.compare(otp, pending.otp_code))) {
+      const attempts = pending.otp_attempts + 1
+      await pool.execute('UPDATE pending_registrations SET otp_attempts = ? WHERE email = ?', [attempts, email])
+      if (attempts >= OTP_MAX_ATTEMPTS) return res.status(429).json({ message: 'Too many OTP attempts. Please request a new OTP.' })
+      return res.status(400).json({ message: 'Invalid verification code. Please try again.' })
+    }
+    const connection = await pool.getConnection()
+    try {
+      await connection.beginTransaction()
+      await connection.execute('INSERT INTO users (name, email, password_hash, email_verified, email_verified_at) VALUES (?, ?, ?, TRUE, NOW())', [pending.name, email, pending.password_hash])
+      await connection.execute('DELETE FROM pending_registrations WHERE email = ?', [email])
+      await connection.commit()
+    } catch (error) {
+      await connection.rollback()
+      if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'An account with this email already exists. Please login.' })
+      throw error
+    } finally { connection.release() }
+    res.json({ message: 'Email verified successfully! Your account has been created.' })
+  } catch (error) { console.error('Email verification failed:', error); res.status(500).json({ message: 'Unable to verify email. Please try again.' }) }
 })
 
 app.post('/api/auth/login', async (req, res) => {
@@ -404,6 +590,7 @@ app.post('/api/auth/login', async (req, res) => {
     const [users] = await pool.execute('SELECT id, name, email, password_hash, role, email_verified FROM users WHERE LOWER(TRIM(email)) = ?', [email])
     const user = users[0]
     if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ message: 'Incorrect email or password.' })
+    if (!user.email_verified) return res.status(403).json({ message: 'Please verify your email before logging in.' })
     setAuthCookie(res, user)
     res.json({ user: { name: user.name, email: user.email, role: user.role } })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to log in.' }) }
@@ -1040,10 +1227,13 @@ app.put('/api/saved-meals', requireAuth, async (req, res) => {
 })
 
 ensureProfileColumns()
+  .then(() => ensureEmailVerificationColumns())
+  .then(() => ensurePendingRegistrationsTable())
   .then(() => ensureReceiptProductsTable())
   .then(() => ensureSavedMealsTable())
   .then(() => ensureProductTables())
   .then(() => ensureAdminAccess())
+  .then(() => verifySmtpConnection())
   .then(() => app.listen(port, () => console.log(`NutriMatrix API running on http://localhost:${port}`)))
   .catch((error) => {
     console.error('Unable to prepare the nutrition profile table.', error)

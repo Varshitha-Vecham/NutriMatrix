@@ -7,7 +7,27 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'user',
+  email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  email_verified_at DATETIME NULL,
+  otp_code VARCHAR(255) NULL,
+  otp_expires_at DATETIME NULL,
+  otp_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  otp_last_sent_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Registration data stays here until the owner proves access to the email.
+CREATE TABLE IF NOT EXISTS pending_registrations (
+  email VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  otp_code VARCHAR(255) NOT NULL,
+  otp_expires_at DATETIME NOT NULL,
+  otp_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  otp_last_sent_at DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_pending_registrations_expiry (otp_expires_at)
 );
 
 CREATE TABLE IF NOT EXISTS nutrition_profiles (

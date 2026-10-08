@@ -2,6 +2,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Welcome from './pages/Welcome.jsx'
 import Register from './pages/Register.jsx'
+import EmailVerification from './pages/EmailVerification.jsx'
 import Login from './pages/Login.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import Home from './pages/Home.jsx'
@@ -24,6 +25,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Welcome />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/admin-forgot-password" element={<ForgotPassword admin />} />
