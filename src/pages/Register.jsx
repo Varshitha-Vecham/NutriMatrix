@@ -21,7 +21,7 @@ function Register() {
   // password rules
   function passwordRules(pwd) {
     return {
-      length: pwd.length >= 6,
+      length: pwd.length >= 8,
       upper: /[A-Z]/.test(pwd),
       number: /[0-9]/.test(pwd),
       special: /[^A-Za-z0-9]/.test(pwd)
@@ -44,8 +44,8 @@ function Register() {
       setError('Please enter a valid email address.')
       return
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.')
       return
     }
     if (password !== confirm) {
@@ -165,7 +165,7 @@ function Register() {
               {/* Password strength hints */}
               {password && (
                 <div className="pwd-rules">
-                  <span className={rules.length ? 'rule ok' : 'rule'}>✓ 6+ characters</span>
+                  <span className={rules.length ? 'rule ok' : 'rule'}>✓ 8+ characters</span>
                   <span className={rules.upper ? 'rule ok' : 'rule'}>✓ Uppercase letter</span>
                   <span className={rules.number ? 'rule ok' : 'rule'}>✓ Number</span>
                   <span className={rules.special ? 'rule ok' : 'rule'}>✓ Special character</span>

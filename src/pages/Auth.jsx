@@ -72,7 +72,7 @@ function Register() {
     event.preventDefault(); setError(''); setSuccess('')
     if (!name || !email || !password || !confirm) return setError('Please fill in all the fields.')
     if (!email.includes('@') || !email.includes('.')) return setError('Please enter a valid email address.')
-    if (password.length < 6) return setError('Password must be at least 6 characters long.')
+    if (password.length < 8) return setError('Password must be at least 8 characters long.')
     if (password !== confirm) return setError('Passwords do not match.')
     setLoading(true); apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) }).then(() => { setSuccess('Account created successfully! Redirecting to login...'); setTimeout(() => navigate('/login'), 1200) }).catch(requestError => { setError(requestError.message); setLoading(false) })
   }
@@ -85,11 +85,11 @@ function ForgotPassword() {
     event.preventDefault(); setError(''); setSuccess('')
     if (!email || !password || !confirm) return setError('Please fill in all the fields.')
     if (!email.includes('@') || !email.includes('.')) return setError('Please enter a valid email address.')
-    if (password.length < 6) return setError('New password must be at least 6 characters long.')
+    if (password.length < 8) return setError('New password must be at least 8 characters long.')
     if (password !== confirm) return setError('New passwords do not match.')
     setLoading(true); apiRequest('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, password }) }).then(() => { setSuccess('Password updated successfully. Redirecting to login...'); setTimeout(() => navigate('/login'), 1000) }).catch(requestError => { setError(requestError.message); setLoading(false) })
   }
-  return <AuthLayout mode="forgot"><div className="auth-card"><div className="card-header"><h2>Reset Password</h2><p>Enter your email and choose a new password</p></div><Message error={error} success={success} /><form onSubmit={submit} className="auth-form"><label>Email Address</label><div className="input-wrap"><span className="input-icon">📧</span><input type="email" placeholder="you@example.com" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" /></div><label>New Password</label><PasswordInput id="new-password" value={password} onChange={event => setPassword(event.target.value)} visible={show} setVisible={setShow} placeholder="At least 6 characters" /><label>Confirm New Password</label><PasswordInput id="confirm-new-password" value={confirm} onChange={event => setConfirm(event.target.value)} visible={showConfirm} setVisible={setShowConfirm} placeholder="Re-enter your new password" /><button className="auth-submit" type="submit" disabled={loading}>{loading ? 'Updating password...' : <>Update Password <span>→</span></>}</button></form><p className="auth-link">Remembered your password? <Link to="/login">Back to Login</Link></p><p className="auth-link">Don't have an account? <Link to="/register">Register here</Link></p></div></AuthLayout>
+  return <AuthLayout mode="forgot"><div className="auth-card"><div className="card-header"><h2>Reset Password</h2><p>Enter your email and choose a new password</p></div><Message error={error} success={success} /><form onSubmit={submit} className="auth-form"><label>Email Address</label><div className="input-wrap"><span className="input-icon">📧</span><input type="email" placeholder="you@example.com" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" /></div><label>New Password</label><PasswordInput id="new-password" value={password} onChange={event => setPassword(event.target.value)} visible={show} setVisible={setShow} placeholder="At least 8 characters" /><label>Confirm New Password</label><PasswordInput id="confirm-new-password" value={confirm} onChange={event => setConfirm(event.target.value)} visible={showConfirm} setVisible={setShowConfirm} placeholder="Re-enter your new password" /><button className="auth-submit" type="submit" disabled={loading}>{loading ? 'Updating password...' : <>Update Password <span>→</span></>}</button></form><p className="auth-link">Remembered your password? <Link to="/login">Back to Login</Link></p><p className="auth-link">Don't have an account? <Link to="/register">Register here</Link></p></div></AuthLayout>
 }
 
 function AdminLogin() {

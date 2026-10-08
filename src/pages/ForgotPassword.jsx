@@ -28,8 +28,8 @@ function ForgotPassword({ admin = false }) {
       setError('Please enter a valid email address.')
       return
     }
-    if (newPassword.length < (admin ? 8 : 6)) {
-      setError(`New password must be at least ${admin ? 8 : 6} characters long.`)
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -115,7 +115,7 @@ function ForgotPassword({ admin = false }) {
                 <input
                   id="new-password"
                   type={showNewPassword ? 'text' : 'password'}
-                  placeholder={`At least ${admin ? 8 : 6} characters`}
+                  placeholder="At least 8 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
