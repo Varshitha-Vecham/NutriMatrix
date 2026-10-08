@@ -233,18 +233,18 @@ def generate_recipes():
         excluded = []
     excluded = [_clean_recipe_text(name, 120) for name in excluded if isinstance(name, str)]
     missing_instruction = "Use only the listed ingredients plus basic essentials (salt, water, oil and common spices). If that is not enough for a complete dish, say so clearly in the description and do not invent ingredients." if mode == "only" else "You may use one or two extra ingredients only; list them in additional_ingredients."
-    prompt = f"""You are NutriMatrix's local recipe generation engine, not a chatbot. Create 3 to 5 distinct, practical recipe suggestions using the user's ingredients as the main ingredients. Prioritize the user's available ingredients and avoid unrelated items. {missing_instruction}
+    prompt = f"""You are NutriMatrix's recipe generator. Create exactly one practical recipe using the user's ingredients as the main ingredients. Keep the description to one short sentence, use no more than 5 ingredients, and give exactly 3 brief steps. Prioritize the user's available ingredients and avoid unrelated items. {missing_instruction}
 Ingredients: {json.dumps(clean_ingredients, ensure_ascii=False)}
 Meal type: {prefs['meal_type']}
 Cuisine: {prefs['cuisine']}
 Maximum time: {prefs['time']}
 Difficulty: {prefs['difficulty']}
 Do not repeat these recipe names: {json.dumps(excluded, ensure_ascii=False)}
-Return JSON only, shaped as {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":["..."],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"..."}}],"steps":["..."],"estimated_nutrition":{{"calories":"Estimated","protein":"Estimated","carbohydrates":"Estimated","fat":"Estimated","fiber":"Estimated"}},"healthier_swaps":["... → ..."]}}]}}.
-Keep instructions concise. Do not include servings. Nutrition is optional and must remain explicitly estimated, never medically authoritative. Do not provide medical advice."""
+Return only valid JSON in this shape: {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":[],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"..."}}],"steps":["..."],"estimated_nutrition":{{"calories":"Estimated","protein":"Estimated","carbohydrates":"Estimated","fat":"Estimated","fiber":"Estimated"}},"healthier_swaps":[]}}]}}.
+Do not include servings. Nutrition must remain explicitly estimated, never medically authoritative. Do not provide medical advice."""
     ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
     model = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-    payload = json.dumps({"model": model, "prompt": prompt, "format": "json", "stream": False, "options": {"temperature": 0.7}}).encode("utf-8")
+    payload = json.dumps({"model": model, "prompt": prompt, "format": "json", "stream": False, "options": {"temperature": 0.7, "num_predict": 500}}).encode("utf-8")
     try:
         req = Request(ollama_url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
         with urlopen(req, timeout=180) as response:
