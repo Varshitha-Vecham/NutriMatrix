@@ -36,7 +36,7 @@ function EmailVerification() {
       })
       setEmail(normalizedEmail)
       setCodeSent(true)
-      setCountdown(response.resendAfterSeconds || 120)
+      setCountdown(response.resendAfterSeconds || 90)
     } catch (requestError) {
       setError(requestError.message)
       if (requestError.resendAfterSeconds) {

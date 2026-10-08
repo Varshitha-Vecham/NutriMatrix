@@ -20,7 +20,7 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'nutrimatrix', waitForConnections: true, connectionLimit: 10
 })
 const OTP_EXPIRY_MINUTES = 2
-const OTP_RESEND_COOLDOWN_SECONDS = 120
+const OTP_RESEND_COOLDOWN_SECONDS = 90
 const OTP_MAX_ATTEMPTS = 4
 let mailTransport
 
