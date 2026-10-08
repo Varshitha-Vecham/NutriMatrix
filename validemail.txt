@@ -1,0 +1,345 @@
+I have an existing **NutriMatrix** project with a working Register and Login system using **Python Flask + MySQL**.
+
+I want to make **ONE specific change only**:
+
+## MAIN CHANGE
+
+Previously, users could register using any dummy email address.
+
+Now, users must provide an email address that they actually have access to.
+
+The system must verify the email using a **6-digit OTP sent to that email address** before the account can be used for login.
+
+## VERY IMPORTANT — DO NOT BREAK MY EXISTING PROJECT
+
+Before making any changes:
+
+1. Inspect my existing project structure.
+2. Inspect my current Register frontend.
+3. Inspect my current Login frontend.
+4. Inspect my existing Flask registration route.
+5. Inspect my existing Flask login route.
+6. Inspect my existing MySQL users table.
+7. Understand how the current authentication system works.
+
+Then make ONLY the changes required for email OTP verification.
+
+### DO NOT:
+
+* Redesign the Register page.
+* Redesign the Login page.
+* Change my existing NutriMatrix UI.
+* Change the existing green theme.
+* Change password validation.
+* Remove the password visibility/eye icon.
+* Change existing Register fields.
+* Change existing Login fields.
+* Change existing navigation.
+* Change the Home page.
+* Change unrelated pages.
+* Replace my existing authentication system.
+* Create a completely new authentication architecture.
+* Delete existing users.
+* Delete my existing database.
+* Change unrelated Flask routes.
+* Change unrelated MySQL tables.
+* Add unnecessary APIs or services.
+* Use a dummy OTP.
+* Display the OTP on the website.
+* Automatically mark an email as verified.
+
+Preserve everything that already works.
+
+---
+
+# REQUIRED NEW FLOW
+
+Change the registration flow only to:
+
+**Register → Send OTP → Verify OTP → Account Verified → Login → Home**
+
+### Step 1 — Register
+
+The user uses the existing Register page.
+
+They enter their existing registration information, including:
+
+* Full Name
+* Email Address
+* Password
+* Confirm Password
+* Any other existing fields
+
+Keep the existing Register page exactly as it is.
+
+When the user clicks **Create Account**, perform the existing validations first.
+
+---
+
+# Step 2 — Email Check
+
+Check whether the email is already registered.
+
+If the email is already registered, keep the existing duplicate-email behavior unless it needs to be adjusted for verification.
+
+Do not incorrectly report an email as unavailable.
+
+Use the same MySQL database and users table that the existing Register/Login system already uses.
+
+Treat email comparison consistently, including accidental spaces and uppercase/lowercase differences.
+
+---
+
+# Step 3 — Send Real OTP
+
+If the email is acceptable, generate a random **6-digit OTP**.
+
+Send the OTP to the email address entered by the user.
+
+The OTP must actually arrive in the user's email inbox.
+
+Do NOT:
+
+* Show the OTP on the Register page.
+* Return the OTP to the frontend.
+* Hard-code an OTP.
+* Use a fake OTP.
+* Automatically verify the email.
+
+Use a suitable email-sending method that works with my existing Flask application and is preferably free/suitable for a college project.
+
+Keep email credentials secure using environment variables.
+
+---
+
+# Step 4 — Email Verification Screen
+
+After successfully sending the OTP, show an email verification screen/page.
+
+Do not redesign my entire authentication system.
+
+The verification screen should contain only the necessary elements:
+
+* Message saying that an OTP was sent to the entered email.
+* OTP input.
+* Verify button.
+* Resend OTP option.
+* Resend countdown.
+* Option to go back and correct the email if necessary.
+
+The design should match my existing NutriMatrix authentication design.
+
+---
+
+# Step 5 — Verify OTP
+
+The user enters the OTP received in their email.
+
+If the OTP is correct:
+
+**Email verified successfully.**
+
+Then complete the registration/account activation process and redirect the user to the existing Login page.
+
+If the OTP is incorrect:
+
+Show:
+
+**Invalid OTP. Please try again.**
+
+If the OTP has expired:
+
+Show:
+
+**OTP expired. Please request a new OTP.**
+
+---
+
+# OTP SECURITY
+
+The OTP should:
+
+* Be randomly generated.
+* Contain 6 digits.
+* Have a limited expiry time, such as 5 minutes.
+* Be usable only once.
+* Be associated with the correct email/registration attempt.
+* Become invalid when a new OTP is generated.
+* Have a reasonable maximum number of incorrect attempts.
+* Have a resend cooldown to prevent unlimited requests.
+
+Do not expose the OTP anywhere in the frontend or API response.
+
+---
+
+# DATABASE
+
+I am using **MySQL**.
+
+Modify the existing database only as much as necessary to support email verification.
+
+Add an email verification status if required.
+
+For example, the system should be able to distinguish between:
+
+**Unverified account**
+
+and
+
+**Verified account**
+
+Do not delete existing users.
+
+Do not recreate the database.
+
+Do not modify unrelated tables.
+
+Before changing the database, inspect the existing users table and adapt to its current structure.
+
+---
+
+# LOGIN
+
+This is extremely important.
+
+Do NOT break my existing Login functionality.
+
+After email verification is added, Login should work as follows:
+
+### If email does not exist:
+
+Show the existing appropriate incorrect email/password message.
+
+### If email exists but has NOT been verified:
+
+Show:
+
+**Please verify your email before logging in.**
+
+Do NOT show "Incorrect email" for an existing but unverified account.
+
+### If email exists, is verified, and password is correct:
+
+Allow login normally.
+
+Then continue with the existing:
+
+**Login → Home**
+
+flow.
+
+Do not change anything else about Login.
+
+---
+
+# EXISTING USERS
+
+My project already contains users created before email verification was implemented.
+
+Do NOT delete them.
+
+Do not assume all existing users are verified.
+
+Handle existing accounts safely.
+
+If necessary, existing users should be treated as unverified and required to verify their email before login.
+
+Do not destroy existing user data.
+
+---
+
+# FORGOT PASSWORD
+
+Do NOT redesign my Forgot Password feature.
+
+Only make the minimum necessary change if email verification affects password recovery.
+
+Do not change unrelated functionality.
+
+---
+
+# EMAIL CONFIGURATION
+
+If an email library/package is required, first check what is already installed in my environment.
+
+Do not install duplicate packages unnecessarily.
+
+I already use:
+
+* Python
+* Flask
+* MySQL
+* python-dotenv
+
+Use my existing environment.
+
+If an additional package is genuinely required, tell me exactly what package is needed before making unnecessary changes.
+
+Use environment variables for SMTP/email credentials.
+
+Never put email passwords directly in frontend code or hard-code sensitive credentials.
+
+---
+
+# ERROR HANDLING
+
+Use clear messages for:
+
+* Invalid email format
+* Email already registered
+* OTP sent successfully
+* Invalid OTP
+* Expired OTP
+* Too many OTP attempts
+* OTP resend cooldown
+* Email sending failure
+* Email verification successful
+* Login before email verification
+
+Do not expose internal Flask, MySQL, SMTP, or Python errors to the user.
+
+---
+
+# IMPORTANT TESTING
+
+After implementation, test these cases:
+
+1. New user with a real accessible email.
+2. OTP is actually received.
+3. Correct OTP successfully verifies the email.
+4. Wrong OTP is rejected.
+5. Expired OTP is rejected.
+6. Resend OTP works.
+7. Old OTP becomes invalid after resend.
+8. Same email cannot create another account.
+9. Unverified account cannot login.
+10. Verified account can login normally.
+11. Incorrect email still produces the correct login error.
+12. Existing users are not deleted.
+13. Existing Register UI still works.
+14. Existing Login UI still works.
+15. Existing Home navigation still works.
+
+---
+
+# FINAL REQUIREMENT
+
+The ONLY feature I want to add/change is:
+
+**Real email verification during registration using a 6-digit OTP.**
+
+Everything else in my NutriMatrix project must remain unchanged unless a change is absolutely necessary for this feature.
+
+Do not rewrite my authentication system.
+
+Do not redesign my pages.
+
+Do not delete existing data.
+
+First inspect the existing implementation, then make the smallest possible changes required.
+
+The final working flow must be:
+
+**Register → Enter real email → Receive OTP → Verify OTP → Account verified → Login → Home**
+
+A user must prove that they can access the entered email address before they are allowed to use that NutriMatrix account for login.
