@@ -166,6 +166,7 @@ RECIPE_OPTIONS = {
     "time": {"Under 15 minutes", "15–30 minutes", "30–60 minutes", "Any"},
     "difficulty": {"Easy", "Medium", "Any"},
 }
+RECIPE_OLLAMA_TIMEOUT_SECONDS = 75
 
 
 def _clean_recipe_text(value, limit=500):
@@ -223,7 +224,7 @@ Return JSON only: {{"recipes":[{{"name":"...","description":"...","available_ing
     try:
         payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 600}}).encode("utf-8")
         url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
-        with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=180) as response: result = json.loads(response.read().decode("utf-8"))
+        with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=RECIPE_OLLAMA_TIMEOUT_SECONDS) as response: result = json.loads(response.read().decode("utf-8"))
         decoded = json.loads(result.get("response", ""))
         recipes = [_validate_recipe(recipe) for recipe in decoded.get("recipes", [])[:1]] if isinstance(decoded, dict) else []
         recipes = [recipe for recipe in recipes if recipe]
@@ -232,8 +233,12 @@ Return JSON only: {{"recipes":[{{"name":"...","description":"...","available_ing
     except HTTPError as error:
         if error.code == 404: return jsonify({"message": "The selected recipe model is unavailable. Please check your Ollama model installation."}), 503
         return jsonify({"message": "Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again."}), 503
-    except (URLError, TimeoutError, ConnectionError):
-        return jsonify({"message": "Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again."}), 503
+    except TimeoutError:
+        app.logger.warning("Ollama recipe generation exceeded %s seconds", RECIPE_OLLAMA_TIMEOUT_SECONDS)
+        return jsonify({"message": "Recipe generation took too long. Try again, or use a smaller Ollama model."}), 504
+    except (URLError, ConnectionError):
+        app.logger.warning("Ollama is unavailable at %s", url)
+        return jsonify({"message": "Ollama is not running or cannot be reached. Start Ollama and try again."}), 503
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         return jsonify({"message": "The recipe model returned an invalid response. Please try again; if this continues, check that your selected Ollama model is available."}), 502
     except Exception:
