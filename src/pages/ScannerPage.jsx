@@ -185,13 +185,17 @@ function ScannerPage() {
       }
 
       if (imageSource) {
-        
+        try {
           const detectedExpiryDate = await detectExpiryDate(imageSource)
           if (detectedExpiryDate) {
             setExpiryDate(detectedExpiryDate)
             setDateSource('package image OCR')
           }
-        
+        } catch (expiryError) {
+          if (expiryError.status !== 422) {
+            setError(expiryError.message || 'Unable to scan the expiry date. You can enter it manually.')
+          }
+        }
       }
     } catch (lookupError) {
       setProduct(null)
@@ -235,8 +239,6 @@ function ScannerPage() {
       if (detectedExpiryDate) {
         setExpiryDate(detectedExpiryDate)
         setDateSource(files.length > 1 ? `OCR detection (${files.length} images checked)` : 'OCR detection')
-      } else {
-        setError(`Expiry date could not be detected in the uploaded image${files.length === 1 ? '' : 's'}. Try a close-up of the printed date or enter it manually.`)
       }
     } catch (uploadError) {
       setError(uploadError.message || 'Expiry date could not be detected clearly. Please scan again or upload a clearer image.')
