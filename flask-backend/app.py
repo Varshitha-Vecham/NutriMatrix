@@ -180,8 +180,18 @@ def _validate_recipe(recipe):
     ingredients = [{"name": _clean_recipe_text(item.get("name"), 100), "quantity": _clean_recipe_text(item.get("quantity"), 80)} for item in recipe["ingredients"][:5] if isinstance(item, dict) and _clean_recipe_text(item.get("name"), 100) and _clean_recipe_text(item.get("quantity"), 80)]
     steps = [_clean_recipe_text(step, 500) for step in recipe["steps"][:3] if _clean_recipe_text(step, 500)]
     if not ingredients or not steps: return None
-    nutrition = recipe.get("estimated_nutrition") if isinstance(recipe.get("estimated_nutrition"), dict) else {}
-    return {"name": _clean_recipe_text(recipe["name"], 120), "description": _clean_recipe_text(recipe["description"], 500), "available_ingredients": [_clean_recipe_text(x, 100) for x in recipe["available_ingredients"][:30] if isinstance(x, str)], "additional_ingredients": [_clean_recipe_text(x, 100) for x in recipe["additional_ingredients"][:2] if isinstance(x, str)], "preparation_time": _clean_recipe_text(recipe["preparation_time"], 80), "difficulty": _clean_recipe_text(recipe["difficulty"], 30), "ingredients": ingredients, "steps": steps, "estimated_nutrition": {key: _clean_recipe_text(str(nutrition.get(key, "Not estimated")), 50) or "Not estimated" for key in ("calories", "protein", "carbohydrates", "fat", "fiber")}, "healthier_swaps": [_clean_recipe_text(x, 180) for x in recipe["healthier_swaps"][:8] if isinstance(x, str)]}
+    nutrition = recipe.get("nutrition")
+    if not isinstance(nutrition, dict) or not nutrition:
+        nutrition = recipe.get("estimated_nutrition")
+    nutrition = nutrition if isinstance(nutrition, dict) else {}
+    nutrition_values = {}
+    for key in ("calories", "protein", "carbohydrates", "fat", "fiber"):
+        value = nutrition.get(key)
+        value = _clean_recipe_text(str(value), 50) if isinstance(value, (str, int, float)) else ""
+        if not re.search(r"\d", value):
+            return None
+        nutrition_values[key] = value
+    return {"name": _clean_recipe_text(recipe["name"], 120), "description": _clean_recipe_text(recipe["description"], 500), "available_ingredients": [_clean_recipe_text(x, 100) for x in recipe["available_ingredients"][:30] if isinstance(x, str)], "additional_ingredients": [_clean_recipe_text(x, 100) for x in recipe["additional_ingredients"][:2] if isinstance(x, str)], "preparation_time": _clean_recipe_text(recipe["preparation_time"], 80), "difficulty": _clean_recipe_text(recipe["difficulty"], 30), "ingredients": ingredients, "steps": steps, "nutrition": nutrition_values, "healthier_swaps": [_clean_recipe_text(x, 180) for x in recipe["healthier_swaps"][:8] if isinstance(x, str)]}
 
 
 @app.post("/api/generate-recipes")
@@ -205,19 +215,19 @@ def generate_recipes():
     excluded = data.get("exclude_names", [])
     excluded = [_clean_recipe_text(name, 120) for name in excluded[:5] if isinstance(name, str)] if isinstance(excluded, list) else []
     missing_instruction = "Use only the listed ingredients plus basic essentials (salt, water, oil and common spices). If that is not enough for a complete dish, say so clearly in the description and do not invent ingredients." if mode == "only" else "You may use one or two extra ingredients only; list them in additional_ingredients."
-    prompt = f'''You are NutriMatrix's recipe generator. Create exactly one practical recipe using the user's ingredients as the main ingredients. Keep the description to one short sentence, use no more than 5 ingredients, and give exactly 3 brief steps. {missing_instruction}
+    prompt = f'''Create one practical recipe using the listed ingredients as the main ingredients. Use no more than 5 ingredients, give exactly 3 short steps, and use metric quantities (g, ml, tsp or tbsp) for every ingredient. {missing_instruction}
 Ingredients: {json.dumps(clean_ingredients, ensure_ascii=False)}
 Meal type: {prefs['meal_type']}; Cuisine: {prefs['cuisine']}; Maximum time: {prefs['time']}; Difficulty: {prefs['difficulty']}
 Do not repeat these recipe names: {json.dumps(excluded, ensure_ascii=False)}
-Return only valid JSON in this shape: {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":[],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"..."}}],"steps":["..."],"estimated_nutrition":{{"calories":"Estimated","protein":"Estimated","carbohydrates":"Estimated","fat":"Estimated","fiber":"Estimated"}},"healthier_swaps":[]}}]}}.'''
+Return JSON only: {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":[],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"100 g"}}],"steps":["..."],"nutrition":{{"calories":"450 kcal","protein":"20 g","carbohydrates":"55 g","fat":"14 g","fiber":"8 g"}},"healthier_swaps":[]}}]}}. Estimate numeric nutrition values for the complete recipe using the stated ingredient quantities; never return the word "Estimated" in place of a value.'''
     try:
-        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "options": {"temperature": 0.7, "num_predict": 500}}).encode("utf-8")
+        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 600}}).encode("utf-8")
         url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
         with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=180) as response: result = json.loads(response.read().decode("utf-8"))
         decoded = json.loads(result.get("response", ""))
         recipes = [_validate_recipe(recipe) for recipe in decoded.get("recipes", [])[:1]] if isinstance(decoded, dict) else []
         recipes = [recipe for recipe in recipes if recipe]
-        if not recipes: return jsonify({"message": "We couldn't generate a recipe this time. Please try again with a few more ingredients."}), 502
+        if not recipes: return jsonify({"message": "The recipe model returned incomplete details. Please try again; if this continues, check that your selected Ollama model is available."}), 502
         return jsonify({"recipes": recipes})
     except HTTPError as error:
         if error.code == 404: return jsonify({"message": "The selected recipe model is unavailable. Please check your Ollama model installation."}), 503
@@ -225,7 +235,7 @@ Return only valid JSON in this shape: {{"recipes":[{{"name":"...","description":
     except (URLError, TimeoutError, ConnectionError):
         return jsonify({"message": "Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again."}), 503
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-        return jsonify({"message": "We couldn't generate a recipe this time. Please try again with a few more ingredients."}), 502
+        return jsonify({"message": "The recipe model returned an invalid response. Please try again; if this continues, check that your selected Ollama model is available."}), 502
     except Exception:
         app.logger.exception("Recipe generation failed")
         return jsonify({"message": "Recipe generation is temporarily unavailable. Please try again."}), 502
