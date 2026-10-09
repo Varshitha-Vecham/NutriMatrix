@@ -97,7 +97,7 @@ export default function RecipeGenerator() {
     setMessage('')
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 45000)
+    const timeoutId = setTimeout(() => controller.abort(), 200000)
 
     try {
       const response = await fetch(apiUrl, {
@@ -124,7 +124,7 @@ export default function RecipeGenerator() {
     } catch (e) {
       console.error('[RecipeGenerator] Generation failed:', e)
       const message = e?.name === 'AbortError'
-        ? 'Recipe generation timed out. Please check that Ollama is running and try again.'
+        ? 'Recipe generation took too long. Check that Ollama is running, the configured model is installed, and try again.'
         : e?.message || 'Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again.'
       setError(message)
     } finally {
