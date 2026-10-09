@@ -138,6 +138,7 @@
   border: 4px solid rgba(34, 197, 94, 0.15);
   background: #154312;
   height: 350px;
+  animation: pulse 5s ease-in-out infinite
 }
 
 .about-visual img {
