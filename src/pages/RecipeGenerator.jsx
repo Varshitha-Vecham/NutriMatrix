@@ -58,7 +58,9 @@ export default function RecipeGenerator() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [cartItemsAdded, setCartItemsAdded] = useState(false)
-  const [saved, setSaved] = useState(() => { try { return JSON.parse(localStorage.getItem('nutrimatrix-saved-recipes') || '[]') } catch { return [] } })
+  const [saved, setSaved] = useState([])
+  const [savedLoaded, setSavedLoaded] = useState(false)
+  const [savingRecipe, setSavingRecipe] = useState(false)
 
   function parseDraftIngredients(value) {
     return value
@@ -155,9 +157,31 @@ export default function RecipeGenerator() {
     }
   }
 
+  async function updateSavedRecipes(next, successMessage) {
+    setSavingRecipe(true)
+    try {
+      await apiRequest('/api/saved-recipes', { method: 'PUT', body: JSON.stringify({ recipes: next }) })
+      setSaved(next)
+      setMessage(successMessage)
+    } catch (requestError) {
+      if (requestError.message === 'Not authenticated.') {
+        setMessage('Please log in to save recipes to your account.')
+        navigate('/login')
+        return
+      }
+      setError(requestError.message)
+    } finally {
+      setSavingRecipe(false)
+    }
+  }
+
   function saveRecipe(recipe) {
-    const next = saved.some((item) => item.name === recipe.name) ? saved : [...saved, recipe]
-    setSaved(next); localStorage.setItem('nutrimatrix-saved-recipes', JSON.stringify(next)); setMessage(`${recipe.name} saved on this device.`)
+    if (saved.some((item) => item.name === recipe.name)) return
+    updateSavedRecipes([...saved, recipe], `${recipe.name} saved to your account.`)
+  }
+
+  function deleteRecipe(recipe) {
+    updateSavedRecipes(saved.filter((item) => item.name !== recipe.name), `${recipe.name} removed from your saved recipes.`)
   }
 
   function addMissing(recipe) {
@@ -167,6 +191,17 @@ export default function RecipeGenerator() {
   }
 
   useEffect(() => { document.title = 'Recipe Generator | NutriMatrix' }, [])
+
+  useEffect(() => {
+    let active = true
+    apiRequest('/api/saved-recipes')
+      .then((result) => { if (active) setSaved(Array.isArray(result?.recipes) ? result.recipes.map(normaliseRecipe) : []) })
+      .catch((requestError) => {
+        if (active && requestError.message !== 'Not authenticated.') setError(requestError.message)
+      })
+      .finally(() => { if (active) setSavedLoaded(true) })
+    return () => { active = false }
+  }, [])
 
   return <div className="recipe-page"><Navbar /><main className="recipe-shell">
     <header className="recipe-hero"><span className="recipe-eyebrow">NUTRIMATRIX · YOUR KITCHEN, REIMAGINED</span><h1>What do you have today?</h1><p>Tell us the ingredients you have, and NutriMatrix will create recipes you can prepare.</p></header>
@@ -182,10 +217,11 @@ export default function RecipeGenerator() {
     </section>
     {recipes.length > 0 && <section className="recipe-results"><div className="results-heading"><div><span className="recipe-eyebrow">MADE FOR WHAT YOU HAVE</span><h2>Recipes for you</h2><p>{recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'} created with your ingredients.</p></div><button type="button" className="another-button" disabled={loading} onClick={() => generate(recipes.map((r) => r.name))}>↻ Generate Another Recipe</button></div>
       <div className="recipe-grid">{recipes.map((recipe, index) => <article className="suggestion-card" key={`${recipe.name}-${index}`}><div className="suggestion-top"><span className="recipe-number">RECIPE {String(index + 1).padStart(2, '0')}</span><span className="difficulty-pill">{recipe.difficulty}</span></div><h3>{recipe.name}</h3><p className="suggestion-description">{recipe.description}</p><div className="suggestion-meta"><span>◷ {recipe.preparation_time}</span><span>·</span><span>{recipe.difficulty}</span></div><div className="available-list"><b>You Have</b><div>{(recipe.available_ingredients || []).map((item) => <span key={item}>✓ {item}</span>)}</div></div>{(recipe.additional_ingredients || []).length > 0 && <div className="additional-list"><b>Additional Ingredients Needed</b><div>{(recipe.additional_ingredients || []).map((item) => <span key={item}>＋ {item}</span>)}</div></div>}
-        <div className="suggestion-actions"><button type="button" className="view-button" onClick={() => setExpanded({ ...expanded, [index]: !expanded[index] })}>{expanded[index] ? 'Hide Recipe' : 'View Recipe'}</button><button type="button" className="save-button" onClick={() => saveRecipe(recipe)}>{saved.some((item) => item.name === recipe.name) ? '♥ Saved' : '♡ Save Recipe'}</button></div>
+        <div className="suggestion-actions"><button type="button" className="view-button" onClick={() => setExpanded({ ...expanded, [index]: !expanded[index] })}>{expanded[index] ? 'Hide Recipe' : 'View Recipe'}</button><button type="button" className="save-button" disabled={savingRecipe} onClick={() => saveRecipe(recipe)}>{saved.some((item) => item.name === recipe.name) ? '♥ Saved' : '♡ Save Recipe'}</button></div>
         {(recipe.additional_ingredients || []).length > 0 && <button type="button" className="cart-button" onClick={() => addMissing(recipe)}>＋ Add Missing Ingredients to SmartCart</button>}
         {expanded[index] && <div className="recipe-detail"><section><h4>Ingredients</h4><ul>{(recipe.ingredients || []).map((item, i) => <li key={`${item.name}-${i}`}>{item.name} <span>{item.quantity}</span></li>)}</ul></section><section><h4>Preparation</h4><ol>{(recipe.steps || []).map((step, i) => <li key={i}><b>{i + 1}.</b> {step}</li>)}</ol></section><section className="nutrition-estimate"><h4>Estimated Nutrition</h4><p>AI estimates for guidance only; values are not verified.</p><div>{Object.entries(recipe.estimated_nutrition || {}).map(([key, value]) => <span key={key}><b>{key.replace('_', ' ')}</b>{value}</span>)}</div></section>{(recipe.healthier_swaps || []).length > 0 && <section><h4>Healthier Swaps</h4><ul>{(recipe.healthier_swaps || []).map((swap, i) => <li key={i}>{swap}</li>)}</ul></section>}</div>}
       </article>)}</div>
     </section>}
+    {savedLoaded && <section className="saved-recipes" aria-labelledby="saved-recipes-title"><div className="saved-recipes-heading"><div><span className="recipe-eyebrow">SAVED TO YOUR ACCOUNT</span><h2 id="saved-recipes-title">Saved recipes</h2><p>These recipes remain available after you log out and sign in again.</p></div><span className="saved-recipe-count">{saved.length}</span></div>{saved.length ? <div className="saved-recipe-list">{saved.map((recipe, index) => <article className="saved-recipe-item" key={`${recipe.name}-${index}`}><div><h3>{recipe.name}</h3><p>{recipe.description}</p><small>{recipe.preparation_time} · {recipe.difficulty}</small></div><button type="button" className="delete-recipe-button" disabled={savingRecipe} onClick={() => deleteRecipe(recipe)}>Delete</button></article>)}</div> : <p className="saved-recipes-empty">No saved recipes yet. Generate a recipe, then choose Save Recipe.</p>}</section>}
   </main><Footer /></div>
 }

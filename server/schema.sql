@@ -75,6 +75,13 @@ CREATE TABLE IF NOT EXISTS receipt_products (
   INDEX idx_receipt_products_user_expiry (user_id, expiry_date)
 );
 
+CREATE TABLE IF NOT EXISTS saved_recipes (
+  user_id INT UNSIGNED PRIMARY KEY,
+  recipes JSON NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_saved_recipes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS products (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_name VARCHAR(255) NOT NULL,
   category VARCHAR(100) NOT NULL, image LONGTEXT NULL, calories DECIMAL(10,2) NULL,

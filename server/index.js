@@ -343,6 +343,15 @@ async function ensureSavedMealsTable() {
   )`)
 }
 
+async function ensureSavedRecipesTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS saved_recipes (
+    user_id INT UNSIGNED PRIMARY KEY,
+    recipes JSON NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_saved_recipes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`)
+}
+
 function expiryStatus(expiryDate) {
   if (!expiryDate) return 'Unavailable'
   const today = new Date()
@@ -1266,11 +1275,34 @@ app.put('/api/saved-meals', requireAuth, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save meals.' }) }
 })
 
+app.get('/api/saved-recipes', requireAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT recipes FROM saved_recipes WHERE user_id = ?', [req.user.id])
+    const recipes = rows.length ? (typeof rows[0].recipes === 'string' ? JSON.parse(rows[0].recipes) : rows[0].recipes) : []
+    res.json({ recipes: Array.isArray(recipes) ? recipes : [] })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load saved recipes.' }) }
+})
+
+app.put('/api/saved-recipes', requireAuth, async (req, res) => {
+  const recipes = req.body?.recipes
+  const isValidRecipe = (recipe) => recipe && typeof recipe === 'object' && !Array.isArray(recipe)
+    && typeof recipe.name === 'string' && recipe.name.trim().length > 0 && recipe.name.length <= 160
+  if (!Array.isArray(recipes) || recipes.length > 100 || recipes.some((recipe) => !isValidRecipe(recipe))) {
+    return res.status(400).json({ message: 'Saved recipes must be a valid list.' })
+  }
+  try {
+    await pool.execute(`INSERT INTO saved_recipes (user_id, recipes) VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE recipes = VALUES(recipes)`, [req.user.id, JSON.stringify(recipes)])
+    res.json({ message: 'Saved recipes updated.' })
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save recipes.' }) }
+})
+
 ensureProfileColumns()
   .then(() => ensureEmailVerificationColumns())
   .then(() => ensurePendingRegistrationsTable())
   .then(() => ensureReceiptProductsTable())
   .then(() => ensureSavedMealsTable())
+  .then(() => ensureSavedRecipesTable())
   .then(() => ensureProductTables())
   .then(() => ensureAdminAccess())
   .then(() => verifySmtpConnection())
