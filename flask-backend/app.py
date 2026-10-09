@@ -159,6 +159,7 @@ RECIPE_OPTIONS = {
     "time": {"Under 15 minutes", "15–30 minutes", "30–60 minutes", "Any"},
     "difficulty": {"Easy", "Medium", "Any"},
 }
+RECIPE_OLLAMA_TIMEOUT_SECONDS = 75
 
 
 def _clean_recipe_text(value, limit=500):
@@ -232,22 +233,24 @@ def generate_recipes():
     if not isinstance(excluded, list) or len(excluded) > 5:
         excluded = []
     excluded = [_clean_recipe_text(name, 120) for name in excluded if isinstance(name, str)]
-    missing_instruction = "Use only the listed ingredients plus basic essentials (salt, water, oil and common spices). If that is not enough for a complete dish, say so clearly in the description and do not invent ingredients." if mode == "only" else "You may use one or two extra ingredients only; list them in additional_ingredients."
-    prompt = f"""You are NutriMatrix's recipe generator. Create exactly one practical recipe using the user's ingredients as the main ingredients. Keep the description to one short sentence, use no more than 5 ingredients, and give exactly 3 brief steps. Prioritize the user's available ingredients and avoid unrelated items. {missing_instruction}
-Ingredients: {json.dumps(clean_ingredients, ensure_ascii=False)}
-Meal type: {prefs['meal_type']}
-Cuisine: {prefs['cuisine']}
-Maximum time: {prefs['time']}
-Difficulty: {prefs['difficulty']}
-Do not repeat these recipe names: {json.dumps(excluded, ensure_ascii=False)}
-Return only valid JSON in this shape: {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":[],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"..."}}],"steps":["..."],"estimated_nutrition":{{"calories":"Estimated","protein":"Estimated","carbohydrates":"Estimated","fat":"Estimated","fiber":"Estimated"}},"healthier_swaps":[]}}]}}.
-Do not include servings. Nutrition must remain explicitly estimated, never medically authoritative. Do not provide medical advice."""
+    ingredient_rule = "Do not add ingredients beyond this list and basic essentials (salt, water, oil, spices)." if mode == "only" else "Add at most two ingredients; list them only in additional_ingredients."
+    prompt = f"""Make one practical recipe mainly from {json.dumps(clean_ingredients, ensure_ascii=False)}.
+Preferences: {prefs['meal_type']}, {prefs['cuisine']}, {prefs['time']}, {prefs['difficulty']}. {ingredient_rule}
+Use a one-sentence description, no more than 5 recipe ingredients, and exactly 3 short steps. Exclude: {json.dumps(excluded, ensure_ascii=False)}.
+Return only JSON matching this shape: {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":[],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"..."}}],"steps":["...","...","..."],"estimated_nutrition":{{"calories":"Estimated","protein":"Estimated","carbohydrates":"Estimated","fat":"Estimated","fiber":"Estimated"}},"healthier_swaps":[]}}]}}. No markdown or medical advice."""
     ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
     model = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-    payload = json.dumps({"model": model, "prompt": prompt, "format": "json", "stream": False, "options": {"temperature": 0.7, "num_predict": 500}}).encode("utf-8")
+    payload = json.dumps({
+        "model": model,
+        "prompt": prompt,
+        "format": "json",
+        "stream": False,
+        "keep_alive": "10m",
+        "options": {"temperature": 0.3, "num_ctx": 2048, "num_predict": 400},
+    }).encode("utf-8")
     try:
         req = Request(ollama_url, data=payload, headers={"Content-Type": "application/json"}, method="POST")
-        with urlopen(req, timeout=180) as response:
+        with urlopen(req, timeout=RECIPE_OLLAMA_TIMEOUT_SECONDS) as response:
             result = json.loads(response.read().decode("utf-8"))
         response_text = result.get("response", "")
         if not response_text.strip():
@@ -276,8 +279,12 @@ Do not include servings. Nutrition must remain explicitly estimated, never medic
             return jsonify({"message": "The selected recipe model is unavailable. Please check your Ollama model installation."}), 503
         app.logger.warning("Ollama request returned HTTP %s", error.code)
         return jsonify({"message": "Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again."}), 503
-    except (URLError, TimeoutError, ConnectionError):
-        return jsonify({"message": "Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again."}), 503
+    except TimeoutError:
+        app.logger.warning("Ollama recipe generation exceeded %s seconds", RECIPE_OLLAMA_TIMEOUT_SECONDS)
+        return jsonify({"message": "Recipe generation took too long. Try again, or use a smaller Ollama model."}), 504
+    except (URLError, ConnectionError):
+        app.logger.warning("Ollama is unavailable at %s", ollama_url)
+        return jsonify({"message": "Ollama is not running or cannot be reached. Start Ollama and try again."}), 503
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         app.logger.warning("Ollama returned an invalid recipe response")
         return jsonify({"message": "We couldn't generate a recipe this time. Please try again with a few more ingredients."}), 502

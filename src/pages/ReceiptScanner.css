@@ -17,6 +17,13 @@
 .receipt-error, .receipt-message { max-width: 680px; margin: 18px 0; padding: 14px 16px; border-radius: 10px; font-weight: 700; }
 .receipt-error { background: #fff0ed; color: #a43d2b; }
 .receipt-message { background: #e9f7ed; color: #21683a; }
+.receipt-error-card { max-width: 680px; margin: 18px 0; padding: 20px; border-left: 4px solid #a43d2b; border-radius: 10px; background: #fff0ed; color: #5e2b25; }
+.receipt-error-content { display: flex; flex-direction: column; gap: 12px; }
+.receipt-error-content strong { color: #a43d2b; font-size: 1rem; }
+.receipt-error-content p { margin: 0; color: #7a6460; font-weight: 600; font-size: 0.95rem; }
+.receipt-error-retry { padding: 8px 16px; border: 1px solid #a43d2b; border-radius: 7px; background: transparent; color: #a43d2b; font: inherit; font-weight: 800; cursor: pointer; transition: all 0.2s ease; }
+.receipt-error-retry:hover { background: rgba(164, 61, 43, 0.08); border-color: #8b3226; }
+.receipt-error-retry:active { transform: scale(0.98); }
 .receipt-products, .tracked-products { max-width: 900px; margin-top: 54px; }
 .receipt-section-heading h2 { margin: 8px 0; color: #28583a; font-size: 1.7rem; }
 .receipt-section-heading p { max-width: 650px; color: #687b6e; line-height: 1.6; }

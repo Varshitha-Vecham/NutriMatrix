@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
@@ -13,7 +13,7 @@ const preferences = {
   difficulty: ['Easy', 'Medium', 'Any']
 }
 const blankPreferences = { meal_type: 'Any', cuisine: 'Any', time: 'Any', difficulty: 'Any' }
-const RECIPE_GENERATION_TIMEOUT_MS = 190_000
+const RECIPE_GENERATION_TIMEOUT_MS = 85_000
 
 function normaliseRecipe(recipe, index) {
   const safeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : []
@@ -56,9 +56,12 @@ export default function RecipeGenerator() {
   const [expanded, setExpanded] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [canRetry, setCanRetry] = useState(false)
+  const [retryNames, setRetryNames] = useState([])
   const [message, setMessage] = useState('')
   const [cartItemsAdded, setCartItemsAdded] = useState(false)
   const [saved, setSaved] = useState(() => { try { return JSON.parse(localStorage.getItem('nutrimatrix-saved-recipes') || '[]') } catch { return [] } })
+  const generationInProgress = useRef(false)
 
   function parseDraftIngredients(value) {
     return value
@@ -74,11 +77,14 @@ export default function RecipeGenerator() {
   }
 
   async function generate(excludeNames = []) {
+    if (generationInProgress.current) return
+
     const pendingIngredients = parseDraftIngredients(draft)
     const allIngredients = [...new Map([...ingredients, ...pendingIngredients].map((item) => [item.toLocaleLowerCase(), item])).values()].slice(0, 30)
 
     if (!allIngredients.length) {
       setError('Please enter at least one ingredient to generate a recipe.')
+      setCanRetry(false)
       return
     }
 
@@ -90,11 +96,10 @@ export default function RecipeGenerator() {
     const requestBody = { ingredients: allIngredients, ...choices, mode, exclude_names: excludeNames }
     const apiUrl = `${OCR_API_URL}/api/generate-recipes`
 
-    console.log('[RecipeGenerator] Request payload:', requestBody)
-    console.log('[RecipeGenerator] API URL:', apiUrl)
-
+    generationInProgress.current = true
     setLoading(true)
     setError('')
+    setCanRetry(false)
     setMessage('')
 
     const controller = new AbortController()
@@ -109,10 +114,9 @@ export default function RecipeGenerator() {
       })
 
       const data = await response.json().catch(() => ({}))
-      console.log('[RecipeGenerator] API response:', { status: response.status, data })
 
       if (!response.ok) {
-        throw new Error(data.message || 'Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again.')
+        throw new Error(data.message || 'Recipe generation is temporarily unavailable. Please try again.')
       }
 
       const nextRecipes = Array.isArray(data.recipes) ? data.recipes.map((recipe, index) => normaliseRecipe(recipe, index)) : []
@@ -125,11 +129,16 @@ export default function RecipeGenerator() {
     } catch (e) {
       console.error('[RecipeGenerator] Generation failed:', e)
       const message = e?.name === 'AbortError'
-        ? 'Recipe generation took too long. Check that Ollama is running, the configured model is installed, and try again.'
-        : e?.message || 'Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again.'
+        ? 'Recipe generation took too long. Check that Ollama is running and try again with a smaller model if needed.'
+        : e instanceof TypeError
+          ? 'Could not reach the recipe service. Make sure NutriMatrix and Ollama are running, then retry.'
+          : e?.message || 'Recipe generation is temporarily unavailable. Please try again.'
       setError(message)
+      setCanRetry(true)
+      setRetryNames(excludeNames)
     } finally {
       clearTimeout(timeoutId)
+      generationInProgress.current = false
       setLoading(false)
     }
   }
@@ -177,8 +186,8 @@ export default function RecipeGenerator() {
       <div className="recipe-preferences"><div className="recipe-section-heading compact"><span className="recipe-step">02</span><div><h2>Recipe preferences <small>Optional</small></h2><p>Set a direction or leave everything on Any.</p></div></div><div className="recipe-select-grid">{Object.entries(preferences).map(([key, options]) => <label key={key}>{({ meal_type: 'Meal Type', cuisine: 'Cuisine', time: 'Preparation Time', difficulty: 'Difficulty' })[key]}<select value={choices[key]} onChange={(e) => setChoices({ ...choices, [key]: e.target.value })}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>)}</div>
         <fieldset className="recipe-mode"><legend>Ingredient mode</legend><label><input type="radio" name="mode" value="only" checked={mode === 'only'} onChange={() => setMode('only')} /><span><b>Use Only My Ingredients</b><small>Only your ingredients and basic cooking essentials.</small></span></label><label><input type="radio" name="mode" value="additional" checked={mode === 'additional'} onChange={() => setMode('additional')} /><span><b>Allow Additional Ingredients</b><small>Recipes may need up to two extra ingredients.</small></span></label></fieldset>
       </div>
-      {error && <p className="recipe-alert" role="alert">{error}</p>}{message && <p className="recipe-notice" role="status">{message}{cartItemsAdded && <button type="button" className="view-cart-link" onClick={() => navigate('/products')}>View SmartCart</button>}</p>}
-      <button className="generate-button" type="button" onClick={() => generate()} disabled={loading}>{loading ? <><span className="recipe-spinner" /> Creating a recipe from your ingredients...</> : '✦ Generate a Recipe'}</button>
+      {error && <p className="recipe-alert" role="alert">{error}</p>}{canRetry && <button className="save-button retry-button" type="button" onClick={() => generate(retryNames)} disabled={loading}>Retry</button>}{message && <p className="recipe-notice" role="status">{message}{cartItemsAdded && <button type="button" className="view-cart-link" onClick={() => navigate('/products')}>View SmartCart</button>}</p>}
+      <button className="generate-button" type="button" onClick={() => generate()} disabled={loading}>{loading ? <><span className="recipe-spinner" /> Generating your recipe…</> : '✦ Generate a Recipe'}</button>
     </section>
     {recipes.length > 0 && <section className="recipe-results"><div className="results-heading"><div><span className="recipe-eyebrow">MADE FOR WHAT YOU HAVE</span><h2>Recipes for you</h2><p>{recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'} created with your ingredients.</p></div><button type="button" className="another-button" disabled={loading} onClick={() => generate(recipes.map((r) => r.name))}>↻ Generate Another Recipe</button></div>
       <div className="recipe-grid">{recipes.map((recipe, index) => <article className="suggestion-card" key={`${recipe.name}-${index}`}><div className="suggestion-top"><span className="recipe-number">RECIPE {String(index + 1).padStart(2, '0')}</span><span className="difficulty-pill">{recipe.difficulty}</span></div><h3>{recipe.name}</h3><p className="suggestion-description">{recipe.description}</p><div className="suggestion-meta"><span>◷ {recipe.preparation_time}</span><span>·</span><span>{recipe.difficulty}</span></div><div className="available-list"><b>You Have</b><div>{(recipe.available_ingredients || []).map((item) => <span key={item}>✓ {item}</span>)}</div></div>{(recipe.additional_ingredients || []).length > 0 && <div className="additional-list"><b>Additional Ingredients Needed</b><div>{(recipe.additional_ingredients || []).map((item) => <span key={item}>＋ {item}</span>)}</div></div>}

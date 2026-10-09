@@ -33,6 +33,19 @@ A colorful, modern React.js web application that helps users make smarter grocer
 
 3. Open `http://localhost:5173` in your browser.
 
+### Local AI recipe generation
+
+Recipe generation uses a local Ollama service and the `qwen2.5:3b` model by default. Start Ollama and install the model once before using the Recipe Generator:
+
+```bash
+ollama serve
+ollama pull qwen2.5:3b
+ollama list
+npm run dev
+```
+
+If Ollama is already running, skip `ollama serve`. For a laptop with limited memory, install the smaller `qwen2.5:1.5b` model and set `OLLAMA_MODEL=qwen2.5:1.5b` in the environment used to start the Flask backend. Open `http://localhost:5173/recipe-generator`, enter ingredients, and generate a recipe to test the flow.
+
 ## 🗂️ Project Structure
 
 ```
