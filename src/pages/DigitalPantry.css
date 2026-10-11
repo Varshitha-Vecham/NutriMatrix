@@ -215,11 +215,30 @@
   font-size: 0.85rem;
 }
 
-.tone-danger { border-color: rgba(239, 68, 68, 0.25); background: #fff1f2; }
-.tone-warning { border-color: rgba(245, 158, 11, 0.25); background: #fff7ed; }
-.tone-info { border-color: rgba(59, 130, 246, 0.2); background: #eff6ff; }
-.tone-success { border-color: rgba(34, 197, 94, 0.25); background: #f0fdf4; }
-.tone-neutral { border-color: rgba(148, 163, 184, 0.2); background: #f8fafc; }
+/* Expired products: light red */
+.pantry-item.tone-danger {
+background-color: #fee2e2 !important;
+border: 1px solid #ef4444;
+}
+
+/* Expiring soon: light green */
+.pantry-item.tone-warning,
+.pantry-item.tone-info {
+background-color: #91f3b4 !important;
+border: 1px solid #12d158;
+}
+
+/* Fresh / safe products: light green */
+.pantry-item.tone-success {
+background-color: #d0f9dc !important;
+border: 1px solid #386448;
+}
+
+/* Neutral products */
+.pantry-item.tone-neutral {
+background-color: #b8babc !important;
+border: 1px solid #e2e8f0;
+}
 
 .summary-grid {
   display: grid;

@@ -166,7 +166,7 @@ RECIPE_OPTIONS = {
     "time": {"Under 15 minutes", "15–30 minutes", "30–60 minutes", "Any"},
     "difficulty": {"Easy", "Medium", "Any"},
 }
-RECIPE_OLLAMA_TIMEOUT_SECONDS = 75
+RECIPE_OLLAMA_TIMEOUT_SECONDS = 40
 
 
 def _clean_recipe_text(value, limit=500):
@@ -195,6 +195,35 @@ def _validate_recipe(recipe):
     return {"name": _clean_recipe_text(recipe["name"], 120), "description": _clean_recipe_text(recipe["description"], 500), "available_ingredients": [_clean_recipe_text(x, 100) for x in recipe["available_ingredients"][:30] if isinstance(x, str)], "additional_ingredients": [_clean_recipe_text(x, 100) for x in recipe["additional_ingredients"][:2] if isinstance(x, str)], "preparation_time": _clean_recipe_text(recipe["preparation_time"], 80), "difficulty": _clean_recipe_text(recipe["difficulty"], 30), "ingredients": ingredients, "steps": steps, "nutrition": nutrition_values, "healthier_swaps": [_clean_recipe_text(x, 180) for x in recipe["healthier_swaps"][:8] if isinstance(x, str)]}
 
 
+def _expand_compact_recipe(recipe, difficulty):
+    if not isinstance(recipe, dict) or "name" in recipe:
+        return recipe
+    nutrition = recipe.get("c")
+    if not isinstance(nutrition, list) or len(nutrition) != 5:
+        return recipe
+    nutrition_keys = ("calories", "protein", "carbohydrates", "fat", "fiber")
+    nutrition_units = ("kcal", "g", "g", "g", "g")
+    return {
+        "name": recipe.get("n"),
+        "description": recipe.get("d"),
+        "available_ingredients": recipe.get("a"),
+        "additional_ingredients": recipe.get("x"),
+        "preparation_time": recipe.get("t"),
+        "difficulty": difficulty,
+        "ingredients": [
+            {"name": item.get("n"), "quantity": item.get("q")}
+            for item in recipe.get("i", [])
+            if isinstance(item, dict)
+        ] if isinstance(recipe.get("i"), list) else [],
+        "steps": recipe.get("s"),
+        "nutrition": {
+            key: f"{value} {unit}"
+            for key, value, unit in zip(nutrition_keys, nutrition, nutrition_units)
+        },
+        "healthier_swaps": [],
+    }
+
+
 @app.post("/api/generate-recipes")
 def generate_recipes():
     data = request.get_json(silent=True)
@@ -215,18 +244,15 @@ def generate_recipes():
     if mode not in ("only", "additional"): return jsonify({"message": "Please select a valid ingredient mode."}), 400
     excluded = data.get("exclude_names", [])
     excluded = [_clean_recipe_text(name, 120) for name in excluded[:5] if isinstance(name, str)] if isinstance(excluded, list) else []
-    missing_instruction = "Use only the listed ingredients plus basic essentials (salt, water, oil and common spices). If that is not enough for a complete dish, say so clearly in the description and do not invent ingredients." if mode == "only" else "You may use one or two extra ingredients only; list them in additional_ingredients."
-    prompt = f'''Create one practical recipe using the listed ingredients as the main ingredients. Use no more than 5 ingredients, give exactly 3 short steps, and use metric quantities (g, ml, tsp or tbsp) for every ingredient. {missing_instruction}
-Ingredients: {json.dumps(clean_ingredients, ensure_ascii=False)}
-Meal type: {prefs['meal_type']}; Cuisine: {prefs['cuisine']}; Maximum time: {prefs['time']}; Difficulty: {prefs['difficulty']}
-Do not repeat these recipe names: {json.dumps(excluded, ensure_ascii=False)}
-Return JSON only: {{"recipes":[{{"name":"...","description":"...","available_ingredients":["..."],"additional_ingredients":[],"preparation_time":"...","difficulty":"Easy","ingredients":[{{"name":"...","quantity":"100 g"}}],"steps":["..."],"nutrition":{{"calories":"450 kcal","protein":"20 g","carbohydrates":"55 g","fat":"14 g","fiber":"8 g"}},"healthier_swaps":[]}}]}}. Estimate numeric nutrition values for the complete recipe using the stated ingredient quantities; never return the word "Estimated" in place of a value.'''
+    missing_instruction = "Use only the listed ingredients plus salt, water, oil, and spices; do not invent other ingredients." if mode == "only" else "Use at most two extra ingredients and list them in additional_ingredients."
+    prompt = f'''Make one quick, concise recipe from {json.dumps(clean_ingredients, ensure_ascii=False)}. Preferences: {prefs['meal_type']}, {prefs['cuisine']}, {prefs['time']}, {prefs['difficulty']}. {missing_instruction}
+Do not use these recipe names: {json.dumps(excluded, ensure_ascii=False)}. Return only compact JSON in this shape: {{"recipes":[{{"n":"Tomato rice","d":"A quick, filling meal.","a":["rice","tomato"],"x":[],"t":"15 min","i":[{{"n":"rice","q":"100 g"}}],"s":["Cook the rice.","Stir in tomato.","Serve warm."],"c":[300,8,50,8,4]}}]}}. Keys: n=name, d=one-sentence description, a=available ingredients, x=additional ingredients, t=prep time, i=up to 5 ingredient objects with n=name and q=metric quantity, s=exactly 3 short non-empty steps, c=numeric estimates [calories kcal, protein g, carbohydrates g, fat g, fiber g]. Keep values brief.'''
     try:
-        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 600}}).encode("utf-8")
+        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 1024, "num_predict": 180}}).encode("utf-8")
         url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
         with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=RECIPE_OLLAMA_TIMEOUT_SECONDS) as response: result = json.loads(response.read().decode("utf-8"))
         decoded = json.loads(result.get("response", ""))
-        recipes = [_validate_recipe(recipe) for recipe in decoded.get("recipes", [])[:1]] if isinstance(decoded, dict) else []
+        recipes = [_validate_recipe(_expand_compact_recipe(recipe, prefs["difficulty"] if prefs["difficulty"] != "Any" else "Easy")) for recipe in decoded.get("recipes", [])[:1]] if isinstance(decoded, dict) else []
         recipes = [recipe for recipe in recipes if recipe]
         if not recipes: return jsonify({"message": "The recipe model returned incomplete details. Please try again; if this continues, check that your selected Ollama model is available."}), 502
         return jsonify({"recipes": recipes})

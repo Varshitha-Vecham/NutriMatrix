@@ -1,0 +1,14 @@
+Update the NutriMatrix registration and email OTP verification logic.
+
+**Requirement:**
+
+* Do not rely only on email format validation.
+* Before sending an OTP, check whether the entered email address is deliverable using a suitable email verification service or API.
+* Example: `v2134_@gmail.com` may have a valid-looking format but may not correspond to an existing mailbox. If the verification service confirms that the mailbox does not exist or is undeliverable, show: **"Invalid email address. Please enter an existing email."**
+* Do not generate or send an OTP when the email is confirmed to be invalid or undeliverable.
+* Send the OTP only when the email verification check passes.
+* If the verification service is unavailable or returns an unknown result, show a suitable retry message instead of incorrectly declaring the email invalid.
+* Keep the existing NutriMatrix design, CSS, registration flow, Gmail SMTP configuration, and OTP expiration/resend logic unchanged.
+* Perform the verification securely on the backend before sending the OTP. Never expose API keys or email service credentials in frontend code.
+* Do not claim that an email exists based solely on its syntax or the existence of its domain.
+* Inspect the current project files and integrate this change into the existing implementation without breaking registration or login.

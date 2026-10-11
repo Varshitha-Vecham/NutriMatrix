@@ -13,7 +13,7 @@ const preferences = {
   difficulty: ['Easy', 'Medium', 'Any']
 }
 const blankPreferences = { meal_type: 'Any', cuisine: 'Any', time: 'Any', difficulty: 'Any' }
-const RECIPE_GENERATION_TIMEOUT_MS = 85_000
+const RECIPE_GENERATION_TIMEOUT_MS =60_000
 const LOCAL_SAVED_RECIPES_KEY = 'nutrimatrix.saved-recipes'
 
 function nutritionValue(recipe, key) {
@@ -147,7 +147,7 @@ export default function RecipeGenerator() {
     } catch (e) {
       console.error('[RecipeGenerator] Generation failed:', e)
       const message = e?.name === 'AbortError'
-        ? 'Recipe generation took too long. Check that Ollama is running and try again with a smaller model if needed.'
+        ? 'Recipe generation exceeded 40 seconds. Please retry; using a smaller Ollama model may help.'
         : e instanceof TypeError
           ? 'Could not reach the recipe service. Make sure NutriMatrix and Ollama are running, then retry.'
           : e?.message || 'Recipe generation is temporarily unavailable. Please try again.'
