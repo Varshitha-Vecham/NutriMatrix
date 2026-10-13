@@ -82,6 +82,14 @@ CREATE TABLE IF NOT EXISTS saved_recipes (
   CONSTRAINT fk_saved_recipes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS feedback (
+  feedback_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, user_id INT UNSIGNED NOT NULL,
+  rating TINYINT UNSIGNED NOT NULL, category VARCHAR(60) NOT NULL, experience VARCHAR(30) NULL,
+  message TEXT NOT NULL, email VARCHAR(255) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_feedback_category_rating (category, rating), INDEX idx_feedback_created_at (created_at)
+);
+
 CREATE TABLE IF NOT EXISTS products (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, product_name VARCHAR(255) NOT NULL,
   category VARCHAR(100) NOT NULL, image LONGTEXT NULL, calories DECIMAL(10,2) NULL,

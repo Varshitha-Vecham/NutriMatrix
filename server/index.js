@@ -343,6 +343,17 @@ async function ensureReceiptProductsTable() {
   }
 }
 
+async function ensureFeedbackTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS feedback (
+    feedback_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL, rating TINYINT UNSIGNED NOT NULL,
+    category VARCHAR(60) NOT NULL, experience VARCHAR(30) NULL, message TEXT NOT NULL,
+    email VARCHAR(255) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_feedback_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_feedback_category_rating (category, rating), INDEX idx_feedback_created_at (created_at)
+  )`)
+}
+
 async function ensureSavedMealsTable() {
   await pool.query(`CREATE TABLE IF NOT EXISTS saved_meals (
     user_id INT UNSIGNED PRIMARY KEY,
@@ -708,6 +719,21 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
       FROM users u LEFT JOIN nutrition_profiles p ON p.user_id = u.id ORDER BY u.created_at DESC`)
     res.json({ users })
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load users.' }) }
+})
+
+const feedbackCategories = ['Product Analysis', 'Barcode Scanner', 'Digital Pantry', 'Meal Planner', 'Recipe Recommendations', 'Nutrition Information', 'Website Design', 'Other']
+const feedbackExperiences = ['Very Good', 'Good', 'Average', 'Poor']
+app.post('/api/feedback', requireAuth, async (req, res) => {
+  const rating = Number(req.body?.rating), category = String(req.body?.category || '').trim(), experience = String(req.body?.experience || '').trim(), message = String(req.body?.message || '').trim(), email = String(req.body?.email || '').trim()
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ message: 'Please choose a rating from 1 to 5 stars.' })
+  if (!feedbackCategories.includes(category)) return res.status(400).json({ message: 'Please select a feedback category.' })
+  if (experience && !feedbackExperiences.includes(experience)) return res.status(400).json({ message: 'Please select a valid experience rating.' })
+  if (!message || message.length > 5000) return res.status(400).json({ message: 'Please write a message under 5,000 characters.' })
+  if (email.length > 255 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ message: 'Please enter a valid email address or leave it blank.' })
+  try { await pool.execute('INSERT INTO feedback (user_id, rating, category, experience, message, email) VALUES (?, ?, ?, ?, ?, ?)', [req.user.id, rating, category, experience || null, message, email || null]); res.status(201).json({ message: 'Feedback submitted successfully.' }) } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to save your feedback right now.' }) }
+})
+app.get('/api/admin/feedback', requireAuth, requireAdmin, async (req, res) => {
+  try { const [feedback] = await pool.execute(`SELECT f.feedback_id AS feedbackId, f.user_id AS userId, u.name AS userName, f.rating, f.category, f.experience, f.message, f.email, f.created_at AS createdAt FROM feedback f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.created_at DESC`); res.json({ feedback }) } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load feedback.' }) }
 })
 
 app.put('/api/admin/profile', requireAuth, requireAdmin, async (req, res) => {
@@ -1333,6 +1359,7 @@ ensureProfileColumns()
   .then(() => ensureEmailVerificationColumns())
   .then(() => ensurePendingRegistrationsTable())
   .then(() => ensureReceiptProductsTable())
+  .then(() => ensureFeedbackTable())
   .then(() => ensureSavedMealsTable())
   .then(() => ensureSavedRecipesTable())
   .then(() => ensureProductTables())

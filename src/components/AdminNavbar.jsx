@@ -15,6 +15,8 @@ function AdminNavbar() {
         <button className="admin-nav-brand" onClick={() => navigate('/admin')}>🥗 Nutri<span>Matrix</span><small>ADMIN</small></button>
         <div className="admin-nav-actions">
           <span>Management console</span>
+          <button onClick={() => navigate('/admin/feedback')}>Feedback Management</button>
+          <button onClick={() => navigate('/admin')}>Users</button>
           <button onClick={handleLogout}>↪ Logout</button>
         </div>
       </div>

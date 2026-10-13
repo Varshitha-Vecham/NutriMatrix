@@ -39,6 +39,7 @@ const nav = [
   ['Product Management', '◈'],
   ['Deleted Products', '↶'],
   ['User Management', '♙'],
+  ['User Feedback', '★'],
   ['Admin Profile', '◉'],
 ]
 
@@ -65,6 +66,7 @@ export default function AdminDashboard() {
   const [admin, setAdmin] = useState({ name: 'Admin' })
   const [products, setProducts] = useState([])
   const [users, setUsers] = useState([])
+  const [feedback, setFeedback] = useState([])
   const [stats, setStats] = useState({ products: 0, users: 0, pantryItems: 0, expiryAlerts: 0 })
   const [activity, setActivity] = useState([])
   const [page, setPage] = useState('Dashboard')
@@ -83,15 +85,17 @@ export default function AdminDashboard() {
       method: 'POST',
       body: JSON.stringify({ products: analysisProducts }),
     })
-    const [p, u, d] = await Promise.all([
+    const [p, u, d, f] = await Promise.all([
       apiRequest('/api/admin/products'),
       apiRequest('/api/admin/users'),
       apiRequest('/api/admin/dashboard'),
+      apiRequest('/api/admin/feedback'),
     ])
 
     setAdmin(a.user)
     setProducts(p.products)
     setUsers(u.users)
+    setFeedback(f.feedback || [])
     setStats({ ...d.stats, products: p.products.filter((product) => product.isActive).length })
     setActivity(d.activity)
   }
@@ -328,6 +332,7 @@ export default function AdminDashboard() {
         {page === 'Deleted Products' && <DeletedProducts products={products} restore={restore} restoreAll={restoreAll} deleteAll={deleteAll} />}
         {page === 'Add Product' && <Form form={form} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
+        {page === 'User Feedback' && <UserFeedback feedback={feedback} />}
         {page === 'Admin Profile' && <Profile admin={admin} setAdmin={setAdmin} notify={setMessage} fail={setError} />}
       </main>
     </div>
@@ -586,6 +591,27 @@ function Users({ users }) {
             <td colSpan="5" className="empty">No registered users yet.</td>
           </tr>
         )}
+      </Table>
+    </section>
+  )
+}
+
+function UserFeedback({ feedback }) {
+  return (
+    <section className="panel">
+      <div className="heading"><div><h2>User feedback</h2><p>Feedback submitted by registered NutriMatrix users.</p></div></div>
+      <Table heads={['Rating', 'Category', 'Feedback', 'Experience', 'User', 'Submitted']}>
+        {feedback.map((item) => (
+          <tr key={item.feedbackId}>
+            <td aria-label={`${item.rating} out of 5 stars`}>{'★'.repeat(item.rating)}</td>
+            <td><strong>{item.category}</strong></td>
+            <td className="feedback-message">{item.message}</td>
+            <td>{item.experience || '—'}</td>
+            <td><strong>{item.userName || 'Account'}</strong><small>{item.email || 'No email provided'}</small></td>
+            <td>{new Date(item.createdAt).toLocaleString()}</td>
+          </tr>
+        ))}
+        {!feedback.length && <tr><td colSpan="6" className="empty">No user feedback has been submitted yet.</td></tr>}
       </Table>
     </section>
   )

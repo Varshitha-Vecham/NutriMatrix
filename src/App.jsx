@@ -23,6 +23,8 @@ const DigitalPantry = lazy(() => import('./pages/DigitalPantry.jsx'))
 const Notifications = lazy(() => import('./pages/Notifications.jsx'))
 const AdminLogin = lazy(() => import('./pages/AdminLogin.jsx'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'))
+const Feedback = lazy(() => import('./pages/Feedback.jsx'))
+const AdminFeedback = lazy(() => import('./pages/AdminFeedback.jsx'))
 
 function App() {
   return (
@@ -55,6 +57,8 @@ function App() {
         <Route path="/admin/users" element={<AdminDashboard />} />
         <Route path="/admin/prices" element={<AdminDashboard />} />
         <Route path="/admin/profile" element={<AdminDashboard />} />
+        <Route path="/feedback" element={<Feedback />} />
+        <Route path="/admin/feedback" element={<AdminFeedback />} />
         </Routes>
       </Suspense>
     </div>
