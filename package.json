@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "concurrently \"node server/index.js\" \"vite\" \".\\.venv\\Scripts\\python.exe flask-backend/app.py\"",
     "build": "vite build",
+    "test:email-verification": "node --test server/email-verification.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

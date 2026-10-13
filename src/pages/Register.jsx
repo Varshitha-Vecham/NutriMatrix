@@ -60,7 +60,14 @@ function Register() {
         body: JSON.stringify({ name, email, password }),
         timeout: 15000
       })
-      navigate('/verify-email', { state: { email: email.trim().toLowerCase(), codeSent: true, resendAfterSeconds: response.resendAfterSeconds } })
+      navigate('/verify-email', {
+        state: {
+          email: email.trim().toLowerCase(),
+          codeSent: true,
+          resendAfterSeconds: response.resendAfterSeconds,
+          message: 'Email verified. Please check your inbox for the OTP.'
+        }
+      })
     } catch (requestError) {
       setError(requestError.message)
     } finally { setLoading(false) }

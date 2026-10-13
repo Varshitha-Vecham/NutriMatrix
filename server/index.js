@@ -1,4 +1,5 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+import { existsSync } from 'node:fs'
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
@@ -10,6 +11,13 @@ import nodemailer from 'nodemailer'
 import crypto from 'crypto'
 import { createWorker } from 'tesseract.js'
 import { extractExpiryDateFromText, validDateString } from './expiry-detection.js'
+import { EmailVerificationError, verifyEmailDeliverability } from './email-verification.js'
+
+// Preserve the existing project-root .env behaviour and also support a
+// backend-local server/.env without allowing it to overwrite deployment env.
+dotenv.config()
+const serverEnvPath = new URL('./.env', import.meta.url)
+if (existsSync(serverEnvPath)) dotenv.config({ path: serverEnvPath, override: false })
 
 const app = express()
 const port = process.env.API_PORT || 3001
@@ -23,6 +31,7 @@ const OTP_EXPIRY_SECONDS = 120
 const OTP_RESEND_COOLDOWN_SECONDS = 120
 const OTP_MAX_ATTEMPTS = 4
 let mailTransport
+const registrationsInProgress = new Set()
 
 class EmailDeliveryError extends Error {}
 
@@ -553,15 +562,35 @@ app.post('/api/auth/register', async (req, res) => {
   if (!name || !email || !password) return res.status(400).json({ message: 'All fields are required.' })
   if (!isValidEmailAddress(email)) return res.status(400).json({ message: 'Please enter a valid email address.' })
 
+  if (registrationsInProgress.has(email)) {
+    return res.status(429).json({ message: 'Registration is already being processed. Please wait a moment.' })
+  }
+
+  registrationsInProgress.add(email)
   try {
     const [existing] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', [email])
-    if (existing[0]) return res.status(409).json({ message: 'Email already registered' })
+    if (existing[0]) return res.status(409).json({ message: 'This email is already registered. Please log in or use another email.' })
     const [pendingRows] = await pool.execute('SELECT otp_last_sent_at FROM pending_registrations WHERE email = ?', [email])
     const pending = pendingRows[0]
     const elapsed = pending?.otp_last_sent_at ? Date.now() - new Date(pending.otp_last_sent_at).getTime() : Infinity
     if (elapsed < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
       const seconds = Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsed / 1000)
       return res.status(429).json({ message: `Please wait ${seconds} seconds before requesting another verification code.`, resendAfterSeconds: seconds })
+    }
+
+    const verification = await verifyEmailDeliverability(email)
+    if (verification.outcome === 'invalid') {
+      return res.status(400).json({ message: 'Enter valid email address.' })
+    }
+    if (verification.outcome !== 'deliverable') {
+      return res.status(422).json({ message: "We couldn't verify this email address. Please try again." })
+    }
+
+    // Recheck immediately before issuing the OTP so a concurrent account
+    // creation cannot receive a new-registration code.
+    const [existingAfterVerification] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', [email])
+    if (existingAfterVerification[0]) {
+      return res.status(409).json({ message: 'This email is already registered. Please log in or use another email.' })
     }
     const otpHash = await issueVerificationOtp(email)
     await pool.execute(`INSERT INTO pending_registrations (email, name, password_hash, otp_code, otp_expires_at, otp_attempts, otp_last_sent_at)
@@ -571,9 +600,12 @@ app.post('/api/auth/register', async (req, res) => {
     [email, name, await bcrypt.hash(password, 12), otpHash, OTP_EXPIRY_SECONDS, OTP_EXPIRY_SECONDS])
     res.status(201).json({ message: 'Verification code sent successfully.', resendAfterSeconds: OTP_RESEND_COOLDOWN_SECONDS })
   } catch (error) {
+    if (error instanceof EmailVerificationError) return res.status(503).json({ message: error.message })
     if (error instanceof EmailDeliveryError) return res.status(503).json({ message: error.message })
     console.error(error)
     res.status(500).json({ message: 'Unable to create your pending account. Please try again.' })
+  } finally {
+    registrationsInProgress.delete(email)
   }
 })
 

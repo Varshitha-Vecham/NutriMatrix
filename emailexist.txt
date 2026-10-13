@@ -1,14 +1,286 @@
-Update the NutriMatrix registration and email OTP verification logic.
+# Feature: Email Existence Verification Before OTP Registration
 
-**Requirement:**
+## Project Context
 
-* Do not rely only on email format validation.
-* Before sending an OTP, check whether the entered email address is deliverable using a suitable email verification service or API.
-* Example: `v2134_@gmail.com` may have a valid-looking format but may not correspond to an existing mailbox. If the verification service confirms that the mailbox does not exist or is undeliverable, show: **"Invalid email address. Please enter an existing email."**
-* Do not generate or send an OTP when the email is confirmed to be invalid or undeliverable.
-* Send the OTP only when the email verification check passes.
-* If the verification service is unavailable or returns an unknown result, show a suitable retry message instead of incorrectly declaring the email invalid.
-* Keep the existing NutriMatrix design, CSS, registration flow, Gmail SMTP configuration, and OTP expiration/resend logic unchanged.
-* Perform the verification securely on the backend before sending the OTP. Never expose API keys or email service credentials in frontend code.
-* Do not claim that an email exists based solely on its syntax or the existence of its domain.
-* Inspect the current project files and integrate this change into the existing implementation without breaking registration or login.
+I am developing NutriMatrix, an AI-powered nutrition and smart grocery platform.
+
+My project uses:
+- Frontend: React, HTML5, CSS3, JavaScript
+- Backend: Node.js and Express
+- Database: MySQL
+- Email service: Gmail SMTP using Nodemailer
+- Authentication: Email OTP verification
+- Environment configuration: `.env`
+
+Inspect the existing project files before making any changes. Identify the current registration endpoint, OTP generation and verification logic, email-sending function, and frontend registration component.
+
+IMPORTANT: Preserve all existing functionality, UI design, CSS, login functionality, password validation, MySQL configuration, and OTP expiry/resend functionality.
+
+## 1. Main Requirement
+
+I want to verify whether an entered email address is deliverable BEFORE generating or sending an OTP.
+
+Currently, the registration form may accept an email address that has a valid format but does not correspond to an existing mailbox.
+
+For example:
+`v2134_@gmail.com`
+
+Even if the address passes format validation, the system should not automatically assume that the mailbox exists.
+
+I want an email verification API, such as ZeroBounce, to check the address before the existing OTP process begins.
+
+Do not rely only on regular expressions or email format validation.
+
+## 2. Required Registration Flow
+
+Implement the following sequence:
+
+Step 1: The user opens the NutriMatrix registration page.
+
+Step 2: The user enters their name, email address, and other required registration details.
+
+Step 3: When the user clicks the existing registration button, the frontend sends the required information to the backend.
+
+Step 4: Before generating an OTP or sending an email, the backend checks whether the email is already registered in the MySQL database.
+
+If the email is already registered, display an appropriate message and do not send an OTP for a new registration.
+
+Step 5: If the email is not already registered, the backend calls the configured email verification API.
+
+Step 6: Interpret the API result according to the provider's official documentation.
+
+If the API confirms that the email is invalid or the mailbox does not exist, display:
+
+"Invalid email address. Please enter an existing email."
+
+Do not generate an OTP, send an OTP email, or create a registered user account.
+
+Step 7: If the API returns a valid/deliverable result, continue with the existing OTP registration process.
+
+Step 8: Send the OTP using the existing Gmail SMTP configuration.
+
+Step 9: Keep the current OTP verification process and complete account registration only after successful OTP verification.
+
+IMPORTANT: A verification API's "valid" result does not guarantee that a mailbox exists. Use the provider's documented result categories accurately.
+
+## 3. Email Verification API Integration
+
+Use ZeroBounce Email Validation API as the initial integration option.
+
+Official documentation:
+https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-validate-emails
+
+Before implementing the integration:
+
+1. Check the official API documentation for the correct endpoint, authentication method, request parameters, and response format.
+2. Use the currently supported API version.
+3. Identify the API result fields that distinguish valid, invalid, catch-all, unknown, and other applicable statuses.
+4. Do not invent API response fields or assume that every provider returns the same status values.
+5. If ZeroBounce is unavailable or its free allowance is exhausted, handle the error gracefully.
+
+Keep the implementation compatible with the existing Node.js/Express backend.
+
+Use Node.js's built-in fetch if supported by the current Node.js version. Do not install unnecessary packages.
+
+If an SDK is genuinely required, explain why before adding it.
+
+## 4. Environment Variables and API Key Security
+
+Store the API key in the backend `.env` file:
+
+ZEROBOUNCE_API_KEY=your_actual_api_key
+
+Use the appropriate environment variable name consistently throughout the code.
+
+Requirements:
+- Never hardcode the API key in source code.
+- Never expose the API key through React or Vite environment variables.
+- Never return the API key in an API response.
+- Do not commit `.env` to Git.
+- Ensure the backend loads environment variables using the project's existing configuration.
+- If the API key is missing, return a clear server-side configuration error without sending an OTP.
+- Never silently skip email verification when the API fails.
+
+Do not print the full API key in terminal logs.
+
+## 5. API Result Handling
+
+Handle verification results carefully.
+
+A. Confirmed invalid email:
+- Reject the registration attempt.
+- Do not send an OTP.
+- Display: "Invalid email address. Please enter an existing email."
+
+B. Valid/deliverable email:
+- Continue to the existing OTP process.
+
+C. Unknown or inconclusive result:
+- Do not automatically classify the email as nonexistent.
+- Do not send an OTP if the application's configured policy requires successful verification before OTP delivery.
+- Display: "We couldn't verify this email address. Please try again."
+
+D. Catch-all or risky result:
+- Follow the provider's documented meaning.
+- Do not claim the mailbox definitely exists or definitely does not exist.
+- Apply an explicit policy rather than treating every non-invalid result as valid.
+
+E. API timeout, network error, rate limit, or service failure:
+- Do not generate or send an OTP.
+- Display a suitable retry message.
+- Log a safe diagnostic message on the backend.
+- Never expose sensitive API response details to the user.
+
+F. Missing API key:
+- Do not bypass verification and continue registration.
+- Return an appropriate server error and explain the missing configuration in server logs.
+
+## 6. Prevent Duplicate API Calls
+
+Avoid calling the email verification service repeatedly for the same registration submission.
+
+Requirements:
+- Disable the registration button while the verification request is processing.
+- Prevent duplicate requests caused by repeated clicks.
+- Add reasonable request timeouts.
+- Handle concurrent registration requests safely.
+- Recheck whether the email is already registered before creating the account.
+- Do not introduce permanent caching that could incorrectly reuse stale verification results.
+
+Respect the API provider's usage limits and avoid unnecessary requests.
+
+## 7. Preserve the Existing OTP System
+
+Do not replace the existing OTP implementation.
+
+Keep:
+- Current OTP generation logic.
+- Current Gmail SMTP configuration.
+- Current email subject and message design.
+- Current OTP verification endpoint or workflow.
+- Existing OTP expiry duration.
+- Existing resend-code timer.
+- Existing registration form styling.
+- Existing login and password-reset functionality.
+
+Email existence verification must happen BEFORE OTP generation and email delivery.
+
+Do not change the OTP expiry or resend duration unless the existing code already requires a correction directly related to this feature.
+
+## 8. Frontend Requirements
+
+Modify the existing React registration component only where necessary.
+
+Requirements:
+- Keep the current NutriMatrix design and CSS.
+- Do not redesign the registration page.
+- Display verification errors near the email field or through the existing notification mechanism.
+- Show a loading indicator or processing message while verification is in progress.
+- Prevent multiple simultaneous submissions.
+- Display the existing OTP interface only after the backend successfully accepts the email verification result and initiates the OTP process.
+- Handle backend validation errors, timeouts, and server errors gracefully.
+- Do not perform the email verification API call directly from React.
+
+Example messages:
+
+Confirmed invalid email:
+"Invalid email address. Please enter an existing email."
+
+Inconclusive verification:
+"We couldn't verify this email address. Please try again."
+
+Verification service unavailable:
+"Email verification is temporarily unavailable. Please try again later."
+
+Email already registered:
+"This email is already registered. Please log in or use another email."
+
+Successful verification:
+"Email verified. Please check your inbox for the OTP."
+
+Do not display success messages before the backend confirms the corresponding operation succeeded.
+
+## 9. MySQL and Registration Safety
+
+Inspect the existing MySQL registration implementation.
+
+Requirements:
+- Do not create a permanent user account before OTP verification if the current application uses OTP-first registration.
+- Preserve the existing registration and pending-verification workflow.
+- If the application temporarily stores pending registration information, use the existing mechanism rather than creating a second incompatible mechanism.
+- Avoid storing plaintext passwords in pending registration records or logs.
+- Prevent duplicate accounts and concurrent registration races.
+- Use parameterized SQL queries.
+- Do not delete existing users or modify unrelated database tables.
+
+Do not create new database tables unless the current implementation genuinely requires them. If a schema change is necessary, explain it first.
+
+## 10. Testing Requirements
+
+Test the feature with the following scenarios.
+
+Test 1: Valid format, confirmed invalid address.
+Expected: Registration is rejected before OTP generation or delivery.
+
+Test 2: Valid and deliverable address.
+Expected: The existing OTP email is sent, and registration proceeds normally.
+
+Test 3: Email already registered in MySQL.
+Expected: Appropriate message; no new-registration OTP is sent.
+
+Test 4: Verification API returns an unknown result.
+Expected: The email is not falsely labelled nonexistent, and OTP delivery does not proceed under the strict verification policy.
+
+Test 5: Verification API times out.
+Expected: Retry message; no OTP is sent.
+
+Test 6: API rate limit is reached.
+Expected: Appropriate retry message; no OTP is sent.
+
+Test 7: API key is missing.
+Expected: Safe server error; no OTP is sent.
+
+Test 8: User clicks Register repeatedly.
+Expected: Duplicate verification requests and OTP emails are prevented as far as possible.
+
+Test 9: Existing login flow.
+Expected: Login continues working without unrelated changes.
+
+Test 10: Existing OTP expiry and resend functionality.
+Expected: Both continue working exactly as before.
+
+Use mocked API responses for automated tests wherever practical. Do not repeatedly consume real verification credits during testing.
+
+## 11. Implementation Instructions
+
+Before editing files:
+
+1. Inspect the project structure.
+2. Identify the actual registration component.
+3. Identify the backend registration route.
+4. Identify the current OTP generation and email-sending functions.
+5. Identify the MySQL account-creation flow.
+6. Identify the existing `.env` configuration.
+7. Explain which files need modification.
+
+Then implement the feature using the smallest necessary changes.
+
+Do not rewrite the entire authentication system.
+
+After implementation, provide:
+
+1. A list of files changed.
+2. Any installation commands required.
+3. The required `.env` variable names.
+4. Where to obtain the API key.
+5. The registration flow after modification.
+6. The API statuses handled.
+7. Testing instructions.
+8. Any known limitations of mailbox-existence verification.
+
+Do not claim the feature works until the relevant code paths and tests have been checked.
+
+FINAL REQUIREMENT:
+The system must not send an OTP when the verification API confirms that an email is invalid, 
+returns an inconclusive result under the strict verification policy, or fails. It must distinguish 
+confirmed invalidity from an unknown verification result and preserve all unrelated NutriMatrix functionality.

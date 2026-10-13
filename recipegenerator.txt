@@ -1,0 +1,59 @@
+**Task: Optimize Recipe Generator to Generate Recipes Within 40–50 Seconds**
+
+In my NutriMatrix project, when I click the **Recipe Generator** button, it takes too long to generate a recipe. I want the recipe to be generated and displayed on the website within **40–50 seconds maximum**.
+
+Please analyze my existing code and optimize the recipe-generation process without breaking any existing functionality or changing the UI design.
+
+**1. Analyze the Existing Implementation**
+- Inspect the Recipe Generator frontend component and its API request.
+- Inspect the backend recipe-generation endpoint in `flask-backend/app.py` and any related files.
+- Check how the backend communicates with Ollama or the currently configured AI model.
+- Identify exactly where the delay occurs.
+- Check whether the frontend is waiting for the complete response even when the backend has already generated the recipe.
+
+**2. Optimize AI Recipe Generation**
+- Reduce unnecessary processing and redundant API calls.
+- Optimize the existing prompt to generate concise, complete, and useful recipes.
+- Configure an appropriate generation length so the model does not generate unnecessarily long responses.
+- If Ollama is being used, inspect the current model and generation settings. Optimize parameters such as `num_predict` and `num_ctx` where appropriate.
+- Avoid repeatedly loading the model or making duplicate requests.
+- Reuse the existing model and configuration instead of introducing another AI service.
+- Do not replace the existing AI model without checking the current implementation and compatibility.
+
+**3. Fix Backend Response Delays**
+- Check the timeout settings in the frontend and backend.
+- Make sure the frontend calls the correct backend API endpoint.
+- Handle errors and timeouts properly.
+- Avoid unnecessary database queries or other operations that delay the response.
+- Ensure the backend returns the generated recipe as soon as it is ready.
+
+**4. Improve Frontend Behavior**
+- When the user clicks the Recipe Generator button, immediately display a loading indicator with a message such as "Generating your healthy recipe..."
+- Prevent duplicate requests while a recipe is being generated.
+- Display the recipe immediately when the backend response arrives.
+- Show a helpful error message if generation fails or exceeds the time limit.
+- Do not freeze the page while waiting for the response.
+
+**5. Performance Target**
+- Target recipe generation within 40–50 seconds under normal operating conditions.
+- Measure the time spent in the frontend, backend, and AI model separately.
+- Optimize the actual bottleneck instead of merely increasing timeout values.
+- If the configured AI model cannot reliably meet this target, explain the limitation and suggest optimizations compatible with my current setup.
+
+**6. Preserve Existing Functionality**
+- Do not remove any existing Recipe Generator features.
+- Do not modify unrelated pages, CSS, authentication, or database functionality.
+- Do not introduce paid APIs or additional paid services.
+- Keep the existing project architecture and configured AI model unless a change is necessary and approved.
+- Reuse the existing dependencies wherever possible.
+
+**7. Final Verification**
+After implementing the changes:
+- Explain what caused the delay.
+- List the files modified.
+- Explain the changes made in each file.
+- Verify that the recipe appears correctly on the website.
+- Measure the generation time and report the actual result.
+- Ensure the recipe-generation process works without timeout errors.
+
+**Important:** First inspect my actual code, then implement the necessary optimizations. Do not make assumptions about the cause of the delay, and do not claim that the 40–50-second target has been achieved unless it has been tested.

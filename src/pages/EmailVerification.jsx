@@ -12,6 +12,7 @@ function EmailVerification() {
   const [codeSent, setCodeSent] = useState(Boolean(location.state?.codeSent))
   const [countdown, setCountdown] = useState(location.state?.resendAfterSeconds || 0)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(location.state?.message || '')
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
 
@@ -28,6 +29,7 @@ function EmailVerification() {
       return
     }
     setError('')
+    setSuccess('')
     setSending(true)
     try {
       const response = await apiRequest('/api/auth/resend-verification', {
@@ -37,6 +39,7 @@ function EmailVerification() {
       setEmail(normalizedEmail)
       setCodeSent(true)
       setCountdown(response.resendAfterSeconds || 90)
+      setSuccess('A new verification code has been sent. Please check your inbox.')
     } catch (requestError) {
       setError(requestError.message)
       if (requestError.resendAfterSeconds) {
@@ -97,6 +100,7 @@ function EmailVerification() {
           </div>
 
           {error && <div className="msg msg-error" role="alert">⚠️ {error}</div>}
+          {success && <div className="msg msg-success" role="status">✅ {success}</div>}
 
           <form onSubmit={verifyCode} className="register-form">
             <div className="input-group">
