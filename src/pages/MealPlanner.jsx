@@ -427,6 +427,8 @@ const recipeImages = {
   'Roasted Makhana Chaat': '/images/recipes/roastedmakhanafeat.jpg',
   'Paneer Butter Masala': '/images/recipes/paneer-butter-masala.jpg',
   'Overnight Mango Chia Oats': '/images/recipes/overnight-mango-chia-oats.jpg',
+  'Lemon Rice with Chana Sundal': '/images/recipes/lemon_rice_chana_sundal.webp',
+  'Apple Peanut Butter Bites': '/images/recipes/apple_peanut_butter.jpg',
   'Curd Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/da14390afafac0ea185fa3670ecc7cf0',
   'Idli Sambar Plate': '/images/recipes/idli-sambar-plate.jpg',
   'Rajma Masala Rice': '/images/recipes/rajma-masala-rice.jpg',

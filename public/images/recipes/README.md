@@ -27,6 +27,8 @@ Place the real food photos in this folder using the exact filenames below. The M
 - peanut-sundal.jpg
 - paneer-butter-masala.jpg
 - south-indian-lemon-rice.jpg
+- lemon_rice_chana_sundal.webp
+- apple_peanut_butter.jpg
 - tandoori-chicken-plate.jpg
 - palak-tofu-curry.jpg
 - idli-sambar-plate.jpg
