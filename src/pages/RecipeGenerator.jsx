@@ -5,6 +5,7 @@ import Footer from '../components/Footer.jsx'
 import { apiRequest, OCR_API_URL } from '../api.js'
 import { addIngredientsToSmartCart } from './Products.jsx'
 import './RecipeGenerator.css'
+import './RecipeGeneratorSaved.css'
 
 const preferences = {
   meal_type: ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Any'],
@@ -70,6 +71,7 @@ export default function RecipeGenerator() {
   const [mode, setMode] = useState('only')
   const [recipes, setRecipes] = useState([])
   const [expanded, setExpanded] = useState({})
+  const [expandedSavedRecipe, setExpandedSavedRecipe] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [canRetry, setCanRetry] = useState(false)
@@ -190,22 +192,32 @@ export default function RecipeGenerator() {
       window.localStorage.removeItem(LOCAL_SAVED_RECIPES_KEY)
       setSaved(next)
       setMessage(successMessage)
+      return true
     } catch (requestError) {
       try {
         window.localStorage.setItem(LOCAL_SAVED_RECIPES_KEY, JSON.stringify(next))
         setSaved(next)
         setMessage(deviceMessage)
+        return true
       } catch (storageError) {
         setError(`Could not save this recipe. ${requestError.message}`)
+        return false
       }
     } finally {
       setSavingRecipe(false)
     }
   }
 
-  function saveRecipe(recipe) {
+  async function saveRecipe(recipe) {
     if (saved.some((item) => item.name === recipe.name)) return
-    updateSavedRecipes([...saved, recipe], `${recipe.name} saved to your account.`, `${recipe.name} saved on this device. Sign in to sync it to your account.`)
+    const wasSaved = await updateSavedRecipes([...saved, recipe], `${recipe.name} saved to your account.`, `${recipe.name} saved on this device. Sign in to sync it to your account.`)
+    if (wasSaved) {
+      setRecipes([])
+      setExpanded({})
+      setIngredients([])
+      setDraft('')
+      setCartItemsAdded(false)
+    }
   }
 
   function deleteRecipe(recipe) {
@@ -278,10 +290,9 @@ export default function RecipeGenerator() {
     {recipes.length > 0 && <section className="recipe-results"><div className="results-heading"><div><span className="recipe-eyebrow">MADE FOR WHAT YOU HAVE</span><h2>Recipes for you</h2><p>{recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'} created with your ingredients.</p></div><button type="button" className="another-button" disabled={loading} onClick={() => generate(recipes.map((r) => r.name))}>↻ Generate Another Recipe</button></div>
       <div className="recipe-grid">{recipes.map((recipe, index) => <article className="suggestion-card" key={`${recipe.name}-${index}`}><div className="suggestion-top"><span className="recipe-number">RECIPE {String(index + 1).padStart(2, '0')}</span><span className="difficulty-pill">{recipe.difficulty}</span></div><h3>{recipe.name}</h3><p className="suggestion-description">{recipe.description}</p><div className="suggestion-meta"><span>◷ {recipe.preparation_time}</span><span>·</span><span>{recipe.difficulty}</span></div><div className="available-list"><b>You Have</b><div>{(recipe.available_ingredients || []).map((item) => <span key={item}>✓ {item}</span>)}</div></div>{(recipe.additional_ingredients || []).length > 0 && <div className="additional-list"><b>Additional Ingredients Needed</b><div>{(recipe.additional_ingredients || []).map((item) => <span key={item}>＋ {item}</span>)}</div></div>}
         <div className="suggestion-actions"><button type="button" className="view-button" onClick={() => setExpanded({ ...expanded, [index]: !expanded[index] })}>{expanded[index] ? 'Hide Recipe' : 'View Recipe'}</button><button type="button" className="save-button" disabled={!savedLoaded || savingRecipe} onClick={() => saveRecipe(recipe)}>{saved.some((item) => item.name === recipe.name) ? '♥ Saved' : savingRecipe ? 'Saving…' : '♡ Save Recipe'}</button></div>
-        {(recipe.additional_ingredients || []).length > 0 && <button type="button" className="cart-button" onClick={() => addMissing(recipe)}>＋ Add Missing Ingredients to SmartCart</button>}
         {expanded[index] && <div className="recipe-detail"><section><h4>Ingredients</h4><ul>{(recipe.ingredients || []).map((item, i) => <li key={`${item.name}-${i}`}>{item.name} <span>{item.quantity}</span></li>)}</ul></section><section><h4>Preparation</h4><ol>{(recipe.steps || []).map((step, i) => <li key={i}><b>{i + 1}.</b> {step}</li>)}</ol></section><section className="nutrition-estimate"><h4>Approximate Nutrition per Recipe</h4><p>AI-generated estimates based on the ingredient quantities shown; actual values may vary.</p><div>{Object.entries(recipe.nutrition || {}).map(([key, value]) => <span key={key}><b>{key.replace('_', ' ')}</b>{value}</span>)}</div></section>{(recipe.healthier_swaps || []).length > 0 && <section><h4>Healthier Swaps</h4><ul>{(recipe.healthier_swaps || []).map((swap, i) => <li key={i}>{swap}</li>)}</ul></section>}</div>}
       </article>)}</div>
     </section>}
-    {savedLoaded && <section className="saved-recipes" aria-labelledby="saved-recipes-title"><div className="saved-recipes-heading"><div><span className="recipe-eyebrow">SAVED TO YOUR ACCOUNT</span><h2 id="saved-recipes-title">Saved recipes</h2><p>These recipes remain available after you log out and sign in again.</p></div><span className="saved-recipe-count">{saved.length}</span></div>{saved.length ? <div className="saved-recipe-list">{saved.map((recipe, index) => <article className="saved-recipe-item" key={`${recipe.name}-${index}`}><div><h3>{recipe.name}</h3><p>{recipe.description}</p><small>{recipe.preparation_time} · {recipe.difficulty}</small></div><button type="button" className="delete-recipe-button" disabled={savingRecipe} onClick={() => deleteRecipe(recipe)}>Delete</button></article>)}</div> : <p className="saved-recipes-empty">No saved recipes yet. Generate a recipe, then choose Save Recipe.</p>}</section>}
+    {savedLoaded && <section className="saved-recipes" aria-labelledby="saved-recipes-title"><div className="saved-recipes-heading"><div><span className="recipe-eyebrow">SAVED TO YOUR ACCOUNT</span><h2 id="saved-recipes-title">Saved recipes</h2><p>These recipes remain available after you log out and sign in again.</p></div><span className="saved-recipe-count">{saved.length}</span></div>{saved.length ? <div className="saved-recipe-list">{saved.map((recipe, index) => <article className="saved-recipe-item" key={`${recipe.name}-${index}`}><button type="button" className="saved-recipe-summary" aria-expanded={expandedSavedRecipe === recipe.name} onClick={() => setExpandedSavedRecipe(expandedSavedRecipe === recipe.name ? null : recipe.name)}><h3>{recipe.name}</h3><p>{recipe.description}</p><small>{recipe.preparation_time} · {recipe.difficulty}</small><span>{expandedSavedRecipe === recipe.name ? 'Hide details' : 'View details'}</span></button><button type="button" className="delete-recipe-button" disabled={savingRecipe} onClick={() => deleteRecipe(recipe)}>Delete</button>{expandedSavedRecipe === recipe.name && <div className="recipe-detail saved-recipe-detail"><section><h4>Ingredients</h4><ul>{(recipe.ingredients || []).map((item, i) => <li key={`${item.name}-${i}`}>{item.name} <span>{item.quantity}</span></li>)}</ul></section><section><h4>Preparation</h4><ol>{(recipe.steps || []).map((step, i) => <li key={i}><b>{i + 1}.</b> {step}</li>)}</ol></section><section className="nutrition-estimate"><h4>Approximate Nutrition per Recipe</h4><p>AI-generated estimates based on the ingredient quantities shown; actual values may vary.</p><div>{Object.entries(recipe.nutrition || {}).map(([key, value]) => <span key={key}><b>{key.replace('_', ' ')}</b>{value}</span>)}</div></section>{(recipe.healthier_swaps || []).length > 0 && <section><h4>Healthier Swaps</h4><ul>{recipe.healthier_swaps.map((swap, i) => <li key={i}>{swap}</li>)}</ul></section>}</div>}</article>)}</div> : <p className="saved-recipes-empty">No saved recipes yet. Generate a recipe, then choose Save Recipe.</p>}</section>}
   </main><Footer /></div>
 }
