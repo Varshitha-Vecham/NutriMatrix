@@ -333,6 +333,7 @@ async function ensureReceiptProductsTable() {
   const requiredColumns = {
     category: 'VARCHAR(100) NULL',
     quantity: 'VARCHAR(50) NULL',
+    price: 'DECIMAL(10, 2) NULL',
     unit: 'VARCHAR(30) NULL',
     manufacturing_date: 'DATE NULL',
     image: 'VARCHAR(500) NULL',
@@ -1235,7 +1236,7 @@ app.post('/api/scanner/receipt', (req, res) => {
 app.get('/api/expiry-products', requireAuth, async (req, res) => {
   try {
     const [products] = await pool.execute(`SELECT id, receipt_file_name AS receiptFileName, product_name AS name,
-      brand, category, barcode, quantity, unit, image, source,
+      brand, category, barcode, quantity, unit, price AS amount, image, source,
       DATE_FORMAT(manufacturing_date, '%Y-%m-%d') AS manufacturingDate,
       DATE_FORMAT(expiry_date, '%Y-%m-%d') AS expiryDate,
       DATE_FORMAT(purchased_at, '%Y-%m-%d') AS purchasedAt
@@ -1247,16 +1248,18 @@ app.get('/api/expiry-products', requireAuth, async (req, res) => {
 app.post('/api/expiry-products', requireAuth, async (req, res) => {
   const { receiptFileName, products = [] } = req.body || {}
   if (!receiptFileName || !Array.isArray(products) || !products.length) return res.status(400).json({ message: 'Receipt products are required.' })
+  if (products.some((product) => !String(product?.name || '').trim() || String(product.name).length > 150)) return res.status(400).json({ message: 'Each receipt product needs a valid name.' })
   if (products.some((product) => product.expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(product.expiryDate))) return res.status(400).json({ message: 'Please provide valid expiry dates.' })
+  if (products.some((product) => product.amount != null && product.amount !== '' && (!Number.isFinite(Number(product.amount)) || Number(product.amount) < 0))) return res.status(400).json({ message: 'Please provide valid prices.' })
   try {
     const purchasedAt = new Date().toISOString().slice(0, 10)
     for (const product of products) {
       if (!product.name) continue
       await pool.execute(`INSERT INTO receipt_products
-        (user_id, receipt_file_name, product_name, brand, category, barcode, quantity, unit, manufacturing_date, image, source, expiry_date, purchased_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        (user_id, receipt_file_name, product_name, brand, category, barcode, quantity, unit, price, manufacturing_date, image, source, expiry_date, purchased_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
         req.user.id, receiptFileName, product.name, product.brand || null, product.category || null, product.barcode || null,
-        product.quantity || null, product.unit || null, product.manufacturingDate || null, product.image || null,
+        product.quantity || null, product.unit || null, Number.isFinite(Number(product.amount ?? product.price)) ? Number(product.amount ?? product.price) : null, product.manufacturingDate || null, product.image || null,
         product.source || req.body.source || (receiptFileName === 'Voice input' ? 'voice' : 'receipt'), product.expiryDate || null, purchasedAt
       ])
     }

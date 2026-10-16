@@ -34,6 +34,13 @@
 .expiry-confirmed { color: #267646 !important; font-weight: 800; }
 .expiry-unavailable { color: #9a6b1d !important; font-weight: 700; }
 .receipt-save { margin-top: 22px; }
+.receipt-review-row { grid-template-columns: minmax(180px, 1.6fr) minmax(110px, .7fr) minmax(100px, .6fr) minmax(150px, .8fr) auto; }
+.receipt-review-row label { min-width: 0; }
+.receipt-review-row .receipt-remove { margin-top: 22px; white-space: nowrap; }
+.receipt-review-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 22px; }
+.receipt-review-actions .receipt-save { margin-top: 0; }
+.receipt-add-product { padding: 12px 16px; border: 1px solid #c8ddcc; border-radius: 10px; background: #fff; color: #267646; font: inherit; font-weight: 800; cursor: pointer; }
+.receipt-add-product:hover { background: #e9f7ed; }
 .receipt-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 .receipt-history-list { display: grid; gap: 18px; margin-top: 20px; }
 .receipt-history { padding: 20px; border: 1px solid #dce9dd; border-radius: 12px; background: rgba(255,255,255,.82); }
@@ -63,5 +70,6 @@
 @media (max-width: 680px) {
 	.receipt-history-heading, .receipt-history-product { display: grid; gap: 10px; }
 	.receipt-product { grid-template-columns: 1fr; gap: 10px; }
+	.receipt-review-row .receipt-remove { margin-top: 0; width: fit-content; }
 	.receipt-product label { max-width: 220px; }
 }

@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS receipt_products (
   category VARCHAR(100) NULL,
   barcode VARCHAR(50) NULL,
   quantity VARCHAR(50) NULL,
+  price DECIMAL(10, 2) NULL,
   unit VARCHAR(30) NULL,
   manufacturing_date DATE NULL,
   image VARCHAR(500) NULL,

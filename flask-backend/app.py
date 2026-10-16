@@ -167,6 +167,13 @@ RECIPE_OPTIONS = {
     "difficulty": {"Easy", "Medium", "Any"},
 }
 RECIPE_OLLAMA_TIMEOUT_SECONDS = 40
+FOOD_INGREDIENT_TERMS = set("rice wheat flour atta oats barley quinoa millet ragi bajra jowar maida suji pasta noodle vermicelli "
+"bread roti chapati bhakri bottlegourd bittergourd snakegourd paratha puri kulcha naan idli dosa appam upma khichdi pulao biryani tomato onion potato milk egg paneer cheese butter ghee yogurt curd cream tofu chicken fish mutton turkey pork beef dal lentil chickpea chana rajma bean pea soybean sprouts moong masoor urad lobia vatana chawli horsegram kulith moth apple banana mango orange grape guava papaya pineapple pear kiwi watermelon pomegranate lemon lime coconut avocado berry strawberry jamun litchi chikoo sitaphal amla carrot cabbage cauliflower broccoli spinach cucumber capsicum pumpkin beetroot corn mushroom garlic ginger coriander mint fenugreek methi okra bhindi brinjal eggplant bottle-gourd ridge-gourd bitter-gourd drumstick zucchini radish turnip colocasia arbi jackfruit plantain oil olive mustard sunflower sesame salt sugar jaggery honey spice turmeric cumin chilli pepper cinnamon cardamom clove masala hing asafoetida ajwain kasuri saffron tamarind vinegar ketchup sauce chutney pickle papad tea coffee peanut almond cashew walnut pistachio raisin date seed chia flax makhana poha cornflakes cereal biscuit chocolate namkeen sev chips wafer snack mixture juice buttermilk coconut water beverage drink squash syrup jam jelly mayonnaise oats muesli granola noodles maggi kurkure lays biscuits cookies rusk cake dal chawal sabzi curry korma kofta sambar rasam thali bhel vada pav pakora samosa chole halwa kheer payasam lassi shrikhand icecream frozen".split())
+NON_FOOD_TERMS = set("soap shampoo detergent dishwashing dishwash liquid plastic bag bags utensil utensils cleaner cleaning product products bleach disinfectant sponge scrubber tissue toilet sanitary toothpaste toothbrush lotion perfume candle battery paper foil mop broom clothes cloth shirt tshirt trouser pant saree dress footwear shoe slipper electronics charger cable bulb toy stationery notebook".split())
+
+def is_food_ingredient(value):
+    terms = re.findall(r"[a-z]+", str(value).lower())
+    return bool(terms) and not any(term in NON_FOOD_TERMS for term in terms) and any(term in FOOD_INGREDIENT_TERMS for term in terms)
 
 
 def _clean_recipe_text(value, limit=500):
@@ -234,6 +241,7 @@ def generate_recipes():
     for item in ingredients:
         clean = _clean_recipe_text(item, 80)
         if not clean: return jsonify({"message": "Each ingredient must be a valid name under 80 characters."}), 400
+        if not is_food_ingredient(clean): return jsonify({"message": f"Remove non-food item before generating a recipe: {clean}."}), 400
         if clean.casefold() not in {existing.casefold() for existing in clean_ingredients}: clean_ingredients.append(clean)
     prefs = {}
     for key, allowed in RECIPE_OPTIONS.items():
@@ -441,6 +449,7 @@ def scan_receipt():
     try:
         image = Image.open(receipt.stream)
         _, text, products, barcodes = read_receipt(image)
+        products = [product for product in products if is_food_ingredient(product.get("name"))]
         if not products:
             return jsonify({"message": "Receipt text was detected, but no product rows were found. Please upload a clearer image."}), 422
         return jsonify({
@@ -453,6 +462,37 @@ def scan_receipt():
     except Exception as error:
         app.logger.exception("Receipt OCR failed")
         return jsonify({"message": f"Unable to read receipt: {error}"}), 500
+
+
+@app.post("/api/scanner/read-barcode")
+def read_barcode_image():
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"message": "Please upload a barcode image."}), 400
+    if not uploaded.mimetype or not uploaded.mimetype.startswith("image/"):
+        return jsonify({"message": "Only barcode images are supported."}), 400
+    try:
+        image = ImageOps.exif_transpose(Image.open(uploaded.stream)).convert("RGB")
+        image_array = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        barcode = ""
+        if hasattr(cv2, "barcode_BarcodeDetector"):
+            detector = cv2.barcode_BarcodeDetector()
+            decoded = detector.detectAndDecode(image_array)
+            if isinstance(decoded, tuple):
+                barcode = str(decoded[0] or "")
+        if not re.fullmatch(r"\d{8,14}", barcode):
+            # A final OCR fallback is helpful for crisp EAN labels when the
+            # installed OpenCV build does not include the barcode module.
+            enlarged = image.resize((image.width * 2, image.height * 2))
+            text = pytesseract.image_to_string(enlarged, config="--psm 11 -c tessedit_char_whitelist=0123456789")
+            matches = re.findall(r"(?<!\d)\d{8,14}(?!\d)", text)
+            barcode = matches[0] if matches else ""
+        if not re.fullmatch(r"\d{8,14}", barcode):
+            return jsonify({"message": "No EAN, UPC, or supported barcode could be read from this image."}), 422
+        return jsonify({"barcode": barcode})
+    except Exception as error:
+        app.logger.exception("Barcode image decoding failed")
+        return jsonify({"message": f"Unable to read barcode image: {error}"}), 500
 
 
 @app.post("/api/scanner/barcode-details")

@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { apiRequest, OCR_API_URL } from '../api.js'
 import { addIngredientsToSmartCart } from './Products.jsx'
+import { splitFoodIngredients } from '../utils/foodIngredients.js'
 import './RecipeGenerator.css'
 import './RecipeGeneratorSaved.css'
 
@@ -92,7 +93,9 @@ export default function RecipeGenerator() {
 
   function addDraft(value = draft) {
     const additions = parseDraftIngredients(value)
-    setIngredients((current) => [...new Map([...current, ...additions].map((item) => [item.toLocaleLowerCase(), item])).values()].slice(0, 30))
+    const { valid, invalid } = splitFoodIngredients(additions)
+    if (invalid.length) setError(`Remove non-food items before generating a recipe: ${invalid.join(', ')}.`)
+    if (valid.length) setIngredients((current) => [...new Map([...current, ...valid].map((item) => [item.toLocaleLowerCase(), item])).values()].slice(0, 30))
     setDraft('')
   }
 
@@ -102,18 +105,24 @@ export default function RecipeGenerator() {
     const pendingIngredients = parseDraftIngredients(draft)
     const allIngredients = [...new Map([...ingredients, ...pendingIngredients].map((item) => [item.toLocaleLowerCase(), item])).values()].slice(0, 30)
 
-    if (!allIngredients.length) {
-      setError('Please enter at least one ingredient to generate a recipe.')
+    const { valid, invalid } = splitFoodIngredients(allIngredients)
+    if (invalid.length) {
+      setError(`Remove non-food items before generating a recipe: ${invalid.join(', ')}.`)
+      setCanRetry(false)
+      return
+    }
+    if (!valid.length) {
+      setError('Please enter valid food ingredients to generate a recipe.')
       setCanRetry(false)
       return
     }
 
     if (pendingIngredients.length) {
-      setIngredients(allIngredients)
+      setIngredients(valid)
       setDraft('')
     }
 
-    const requestBody = { ingredients: allIngredients, ...choices, mode, exclude_names: excludeNames }
+    const requestBody = { ingredients: valid, ...choices, mode, exclude_names: excludeNames }
     const apiUrl = `${OCR_API_URL}/api/generate-recipes`
 
     generationInProgress.current = true
