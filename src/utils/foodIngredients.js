@@ -4,7 +4,7 @@ const FOOD_TERMS = new Set(`rice wheat flour atta oats barley quinoa millet ragi
 tomato onion potato milk egg paneer cheese butter ghee yogurt curd cream tofu chicken fish mutton turkey pork beef
 dal lentil chickpea chana rajma bean pea soybean sprouts moong masoor urad lobia vatana chawli horsegram kulith moth
 apple banana mango orange grape guava papaya pineapple pear kiwi watermelon pomegranate lemon lime coconut avocado berry strawberry jamun litchi chikoo sitaphal amla
-carrot cabbage cauliflower broccoli spinach cucumber capsicum pumpkin beetroot corn mushroom garlic ginger coriander mint fenugreek methi okra bhindi brinjal eggplant bottle gourd bottlegourdsnake gourd snakegourd ridge gourd ridgegourd bitter gourd bittergourd drumstick zucchini radish turnip colocasia arbi jackfruit plantain
+carrot cabbage cauliflower broccoli spinach cucumber capsicum pumpkin beetroot corn mushroom garlic ginger coriander mint fenugreek methi okra bhindi brinjal eggplant bottle gourd bottlegourd snake gourd snakegourd ridge gourd ridgegourd bitter gourd bittergourd drumstick zucchini radish turnip colocasia arbi jackfruit plantain
 oil olive mustard sunflower sesame salt sugar jaggery honey spice turmeric cumin chilli pepper cinnamon cardamom clove masala hing asafoetida ajwain kasuri saffron tamarind vinegar ketchup sauce chutney pickle papad
 tea coffee peanut almond cashew walnut pistachio raisin date seed chia flax makhana poha cornflakes cereal biscuit chocolate namkeen sev chips wafer snack mixture
 juice buttermilk coconut water beverage drink squash syrup jam jelly mayonnaise honey oats muesli granola noodles maggi kurkure lays biscuits cookies rusk cake breadspread

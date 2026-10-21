@@ -186,8 +186,11 @@ def _validate_recipe(recipe):
     list_fields = ("available_ingredients", "additional_ingredients", "ingredients", "steps", "healthier_swaps")
     if any(not _clean_recipe_text(recipe.get(field), 300) for field in scalar_fields) or any(not isinstance(recipe.get(field), list) for field in list_fields): return None
     ingredients = [{"name": _clean_recipe_text(item.get("name"), 100), "quantity": _clean_recipe_text(item.get("quantity"), 80)} for item in recipe["ingredients"][:5] if isinstance(item, dict) and _clean_recipe_text(item.get("name"), 100) and _clean_recipe_text(item.get("quantity"), 80)]
-    steps = [_clean_recipe_text(step, 500) for step in recipe["steps"][:3] if _clean_recipe_text(step, 500)]
-    if not ingredients or not steps: return None
+    # Keep a complete, useful method instead of truncating the model output to
+    # three summary steps. Recipes must still include a properly sequenced
+    # preparation method, while the upper bound prevents unbounded responses.
+    steps = [_clean_recipe_text(step, 500) for step in recipe["steps"][:10] if _clean_recipe_text(step, 500)]
+    if not ingredients or len(steps) < 4: return None
     nutrition = recipe.get("nutrition")
     if not isinstance(nutrition, dict) or not nutrition:
         nutrition = recipe.get("estimated_nutrition")
@@ -200,6 +203,39 @@ def _validate_recipe(recipe):
             return None
         nutrition_values[key] = value
     return {"name": _clean_recipe_text(recipe["name"], 120), "description": _clean_recipe_text(recipe["description"], 500), "available_ingredients": [_clean_recipe_text(x, 100) for x in recipe["available_ingredients"][:30] if isinstance(x, str)], "additional_ingredients": [_clean_recipe_text(x, 100) for x in recipe["additional_ingredients"][:2] if isinstance(x, str)], "preparation_time": _clean_recipe_text(recipe["preparation_time"], 80), "difficulty": _clean_recipe_text(recipe["difficulty"], 30), "ingredients": ingredients, "steps": steps, "nutrition": nutrition_values, "healthier_swaps": [_clean_recipe_text(x, 180) for x in recipe["healthier_swaps"][:8] if isinstance(x, str)]}
+
+
+def _ingredient_key(value):
+    return re.sub(r"[^a-z0-9]+", " ", str(value).casefold()).strip()
+
+
+def _is_user_ingredient(value, user_keys):
+    candidate = _ingredient_key(value)
+    return any(candidate == user_key or candidate.startswith(user_key + " ") or user_key.startswith(candidate + " ") for user_key in user_keys)
+
+
+def _apply_ingredient_mode(recipe, user_ingredients, mode):
+    """Make the displayed ingredient lists obey the selected mode exactly."""
+    user_keys = {_ingredient_key(item) for item in user_ingredients}
+    recipe["available_ingredients"] = user_ingredients
+
+    if mode == "only":
+        recipe["additional_ingredients"] = []
+        recipe["ingredients"] = [
+            item for item in recipe["ingredients"]
+            if _is_user_ingredient(item["name"], user_keys)
+        ]
+        return recipe if recipe["ingredients"] else None
+
+    additional = []
+    seen = set()
+    for item in recipe["additional_ingredients"]:
+        key = _ingredient_key(item)
+        if key and not _is_user_ingredient(item, user_keys) and key not in seen:
+            additional.append(item)
+            seen.add(key)
+    recipe["additional_ingredients"] = additional[:2]
+    return recipe
 
 
 def _expand_compact_recipe(recipe, difficulty):
@@ -252,15 +288,15 @@ def generate_recipes():
     if mode not in ("only", "additional"): return jsonify({"message": "Please select a valid ingredient mode."}), 400
     excluded = data.get("exclude_names", [])
     excluded = [_clean_recipe_text(name, 120) for name in excluded[:5] if isinstance(name, str)] if isinstance(excluded, list) else []
-    missing_instruction = "Use only the listed ingredients plus salt, water, oil, and spices; do not invent other ingredients." if mode == "only" else "Use at most two extra ingredients and list them in additional_ingredients."
+    missing_instruction = "Use exactly and only the listed ingredients. Do not add, suggest, or list any other ingredient, including salt, oil, water, or spices unless it is in the user's list. additional_ingredients must be an empty array." if mode == "only" else "Use at most two extra ingredients. additional_ingredients must contain only ingredients that are not in the user's list; never repeat a user-provided ingredient there."
     prompt = f'''Make one quick, concise recipe from {json.dumps(clean_ingredients, ensure_ascii=False)}. Preferences: {prefs['meal_type']}, {prefs['cuisine']}, {prefs['time']}, {prefs['difficulty']}. {missing_instruction}
-Do not use these recipe names: {json.dumps(excluded, ensure_ascii=False)}. Return only compact JSON in this shape: {{"recipes":[{{"n":"Tomato rice","d":"A quick, filling meal.","a":["rice","tomato"],"x":[],"t":"15 min","i":[{{"n":"rice","q":"100 g"}}],"s":["Cook the rice.","Stir in tomato.","Serve warm."],"c":[300,8,50,8,4]}}]}}. Keys: n=name, d=one-sentence description, a=available ingredients, x=additional ingredients, t=prep time, i=up to 5 ingredient objects with n=name and q=metric quantity, s=exactly 3 short non-empty steps, c=numeric estimates [calories kcal, protein g, carbohydrates g, fat g, fiber g]. Keep values brief.'''
+Do not use these recipe names: {json.dumps(excluded, ensure_ascii=False)}. Return only compact JSON in this shape: {{"recipes":[{{"n":"Tomato rice","d":"A quick, filling meal.","a":["rice","tomato"],"x":[],"t":"15 min","i":[{{"n":"rice","q":"100 g"}}],"s":["Rinse the rice until the water runs mostly clear, then soak it for 10 minutes.","Heat oil in a pan over medium heat and cook the tomato with the spices until soft and jammy, about 4 minutes.","Add the drained rice and stir gently for 1 minute so every grain is coated.","Pour in the measured water, bring it to a boil, then cover and cook on low heat until the rice is tender and the water is absorbed.","Rest the pan, covered, for 5 minutes; fluff with a fork and serve warm."],"c":[300,8,50,8,4]}}]}}. Keys: n=name, d=one-sentence description, a=available ingredients, x=additional ingredients, t=prep time, i=up to 5 ingredient objects with n=name and q=metric quantity, s=5 to 8 clear, non-empty cooking steps. Each step must state the action and, where useful, heat level, timing, texture, or a visual cue. Include preparation, cooking, finishing, and serving; do not combine multiple stages into vague steps. c=numeric estimates [calories kcal, protein g, carbohydrates g, fat g, fiber g]. Keep JSON values concise.'''
     try:
-        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 1024, "num_predict": 180}}).encode("utf-8")
+        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 500}}).encode("utf-8")
         url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
         with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=RECIPE_OLLAMA_TIMEOUT_SECONDS) as response: result = json.loads(response.read().decode("utf-8"))
         decoded = json.loads(result.get("response", ""))
-        recipes = [_validate_recipe(_expand_compact_recipe(recipe, prefs["difficulty"] if prefs["difficulty"] != "Any" else "Easy")) for recipe in decoded.get("recipes", [])[:1]] if isinstance(decoded, dict) else []
+        recipes = [_apply_ingredient_mode(validated, clean_ingredients, mode) for recipe in decoded.get("recipes", [])[:1] if (validated := _validate_recipe(_expand_compact_recipe(recipe, prefs["difficulty"] if prefs["difficulty"] != "Any" else "Easy")))] if isinstance(decoded, dict) else []
         recipes = [recipe for recipe in recipes if recipe]
         if not recipes: return jsonify({"message": "The recipe model returned incomplete details. Please try again; if this continues, check that your selected Ollama model is available."}), 502
         return jsonify({"recipes": recipes})
