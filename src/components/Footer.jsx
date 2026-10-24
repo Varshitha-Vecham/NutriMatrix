@@ -16,15 +16,19 @@ function Footer() {
           <ul>
             <li><Link to="/home">Home</Link></li>
             <li><Link to="/about">About Us</Link></li>
-            <li><a href="#nutrition">Nutrition Analysis</a></li>
-            <li><a href="#pantry">Digital Pantry</a></li>
-            <li><a href="#recommendations">Recommendations</a></li>
+            <li><Link to="/Scanner">Scanner</Link></li>
+            <li><Link to="/digital-pantry">Digital Pantry</Link></li>
+            <li><Link to="/meal-planner">Meal Planner</Link></li>
+            <li><Link to="/Products">Product Analysis</Link></li>
+            <li><Link to="/recipe-generator">Recipe Generator</Link></li>
+            <li><Link to="/Feedback">Feedback</Link></li>
+            <li><Link to="/Profile">Profile</Link></li>
           </ul>
         </div>
 
         <div className="footer-contact">
           <h4>Stay Healthy</h4>
-          <p>📧 hello@nutrimatrix.app</p>
+          <p>📧 nutrimatrix286@gmail.com</p>
           <p>🌱 Eat smart. Live better.</p>
           <div className="social-icons">
             <span>📘</span><span>📷</span><span>🐦</span><span>▶️</span>
