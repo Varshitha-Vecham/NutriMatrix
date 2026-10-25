@@ -723,12 +723,18 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ message: 'Unable to load users.' }) }
 })
 
-const feedbackCategories = ['Product Analysis', 'Barcode Scanner', 'Digital Pantry', 'Meal Planner', 'Recipe Recommendations', 'Nutrition Information', 'Website Design', 'Other']
+// Keep this list in sync with the feedback form. Legacy names remain accepted so
+// feedback from clients that have not refreshed yet is not rejected.
+const feedbackCategories = new Set([
+  'Product Analysis', 'Barcode Scanner', 'Receipt Scanner', 'Voice Input',
+  'Digital Pantry', 'Meal Planner', 'Recipe Generator', 'Nutrition Information',
+  'Website Design', 'Recipe Recommendations', 'Other',
+])
 const feedbackExperiences = ['Very Good', 'Good', 'Average', 'Poor']
 app.post('/api/feedback', requireAuth, async (req, res) => {
   const rating = Number(req.body?.rating), selectedCategories = Array.isArray(req.body?.category) ? req.body.category : [req.body?.category], category = [...new Set(selectedCategories.map((item) => String(item || '').trim()).filter(Boolean))], experience = String(req.body?.experience || '').trim(), message = String(req.body?.message || '').trim(), email = String(req.body?.email || '').trim()
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ message: 'Please choose a rating from 1 to 5 stars.' })
-  if (!category.length || category.some((item) => !feedbackCategories.includes(item))) return res.status(400).json({ message: 'Please select valid feedback categories.' })
+  if (!category.length || category.some((item) => !feedbackCategories.has(item))) return res.status(400).json({ message: 'Please select valid feedback categories.' })
   if (experience && !feedbackExperiences.includes(experience)) return res.status(400).json({ message: 'Please select a valid experience rating.' })
   if (!message || message.length > 5000) return res.status(400).json({ message: 'Please write a message under 5,000 characters.' })
   if (email.length > 255 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return res.status(400).json({ message: 'Please enter a valid email address or leave it blank.' })

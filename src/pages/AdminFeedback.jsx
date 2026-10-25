@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../api.js'
 import AdminNavbar from '../components/AdminNavbar.jsx'
 import './AdminFeedback.css'
-const categories = ['Product Analysis', 'Barcode Scanner', 'Digital Pantry', 'Meal Planner', 'Recipe Recommendations', 'Nutrition Information', 'Website Design', 'Other']
+const categories = ['Product Analysis', 'Barcode Scanner', 'Receipt Scanner', 'Voice Input', 'Digital Pantry', 'Meal Planner', 'Recipe Generator', 'Nutrition Information', 'Website Design']
 export default function AdminFeedback() {
   const navigate = useNavigate(); const [items, setItems] = useState([]); const [category, setCategory] = useState(''); const [rating, setRating] = useState(''); const [error, setError] = useState('')
   useEffect(() => { apiRequest('/api/admin/feedback').then((result) => setItems(result.feedback || [])).catch((e) => { if (e.message === 'Not authenticated.') navigate('/admin-login'); else if (e.message === 'Admin access required.') navigate('/home'); else setError(e.message) }) }, [navigate])

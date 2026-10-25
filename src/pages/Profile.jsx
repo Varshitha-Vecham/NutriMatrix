@@ -28,7 +28,6 @@ const initialProfile = {
   cuisines: '',
   goals: 'healthy eating',
   monthlyBudget: '',
-  priceConscious: true,
   notifications: true,
   expiryReminders: true,
   aiRecommendations: true
@@ -157,7 +156,6 @@ function Profile() {
             <div className="section-heading"><span className="step-number">05</span><div><h2>Grocery preferences</h2><p>Make recommendations match your usual shopping and budget.</p></div></div>
             <div className="field-grid">
               <label>Monthly grocery budget <span className="optional">in your local currency</span><input name="monthlyBudget" type="number" min="0" step="0.01" value={profile.monthlyBudget} onChange={updateField} placeholder="e.g. 5000" disabled={!isEditing} /></label>
-              <label className="toggle-label"><span>Price-conscious shopping</span><input name="priceConscious" type="checkbox" checked={profile.priceConscious} onChange={(event) => setProfile((current) => ({ ...current, priceConscious: event.target.checked }))} disabled={!isEditing} /><span className="toggle"></span></label>
             </div>
           </section>
 
