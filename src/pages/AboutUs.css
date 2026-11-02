@@ -5,6 +5,12 @@
   -webkit-text-fill-color: #111827;
 }
 
+/* Keep the shared navigation active state visible on the About page too. */
+.about-page .navbar .nav-link.active {
+  color: #16a34a;
+  -webkit-text-fill-color: #16a34a;
+}
+
 .about-page .footer,
 .about-page .footer p,
 .about-page .footer h3,

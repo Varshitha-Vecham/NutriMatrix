@@ -2,6 +2,7 @@
 import { useNavigate, NavLink } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../api.js'
+import { loadReadItems, subscribeToReadItems } from '../utils/pantryReadState.js'
 import './Navbar.css'
 
 function Navbar() {
@@ -9,6 +10,12 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState({})
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+
+  const updateUnreadCount = (products = [], readItems = loadReadItems()) => {
+    const readIds = new Set(readItems.map((item) => String(item.id)))
+    const alerts = products.filter((item) => item.expiryDate && item.daysRemaining !== null && item.daysRemaining <= 7 && !readIds.has(String(item.id)))
+    setUnreadNotifications(alerts.length)
+  }
 
   useEffect(() => {
     const isPublicRoute = window.location.pathname === '/recipe-generator'
@@ -21,14 +28,16 @@ function Navbar() {
   }, [navigate])
 
   useEffect(() => {
+    let currentProducts = []
     apiRequest('/api/expiry-products')
       .then(({ products = [] }) => {
-        const alerts = products.filter((item) => item.expiryDate && item.daysRemaining !== null && item.daysRemaining <= 7)
-        setUnreadNotifications(alerts.length)
+        currentProducts = products
+        updateUnreadCount(currentProducts)
       })
       .catch(() => {
         setUnreadNotifications(0)
       })
+    return subscribeToReadItems((readItems) => updateUnreadCount(currentProducts, readItems))
   }, [])
 
   function handleLogout() {
@@ -66,7 +75,7 @@ function Navbar() {
               aria-label="Open expiry notifications"
             >
               <span>🔔</span>
-              {unreadNotifications > 0 && <span className="notification-count">{unreadNotifications}</span>}
+              <span className="notification-count">{unreadNotifications}</span>
             </button>
           </li>
 

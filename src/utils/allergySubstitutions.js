@@ -71,20 +71,28 @@ function substitutionsForIngredient(name, group) {
 
 export function applyAllergySubstitutions(recipe, allergies = [], dislikes = []) {
   const allergyGroups = allergenGroups(allergies)
-  const allRestrictions = [...splitRestrictions(allergies), ...splitRestrictions(dislikes)]
+  const allergyRestrictions = splitRestrictions(allergies)
+  const dislikeRestrictions = splitRestrictions(dislikes)
+  const allRestrictions = [...allergyRestrictions, ...dislikeRestrictions]
   const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : []
   const substitutions = []
   let unavailable = false
   const nextIngredients = ingredients.map((ingredient) => {
     const name = typeof ingredient === 'string' ? ingredient : ingredient?.name
     if (!matchesRestriction(name, allRestrictions)) return ingredient
-    const group = allergenGroups([name]).find((item) => allergyGroups.includes(item)) || allergenGroups([name])[0]
+    const ingredientGroups = allergenGroups([name])
+    const safety = ingredientGroups.some((item) => allergyGroups.includes(item)) && matchesRestriction(name, allergyRestrictions)
+    const group = ingredientGroups.find((item) => allergyGroups.includes(item)) || ingredientGroups[0]
     const replacement = substitutionsForIngredient(name, group).find((candidate) => !matchesRestriction(candidate, allRestrictions))
     if (!replacement) { unavailable = true; return ingredient }
-    substitutions.push({ from: name, to: replacement, safety: allergenGroups([name]).some((item) => allergyGroups.includes(item)) })
+    substitutions.push({ from: name, to: replacement, safety, type: safety ? 'allergy' : 'dislike' })
     return typeof ingredient === 'string' ? replacement : { ...ingredient, name: replacement }
   })
   const changed = substitutions.length > 0
-  const title = changed && recipe?.name ? `${recipe.name} (${substitutions.some((item) => item.safety) ? 'allergy-aware' : 'preference-adjusted'})` : recipe?.name
-  return { ...recipe, name: title, ingredients: nextIngredients, substitutions, safe: !unavailable, safetyNotice: allergyGroups.length ? 'Ingredient matches and substitutions are based on available recipe information; verify packaged ingredients and cross-contact risk.' : '' }
+  const hasAllergySubstitution = substitutions.some((item) => item.type === 'allergy')
+  const hasDislikeSubstitution = substitutions.some((item) => item.type === 'dislike')
+  const adjustmentLabel = hasAllergySubstitution && hasDislikeSubstitution ? 'allergy-aware & food dislike-adjusted' : hasAllergySubstitution ? 'allergy-aware' : hasDislikeSubstitution ? 'food dislike-adjusted' : ''
+  const title = changed && recipe?.name ? `${recipe.name} (${adjustmentLabel})` : recipe?.name
+  const substitutionNotices = substitutions.map((item) => `${item.from} is ${item.type === 'allergy' ? 'an allergy' : 'a food dislike'}, so it has been replaced with ${item.to}.`)
+  return { ...recipe, name: title, ingredients: nextIngredients, substitutions, substitutionNotices, safe: !unavailable, safetyNotice: allergyGroups.length ? 'Ingredient matches and substitutions are based on available recipe information; verify packaged ingredients and cross-contact risk.' : '' }
 }

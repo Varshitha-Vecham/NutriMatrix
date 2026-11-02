@@ -254,6 +254,7 @@ function Products() {
   const [catalogError, setCatalogError] = useState('')
   const [foodRestrictions, setFoodRestrictions] = useState([])
   const [aiRecommendationsEnabled, setAiRecommendationsEnabled] = useState(true)
+  const [monthlyBudget, setMonthlyBudget] = useState(null)
   useEffect(() => {
     apiRequest('/api/products')
       .then(({ products: savedProducts }) => {
@@ -277,6 +278,8 @@ function Products() {
       if (result?.hasProfile) {
         setFoodRestrictions([...splitRestrictions(result.profile?.allergies), ...splitRestrictions(result.profile?.foodDislikes)])
         setAiRecommendationsEnabled(Boolean(result.profile?.aiRecommendations))
+        const budget = Number(result.profile?.monthlyBudget)
+        setMonthlyBudget(Number.isFinite(budget) && budget > 0 ? budget : null)
       }
     }).catch(() => {})
   }, [])
@@ -290,6 +293,7 @@ function Products() {
   const cheapestTotal = Math.min(...retailerTotals.map((retailer) => retailer.total))
   const highestTotal = Math.max(...retailerTotals.map((retailer) => retailer.total))
   const recommendedRetailer = retailerTotals.find((retailer) => retailer.total === cheapestTotal)?.name
+  const isOverMonthlyBudget = monthlyBudget !== null && cheapestTotal > monthlyBudget
   const addToCart = (product, packageId = product.packageOptions[0].id) => setCart((current) => current.some((item) => item.id === product.id && item.packageId === packageId) ? current.map((item) => item.id === product.id && item.packageId === packageId ? { ...item, quantity: item.quantity + 1 } : item) : [...current, { id: product.id, packageId, quantity: 1 }])
   const changeQuantity = (id, packageId, delta) => setCart((current) => current.map((item) => item.id === id && item.packageId === packageId ? { ...item, quantity: item.quantity + delta } : item).filter((item) => item.quantity > 0))
   const changePackage = (product, packageId) => setPackageSelections((current) => ({ ...current, [product.id]: packageId }))
@@ -342,7 +346,7 @@ function Products() {
                     <div><strong>{Number(nutrition.carbs).toFixed(2)}g</strong><span>Carbs</span></div>
                     <div><strong>{Number(nutrition.fat).toFixed(2)}g</strong><span>Fat</span></div><div><strong>{Number(nutrition.fiber).toFixed(2)}g</strong><span>Fiber</span></div></div></div>
                     <div className="price-box"><div className="summary-title"><h3>Indian price comparison</h3><span>Across 7 platforms</span></div>
-                    <div className="price-total"><strong>{formatINR(cheapestTotal)}</strong><span>Recommended total</span><small><b>Original / highest total: {formatINR(highestTotal)}</b></small><span>Save {formatINR(Math.max(highestTotal - cheapestTotal, 0))} vs highest total</span></div>
+                    <div className="price-total"><strong>{formatINR(cheapestTotal)}</strong><span>Recommended total</span><small><b>Original / highest total: {formatINR(highestTotal)}</b></small><span>Save {formatINR(Math.max(highestTotal - cheapestTotal, 0))} vs highest total</span>{isOverMonthlyBudget && <p className="monthly-budget-warning" role="alert">Your monthly budget is {formatINR(monthlyBudget)}. This basket exceeds it by {formatINR(cheapestTotal - monthlyBudget)}.</p>}</div>
                     <div className="retailer-list">{retailerTotals.map((retailer) => <div key={retailer.name}><span className={retailer.name === recommendedRetailer ? 'recommended-dot' : ''}>{retailer.name}{retailer.name === recommendedRetailer && <em>Recommended</em>}</span>
                     <strong>{formatINR(retailer.total)}</strong></div>)}</div></div><p className="analysis-note">Prices are comparison estimates from listed retailers. NutriMatrix does not sell or process orders.</p></>}</aside></div></main></div>
 }

@@ -41,6 +41,7 @@
 .alternative-list article { border: 1px solid #d6e0d4; }
 .alternative-list img { aspect-ratio: auto; height: 160px; border-bottom: 1px solid #d6e0d4; }
 .price-total big { display: block; color: #7c887d; font-size: .98rem; margin-top: 5px; }
+.monthly-budget-warning { margin: 12px 0 0; padding: 9px 10px; border-radius: 5px; background: #fff3df; color: #9a4e00; font-size: .78rem; font-weight: 700; line-height: 1.45; }
 .analysis-quantity { display: inline-flex; align-items: center; gap: 14px; margin-top: 18px; padding: 6px 8px; border: 1px solid #d6e0d4; border-radius: 6px; background: #f5f8f3; color: #39473b; font-weight: 700; }.analysis-quantity button { width: 28px; height: 28px; border-radius: 4px; background: #e4ede2; color: #31583c; font-size: 1.2rem; line-height: 1; }.analysis-quantity button:hover { background: #3c6546; color: #fff; }
 .product-art > .analysis-image-placeholder,
 .analysis-hero > .analysis-image-placeholder {

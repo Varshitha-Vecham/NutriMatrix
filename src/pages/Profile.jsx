@@ -33,6 +33,13 @@ const initialProfile = {
   aiRecommendations: true
 }
 
+function normalizeDietType(value) {
+  const diet = String(value || '').toLowerCase()
+  if (diet.includes('non')) return 'Non-Vegetarian'
+  if (diet.includes('vegetarian') || diet === 'veg') return 'Vegetarian'
+  return 'no preference(veg&non-veg)'
+}
+
 function Profile() {
   const navigate = useNavigate()
   const [user, setUser] = useState({ name: 'Friend', email: '' })
@@ -58,7 +65,7 @@ function Profile() {
         delete profileDetails.groceryCategories
         delete profileDetails.brands
         delete profileDetails.profileUserId
-        const loadedProfile = { ...initialProfile, ...profileDetails, name: profileDetails.name || authUser.name }
+        const loadedProfile = { ...initialProfile, ...profileDetails, dietType: normalizeDietType(profileDetails.dietType), name: profileDetails.name || authUser.name }
         setProfile(loadedProfile)
         setSavedProfile(loadedProfile)
         setIsEditing(!savedProfile.hasProfile)

@@ -849,8 +849,12 @@ function MealPlanner() {
     if (saveAsDefault) try {
       const result = await apiRequest('/api/profile')
       const current = result.profile || {}
-      const selectedDiet = draftDiet.toLowerCase() === 'no preference' ? 'no preference(veg&non-veg)' : draftDiet.toLowerCase()
-      const dietType = saveAsDefault || !current.dietType ? selectedDiet : current.dietType
+      const selectedDiet = ({
+        'no preference': 'no preference(veg&non-veg)',
+        Vegetarian: 'Vegetarian',
+        'Non-Vegetarian': 'Non-Vegetarian'
+      })[draftDiet] || draftDiet
+      const dietType = selectedDiet
       const goals = ({ 'Balanced Nutrition': 'balanced nutrition', 'High Protein': 'high-protein diet', 'Low Sugar': 'low-sugar diet', 'Maintain Weight': 'maintain weight', 'Weight Loss': 'weight loss', 'Weight Gain': 'weight gain' })[draftGoal] || draftGoal.toLowerCase()
       await apiRequest('/api/profile', {
         method: 'PUT',
@@ -1261,6 +1265,12 @@ function MealPlanner() {
                   </div>
 
                   <div className="recipe-content">
+                  {selectedRecipe.substitutionNotices?.length > 0 && (
+                    <div className="recipe-section substitution-notice" role="status">
+                      <h3>Recipe adjustments</h3>
+                      {selectedRecipe.substitutionNotices.map((notice) => <p key={notice}>{notice}</p>)}
+                    </div>
+                  )}
                   <div className="recipe-section">
                     <h3>Ingredients</h3>
                     <ul>
