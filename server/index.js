@@ -20,7 +20,7 @@ const serverEnvPath = new URL('./.env', import.meta.url)
 if (existsSync(serverEnvPath)) dotenv.config({ path: serverEnvPath, override: false })
 
 const app = express()
-const port = process.env.API_PORT || 3001
+const port = process.env.API_PORT || 5001
 const jwtSecret = process.env.JWT_SECRET || 'change-this-secret'
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost', port: Number(process.env.DB_PORT || 3306),

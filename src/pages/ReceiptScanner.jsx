@@ -64,7 +64,7 @@ function ReceiptScanner() {
       try {
         result = JSON.parse(responseText)
       } catch {
-        throw new Error(`Receipt service returned an unexpected response (${response.status}). Restart Flask on port 5000 and try again.`)
+        throw new Error(`Receipt service returned an unexpected response (${response.status}). Restart the OCR service on port 5001 and try again.`)
       }
       if (!response.ok) throw new Error(result.message || 'Unable to analyze receipt.')
       const detectedProducts = Array.isArray(result.products) ? result.products.map((product) => ({ ...product, expiryDate: product.expiryDate || '', quantity: product.quantity || '', amount: product.amount ?? product.price ?? '' })) : []
@@ -75,7 +75,7 @@ function ReceiptScanner() {
       setMessage('Review the detected products and save when they are correct.')
     } catch (uploadError) {
       setError(uploadError.name === 'TypeError' && uploadError.message === 'Failed to fetch'
-        ? 'Receipt service is not running. Start Flask on http://localhost:5000, then try again.'
+        ? 'Receipt service is not running. Start the OCR service on http://localhost:5001, then try again.'
         : uploadError.message)
     } finally {
       setLoading(false)

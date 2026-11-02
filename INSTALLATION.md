@@ -36,7 +36,7 @@ These commands are for Windows PowerShell.
    DB_NAME=nutrimatrix
    JWT_SECRET=your_strong_secret
    OTP_SECRET=another_long_random_secret
-   API_PORT=3001
+   API_PORT=5001
    CLIENT_URL=http://localhost:5173
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587

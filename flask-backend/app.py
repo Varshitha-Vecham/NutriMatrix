@@ -640,4 +640,7 @@ def scan_barcode_details():
         return jsonify({"message": f"Unable to read package details: {error}"}), 500
 
 if __name__ == "__main__":
-    serve(app, host="127.0.0.1", port=5000)
+    # Port 5000 is reserved by Windows on some systems (including Hyper-V
+    # configurations), which prevents Waitress from starting.  Use 5001 for
+    # the local OCR service and keep the frontend default in sync.
+    serve(app, host="127.0.0.1", port=5001)
