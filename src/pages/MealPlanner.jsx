@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { apiRequest } from '../api.js'
 import './MealPlanner.css'
+import { applyAllergySubstitutions } from '../utils/allergySubstitutions.js'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DAY_NAMES = { Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday' }
@@ -316,7 +317,7 @@ const additionalRecipes = {
       instructions: 'Temper mustard seeds and curry leaves, toss in peanuts and coconut, then finish with lemon.',
       steps: ['Heat oil and crackle mustard seeds.', 'Add curry leaves and stir for 20 seconds.', 'Toss in boiled peanuts and coconut.', 'Season with lemon and serve warm.'],
       dietary: ['Vegetarian', 'Vegan'], goal: ['Weight Gain', 'Balanced Diet', 'Maintenance'], categories: ['Snacks', 'South Indian', 'High Protein'],
-      image: '/images/recipes/peanut-sundal.jpg', source: 'Local recipe image'
+      image: '/images/recipes/peanut-sundal(2).jpg', source: 'Local recipe image'
     }
   ],
   Lunch: [
@@ -407,20 +408,20 @@ const recipeImages = {
   'Berry Oat Protein Bowl': '/images/recipes/berry-oat-protein-bowl.jpg',
   'Avocado Spinach Omelet': '/images/recipes/avocado-spinach-omelet.jpg',
   'Chia Banana Smoothie': '/images/recipes/chia-banana-smoothie.jpg',
-  'Peanut Butter Apple Toast': '/images/recipes/peanut-butter-apple-toast.jpg',
+  'Peanut Butter Apple Toast': '/images/recipes/apple-peanut-butter.jpg',
   'Strawberry Cinnamon Yogurt': 'https://img-global.cpcdn.com/recipes/f6a0afe80125f60c/680x781cq80/bowl-de-yogurt-griego-con-fresas-y-nueces-foto-principal.jpg',
   'Hummus Veggie Cups': '/images/recipes/hummus-veggie-cups.jpg',
   'Edamame Crunch Cup': '/images/recipes/edamame-crunch-cup.jpg',
   'Quinoa Chicken Power Bowl': '/images/recipes/quinoa-chicken-power-bowl.jpg',
-  'Chickpea Rainbow Salad': 'https://images.unsplash.com/photo-1581570377609-d82072a69569?auto=format&fit=crop&w=900&q=85',
+  'Chickpea Rainbow Salad': '/images/recipes/rainbow-chickpea-salad.jpg',
   'Tofu Rice Veggie Bowl': '/images/recipes/tofu-rice-veggie-bowl.jpg',
-  'Black Bean Fajita Bowl': '/images/recipes/black-bean-fajita-bowl.jpg',
+  'Black Bean Fajita Bowl': '/images/recipes/black-bean-fajita-bowl(2).jpg',
   'Cinnamon Banana Toast': '/images/recipes/cinnamon-banana-toast.jpg',
   'Trail Mix Crunch': '/images/recipes/trail-mix-crunch.jpg',
   'Cucumber Yogurt Dip': '/images/recipes/cucumber-yogurt-dip.jpg',
   'Roasted Chickpea Snack': '/images/recipes/roasted-chickpea-snack.jpg',
   'Salmon Sweet Potato Plate': '/images/recipes/salmon-sweet-potato-plate.jpg',
-  'Lentil Veggie Curry': 'https://images.unsplash.com/photo-1756821753226-c0fc88056cf7?auto=format&fit=crop&w=900&q=85',
+  'Lentil Veggie Curry': '/images/recipes/lentil-veggie-curry.jpg',
   'Turkey Bean Stir-Fry': '/images/recipes/turkey-bean-stir-fry.jpg',
   'Chicken Lentil Stew': '/images/recipes/chicken-lentil-stew.jpg',
   'Palak Tofu Curry': '/images/recipes/palak-tofu-curry.jpg',
@@ -431,7 +432,7 @@ const recipeImages = {
   'Apple Peanut Butter Bites': '/images/recipes/apple_peanut_butter.jpg',
   'Curd Rice': 'https://media-assets.swiggy.com/swiggy/image/upload/f_auto%2Cq_auto%2Cfl_lossy/da14390afafac0ea185fa3670ecc7cf0',
   'Idli Sambar Plate': '/images/recipes/idli-sambar-plate.jpg',
-  'Rajma Masala Rice': '/images/recipes/rajma-masala-rice.jpg',
+  'Rajma Masala Rice': '/images/recipes/rajma-masala.jpg',
   'Moong Dal Khichdi': '/images/recipes/Yellow-Moong-Dal-Khichdi-Recipe.jpg',
   'Vegetable Khichdi': '/images/recipes/vegetable-kichidi.jpg',
   'Paneer Paratha with Raita': '/images/recipes/paneer-paratha.jpg',
@@ -658,12 +659,13 @@ function normalizeProfile(profile) {
 }
 
 function hasAllergen(recipe, exclusions = '') {
-  const allergens = String(exclusions || '').toLowerCase().split(/[,;\n]/).map((item) => item.trim()).filter(Boolean)
-  const ingredients = recipe.ingredients.join(' ').toLowerCase()
-  return allergens.some((allergen) => {
-    const normalized = allergen.replace(/s$/, '')
-    return ingredients.includes(normalized) || (normalized === 'peanut' && ingredients.includes('groundnut'))
-  })
+  return !applyAllergySubstitutions(recipe, exclusions).safe
+}
+
+function personalizeMeal(recipe, profile) {
+  // Never mutate the catalogue recipe. This derived object is used only for
+  // this user's displayed plan, recommendations, swaps, and saved selection.
+  return applyAllergySubstitutions(recipe, profile.allergies, profile.foodDislikes)
 }
 
 function scaleQuantity(quantity, members) {
@@ -699,8 +701,8 @@ function getFoodOptions(slot, profile, category = 'All') {
                   : recipe.goal.includes(goal)
     const categories = recipe.categories || [slot === 'Morning Snack' || slot === 'Evening Snack' ? 'Snacks' : slot, ...(recipe.dietary || [])]
     const matchesCategory = category === 'All' || categories.includes(category)
-    return matchesDiet && matchesGoal && matchesCategory && !hasAllergen(recipe, profile.allergies) && !hasAllergen(recipe, profile.foodDislikes)
-  })
+    return matchesDiet && matchesGoal && matchesCategory
+  }).map((recipe) => personalizeMeal(recipe, profile)).filter((recipe) => recipe.safe)
 }
 
 // Keep a stable slot-specific recipe order, then rank eligible meals against
@@ -762,7 +764,8 @@ function getSwapFoodOptions(slot, profile, category, currentName) {
   const allowedDiets = normalizeDietary(profile.dietary)
   const noDietPreference = String(profile.dietary || '').toLowerCase().includes('no preference')
   const candidates = [...new Map([...goalMatches, ...broadMatches, ...balancedMatches, ...slotRecipes]
-    .filter((recipe) => recipe.name !== currentName && (noDietPreference || recipe.dietary.some((diet) => allowedDiets.includes(diet))) && !hasAllergen(recipe, profile.allergies) && !hasAllergen(recipe, profile.foodDislikes))
+    .filter((recipe) => recipe.name !== currentName && (noDietPreference || recipe.dietary.some((diet) => allowedDiets.includes(diet))))
+    .map((recipe) => personalizeMeal(recipe, profile)).filter((recipe) => recipe.safe)
     .map((recipe) => [recipe.name, recipe])).values()]
   return candidates.slice(0, 6)
 }
