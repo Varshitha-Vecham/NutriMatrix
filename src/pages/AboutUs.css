@@ -5,6 +5,23 @@
   -webkit-text-fill-color: #111827;
 }
 
+.about-page .footer,
+.about-page .footer p,
+.about-page .footer h3,
+.about-page .footer h4,
+.about-page .footer a,
+.about-page .footer-bottom {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.about-page .footer .footer-accent,
+.about-page .footer h4,
+.about-page .footer a:hover {
+  color: #facc15;
+  -webkit-text-fill-color: #facc15;
+}
+
 .about-page-content {
   max-width: 1500px;
   margin: 0 auto;

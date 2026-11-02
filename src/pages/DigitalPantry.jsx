@@ -4,9 +4,8 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { apiRequest } from '../api.js'
 import { getExpiryMeta, getExpirySummary } from '../utils/expiry.js'
+import { addUnique, loadReadItems, mergeUnique, sameReadItems, saveReadItems, sortPantryItems, subscribeToReadItems, withoutItem } from '../utils/pantryReadState.js'
 import './DigitalPantry.css'
-
-const READ_ITEMS_STORAGE_KEY = 'nutrimatrix-digital-pantry-read-items'
 
 const toneClass = {
   danger: 'tone-danger',
@@ -19,45 +18,28 @@ const toneClass = {
 function DigitalPantry() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
-  const [readItems, setReadItems] = useState([])
+  const [readItems, setReadItems] = useState(loadReadItems)
   const [isRestoreOpen, setIsRestoreOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [hasRestoredReadItems, setHasRestoredReadItems] = useState(false)
-
+  const [remindersEnabled, setRemindersEnabled] = useState(true)
   useEffect(() => {
     try {
-      const savedReadItems = localStorage.getItem(READ_ITEMS_STORAGE_KEY)
-      if (savedReadItems) {
-        const parsedReadItems = JSON.parse(savedReadItems)
-        if (Array.isArray(parsedReadItems)) {
-          setReadItems(parsedReadItems)
-        }
-      }
-    } catch (storageError) {
-      console.error('Unable to restore pantry read items from storage.', storageError)
-    } finally {
-      setHasRestoredReadItems(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    // Do not replace saved Restore items with the initial empty state before
-    // localStorage has been read on a new page visit.
-    if (!hasRestoredReadItems) return
-
-    try {
-      localStorage.setItem(READ_ITEMS_STORAGE_KEY, JSON.stringify(readItems))
+      saveReadItems(readItems)
     } catch (storageError) {
       console.error('Unable to save pantry read items to storage.', storageError)
     }
-  }, [hasRestoredReadItems, readItems])
+  }, [readItems])
+
+  useEffect(() => subscribeToReadItems((nextItems) => setReadItems((current) => sameReadItems(current, nextItems) ? current : nextItems)), [])
 
   useEffect(() => {
     apiRequest('/api/expiry-products')
       .then(({ products }) => {
-        setItems(products || [])
+        // A read item is persisted locally by its MySQL pantry-item id. Do not
+        // re-add it when a fresh API response arrives.
+        setItems((products || []).filter((item) => !loadReadItems().some((read) => String(read.id) === String(item.id))))
       })
       .catch((requestError) => {
         if (requestError.message === 'Not authenticated.') {
@@ -68,6 +50,12 @@ function DigitalPantry() {
       })
       .finally(() => setLoading(false))
   }, [navigate])
+
+  useEffect(() => {
+    apiRequest('/api/profile').then((result) => {
+      if (result?.hasProfile) setRemindersEnabled(Boolean(result.profile?.notifications) && Boolean(result.profile?.expiryReminders))
+    }).catch(() => {})
+  }, [])
 
   const hiddenItemIds = useMemo(() => new Set(readItems.map((item) => String(item.id))), [readItems])
   const visibleItems = useMemo(() => items.filter((item) => !hiddenItemIds.has(String(item.id))), [items, hiddenItemIds])
@@ -96,6 +84,7 @@ function DigitalPantry() {
   }, [visibleItems])
 
   const notifications = useMemo(() => {
+    if (!remindersEnabled) return []
     return visibleItems
       .filter((item) => item.expiryDate && item.daysRemaining !== null && item.daysRemaining <= 7)
       .map((item) => ({ ...item, ...getExpiryMeta(item.expiryDate) }))
@@ -103,7 +92,7 @@ function DigitalPantry() {
         const priority = { expired: 0, today: 1, tomorrow: 2, three: 3, seven: 4 }
         return (priority[a.statusKey] ?? 99) - (priority[b.statusKey] ?? 99)
       })
-  }, [visibleItems])
+  }, [visibleItems, remindersEnabled])
 
   const filteredItems = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -122,12 +111,9 @@ function DigitalPantry() {
       const itemIndex = current.findIndex((item) => String(item.id) === String(id))
       if (itemIndex === -1) return current
 
-      const itemToRead = { ...current[itemIndex], originalIndex: itemIndex }
+      const itemToRead = current[itemIndex]
 
-      setReadItems((previousRead) => {
-        const alreadyStored = previousRead.some((item) => String(item.id) === String(id))
-        return alreadyStored ? previousRead : [...previousRead, itemToRead]
-      })
+      setReadItems((previousRead) => addUnique(previousRead, itemToRead))
 
       return current.filter((item) => String(item.id) !== String(id))
     })
@@ -139,13 +125,11 @@ function DigitalPantry() {
       if (!itemToRestore) return current
 
       setItems((existing) => {
-        const nextItems = [...existing]
-        const insertIndex = Number.isFinite(itemToRestore.originalIndex) ? Math.min(itemToRestore.originalIndex, nextItems.length) : nextItems.length
-        nextItems.splice(insertIndex, 0, itemToRestore)
-        return nextItems
+        if (existing.some((item) => String(item.id) === String(id))) return existing
+        return sortPantryItems([...existing, itemToRestore])
       })
 
-      return current.filter((item) => String(item.id) !== String(id))
+      return withoutItem(current, id)
     })
   }
 
@@ -153,19 +137,7 @@ function DigitalPantry() {
     if (!readItems.length) return
 
     setItems((current) => {
-      const nextItems = [...current]
-      const sortedReadItems = [...readItems].sort((a, b) => {
-        const aIndex = Number.isFinite(a.originalIndex) ? a.originalIndex : Number.MAX_SAFE_INTEGER
-        const bIndex = Number.isFinite(b.originalIndex) ? b.originalIndex : Number.MAX_SAFE_INTEGER
-        return aIndex - bIndex
-      })
-
-      sortedReadItems.forEach((item) => {
-        const insertIndex = Number.isFinite(item.originalIndex) ? Math.min(item.originalIndex, nextItems.length) : nextItems.length
-        nextItems.splice(insertIndex, 0, item)
-      })
-
-      return nextItems
+      return sortPantryItems(mergeUnique(current, readItems))
     })
 
     setReadItems([])
@@ -174,13 +146,7 @@ function DigitalPantry() {
   const handleMarkAllRead = () => {
     if (!visibleItems.length) return
     setReadItems((current) => {
-      const merged = [...current]
-      visibleItems.forEach((item) => {
-        if (!merged.some((existingItem) => String(existingItem.id) === String(item.id))) {
-          merged.push(item)
-        }
-      })
-      return merged
+      return mergeUnique(current, visibleItems)
     })
     setItems((current) => current.filter((item) => hiddenItemIds.has(String(item.id))))
   }
@@ -196,12 +162,12 @@ function DigitalPantry() {
             <h1>Expiry reminders and pantry overview</h1>
           </div>
 
-          <div className="notification-bell-wrap">
+          {remindersEnabled && <div className="notification-bell-wrap">
             <button type="button" className="notification-bell" onClick={() => navigate('/notifications')} aria-label="Open expiry notifications">
               🔔
               {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
             </button>
-          </div>
+          </div>}
         </section>
 
         <section className="summary-grid">

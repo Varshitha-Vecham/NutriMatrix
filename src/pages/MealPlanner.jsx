@@ -401,7 +401,8 @@ const defaultProfile = {
   dietary: 'Vegetarian',
   goal: 'Balanced Diet',
   calories: 2200,
-  pantry: ['oats', 'berries', 'Greek yogurt', 'spinach', 'eggs', 'quinoa', 'tomato', 'broccoli', 'brown rice', 'lentils', 'banana', 'cinnamon', 'almond milk']
+  pantry: ['oats', 'berries', 'Greek yogurt', 'spinach', 'eggs', 'quinoa', 'tomato', 'broccoli', 'brown rice', 'lentils', 'banana', 'cinnamon', 'almond milk'],
+  aiRecommendations: true
 }
 
 const recipeImages = {
@@ -826,7 +827,7 @@ function MealPlanner() {
       const rawDiet = String(saved.dietType || 'no preference').toLowerCase()
       const displayDiet = rawDiet.includes('no preference') ? 'no preference' : rawDiet.includes('non') ? 'Non-Vegetarian' : rawDiet.includes('vegan') ? 'Vegan' : rawDiet.includes('egg') ? 'Eggetarian' : rawDiet.includes('vegetarian') ? 'Vegetarian' : 'no preference'
       const displayGoal = normalizeGoal(saved.goals || defaultProfile.goal)
-      const nextProfile = normalizeProfile({ ...defaultProfile, dietary: displayDiet, goal: displayGoal, allergies: saved.allergies || '', foodDislikes: saved.foodDislikes || '' })
+      const nextProfile = normalizeProfile({ ...defaultProfile, dietary: displayDiet, goal: displayGoal, allergies: saved.allergies || '', foodDislikes: saved.foodDislikes || '', aiRecommendations: Boolean(saved.aiRecommendations) })
       const nextPlan = buildMealPlan(nextProfile)
       setProfile(nextProfile)
       setSavedProfile(nextProfile)
@@ -845,7 +846,7 @@ function MealPlanner() {
     setPlan(nextPlan)
     setSelectedMeal(nextPlan[0].meals.Breakfast)
     setSelectedRecipe(null)
-    try {
+    if (saveAsDefault) try {
       const result = await apiRequest('/api/profile')
       const current = result.profile || {}
       const selectedDiet = draftDiet.toLowerCase() === 'no preference' ? 'no preference(veg&non-veg)' : draftDiet.toLowerCase()
@@ -867,7 +868,8 @@ function MealPlanner() {
       setAdjustOpen(false)
       return
     }
-    setStatusMessage('Your meal plan has been updated based on your preferences.')
+    setSaveAsDefault(false)
+    setStatusMessage(saveAsDefault ? 'Your meal plan and default dietary preferences were updated.' : 'Your meal plan has been updated for this session. Your Profile was not changed.')
     setAdjustOpen(false)
   }
 
@@ -1196,7 +1198,7 @@ function MealPlanner() {
 
                           <div className="meal-actions">
                             <button type="button" onClick={(event) => handleViewRecipe(dayPlan.day, slot, meal, event)}>View Recipe</button>
-                            <button type="button" onClick={(event) => handleSwapMeal(dayPlan.day, slot, meal, event)}>Swap Meal</button>
+                            <button type="button" disabled={!profile.aiRecommendations} onClick={(event) => handleSwapMeal(dayPlan.day, slot, meal, event)}>Swap Meal</button>
                           </div>
                         </div>
                       )

@@ -5,6 +5,7 @@ import Footer from '../components/Footer.jsx'
 import { apiRequest, OCR_API_URL } from '../api.js'
 import { addIngredientsToSmartCart } from './Products.jsx'
 import { splitFoodIngredients } from '../utils/foodIngredients.js'
+import { applyAllergySubstitutions, splitRestrictions } from '../utils/allergySubstitutions.js'
 import './RecipeGenerator.css'
 import './RecipeGeneratorSaved.css'
 
@@ -82,6 +83,8 @@ export default function RecipeGenerator() {
   const [saved, setSaved] = useState([])
   const [savedLoaded, setSavedLoaded] = useState(false)
   const [savingRecipe, setSavingRecipe] = useState(false)
+  const [restrictions, setRestrictions] = useState({ allergies: [], dislikes: [] })
+  const [aiRecommendationsEnabled, setAiRecommendationsEnabled] = useState(true)
   const generationInProgress = useRef(false)
 
   function parseDraftIngredients(value) {
@@ -101,6 +104,10 @@ export default function RecipeGenerator() {
 
   async function generate(excludeNames = []) {
     if (generationInProgress.current) return
+    if (!aiRecommendationsEnabled) {
+      setError('AI recipe generation is turned off in your Profile settings.')
+      return
+    }
 
     const pendingIngredients = parseDraftIngredients(draft)
     const allIngredients = [...new Map([...ingredients, ...pendingIngredients].map((item) => [item.toLocaleLowerCase(), item])).values()].slice(0, 30)
@@ -122,7 +129,17 @@ export default function RecipeGenerator() {
       setDraft('')
     }
 
-    const requestBody = { ingredients: valid, ...choices, mode, exclude_names: excludeNames }
+    const inputSafety = applyAllergySubstitutions({ ingredients: valid }, restrictions.allergies, restrictions.dislikes)
+    if (!inputSafety.safe) {
+      setError('A safe substitute could not be verified for one of your allergies or food dislikes. Remove that ingredient or update your profile.')
+      return
+    }
+    const safeIngredients = inputSafety.ingredients.map((item) => typeof item === 'string' ? item : item.name)
+    if (inputSafety.substitutions.length) {
+      setIngredients(safeIngredients)
+      setMessage(`Adjusted ${inputSafety.substitutions.map((item) => `${item.from} → ${item.to}`).join(', ')} using your profile.`)
+    }
+    const requestBody = { ingredients: safeIngredients, allergies: restrictions.allergies, food_dislikes: restrictions.dislikes, ...choices, mode, exclude_names: excludeNames }
     const apiUrl = `${OCR_API_URL}/api/generate-recipes`
 
     generationInProgress.current = true
@@ -243,6 +260,16 @@ export default function RecipeGenerator() {
 
   useEffect(() => {
     let active = true
+    apiRequest('/api/profile').then((result) => {
+      if (!active || !result?.hasProfile) return
+      setRestrictions({ allergies: splitRestrictions(result.profile?.allergies), dislikes: splitRestrictions(result.profile?.foodDislikes) })
+      setAiRecommendationsEnabled(Boolean(result.profile?.aiRecommendations))
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
     async function loadSavedRecipes() {
       let localRecipes = []
       try {
@@ -294,7 +321,7 @@ export default function RecipeGenerator() {
         <fieldset className="recipe-mode"><legend>Ingredient mode</legend><label><input type="radio" name="mode" value="only" checked={mode === 'only'} onChange={() => setMode('only')} /><span><b>Use Only My Ingredients</b><small>Uses only the ingredients you listed; no extras are added.</small></span></label><label><input type="radio" name="mode" value="additional" checked={mode === 'additional'} onChange={() => setMode('additional')} /><span><b>Allow Additional Ingredients</b><small>Recipes may need up to two extra ingredients, different from your list.</small></span></label></fieldset>
       </div>
       {error && <p className="recipe-alert" role="alert">{error}</p>}{canRetry && <button className="save-button retry-button" type="button" onClick={() => generate(retryNames)} disabled={loading}>Retry</button>}{message && <p className="recipe-notice" role="status">{message}{cartItemsAdded && <button type="button" className="view-cart-link" onClick={() => navigate('/products')}>View SmartCart</button>}</p>}
-      <button className="generate-button" type="button" onClick={() => generate()} disabled={loading}>{loading ? <><span className="recipe-spinner" /> Generating your recipe...</> : '✦ Generate a Recipe'}</button>
+      <button className="generate-button" type="button" onClick={() => generate()} disabled={loading || !aiRecommendationsEnabled}>{loading ? <><span className="recipe-spinner" /> Generating your recipe...</> : aiRecommendationsEnabled ? '✦ Generate a Recipe' : 'AI recommendations are off'}</button>
     </section>
     {recipes.length > 0 && <section className="recipe-results"><div className="results-heading"><div><span className="recipe-eyebrow">MADE FOR WHAT YOU HAVE</span><h2>Recipes for you</h2><p>{recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'} created with your ingredients.</p></div><button type="button" className="another-button" disabled={loading} onClick={() => generate(recipes.map((r) => r.name))}>↻ Generate Another Recipe</button></div>
       <div className="recipe-grid">{recipes.map((recipe, index) => <article className="suggestion-card" key={`${recipe.name}-${index}`}><div className="suggestion-top"><span className="recipe-number">RECIPE {String(index + 1).padStart(2, '0')}</span><span className="difficulty-pill">{recipe.difficulty}</span></div><h3>{recipe.name}</h3><p className="suggestion-description">{recipe.description}</p><div className="suggestion-meta"><span>◷ {recipe.preparation_time}</span><span>·</span><span>{recipe.difficulty}</span></div><div className="available-list"><b>You Have</b><div>{(recipe.available_ingredients || []).map((item) => <span key={item}>✓ {item}</span>)}</div></div>{(recipe.additional_ingredients || []).length > 0 && <div className="additional-list"><b>Additional Ingredients Needed</b><div>{(recipe.additional_ingredients || []).map((item) => <span key={item}>＋ {item}</span>)}</div></div>}

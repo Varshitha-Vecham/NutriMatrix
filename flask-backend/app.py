@@ -171,6 +171,74 @@ FOOD_INGREDIENT_TERMS = set("rice wheat flour atta oats barley quinoa millet rag
 "bread roti chapati bhakri bottlegourd bittergourd snakegourd paratha puri kulcha naan idli dosa appam upma khichdi pulao biryani tomato onion potato milk egg paneer cheese butter ghee yogurt curd cream tofu chicken fish mutton turkey pork beef dal lentil chickpea chana rajma bean pea soybean sprouts moong masoor urad lobia vatana chawli horsegram kulith moth apple banana mango orange grape guava papaya pineapple pear kiwi watermelon pomegranate lemon lime coconut avocado berry strawberry jamun litchi chikoo sitaphal amla carrot cabbage cauliflower broccoli spinach cucumber capsicum pumpkin beetroot corn mushroom garlic ginger coriander mint fenugreek methi okra bhindi brinjal eggplant bottle-gourd ridge-gourd bitter-gourd drumstick zucchini radish turnip colocasia arbi jackfruit plantain oil olive mustard sunflower sesame salt sugar jaggery honey spice turmeric cumin chilli pepper cinnamon cardamom clove masala hing asafoetida ajwain kasuri saffron tamarind vinegar ketchup sauce chutney pickle papad tea coffee peanut almond cashew walnut pistachio raisin date seed chia flax makhana poha cornflakes cereal biscuit chocolate namkeen sev chips wafer snack mixture juice buttermilk coconut water beverage drink squash syrup jam jelly mayonnaise oats muesli granola noodles maggi kurkure lays biscuits cookies rusk cake dal chawal sabzi curry korma kofta sambar rasam thali bhel vada pav pakora samosa chole halwa kheer payasam lassi shrikhand icecream frozen".split())
 NON_FOOD_TERMS = set("soap shampoo detergent dishwashing dishwash liquid plastic bag bags utensil utensils cleaner cleaning product products bleach disinfectant sponge scrubber tissue toilet sanitary toothpaste toothbrush lotion perfume candle battery paper foil mop broom clothes cloth shirt tshirt trouser pant saree dress footwear shoe slipper electronics charger cable bulb toy stationery notebook".split())
 
+# Kept deliberately conservative: aliases catch common and hidden ingredient
+# names, while an unknown conflict is rejected instead of being called safe.
+ALLERGEN_ALIASES = {
+    "peanut": ("peanut", "groundnut", "arachis"),
+    "milk": ("milk", "dairy", "lactose", "casein", "whey", "butter", "ghee", "cheese", "paneer", "yogurt", "curd", "cream"),
+    "egg": ("egg", "albumin", "mayonnaise"),
+    "soy": ("soy", "soya", "soybean", "tofu", "tempeh", "edamame"),
+    "almond": ("almond",), "wheat": ("wheat", "atta", "maida", "semolina", "suji", "bread", "roti", "chapati", "pasta", "noodle", "vermicelli"),
+    "sesame": ("sesame", "til", "tahini"), "fish": ("fish", "anchovy", "tuna", "salmon"),
+    "shellfish": ("shellfish", "prawn", "shrimp", "crab", "lobster"), "tree_nut": ("cashew", "walnut", "pistachio", "hazelnut", "pecan", "macadamia"),
+}
+ALLERGEN_SUBSTITUTES = {"peanut": ("pumpkin seeds", "sunflower seeds"), "milk": ("oat milk", "coconut milk"), "egg": ("flaxseed gel", "mashed banana"), "soy": ("chickpeas", "lentils"), "almond": ("sunflower seeds", "pumpkin seeds"), "wheat": ("rice flour", "millet flour"), "sesame": ("sunflower seeds", "pumpkin seeds"), "fish": ("chickpeas", "lentils"), "shellfish": ("chickpeas", "lentils"), "tree_nut": ("pumpkin seeds", "sunflower seeds")}
+
+def _restriction_list(value):
+    values = value if isinstance(value, list) else [value]
+    return [item.strip().lower() for value in values for item in re.split(r"[,;\n]", str(value or "")) if item.strip()]
+
+def _restriction_group(value):
+    text = str(value or "").lower()
+    return next((group for group, aliases in ALLERGEN_ALIASES.items() if any(alias in text for alias in aliases)), text)
+
+def _matches_restriction(ingredient, restrictions):
+    text = str(ingredient or "").lower()
+    for item in restrictions:
+        group = _restriction_group(item)
+        aliases = ALLERGEN_ALIASES.get(group, (item,))
+        # Plant milks are not dairy; they are still checked against their own
+        # source allergen (for example soy or almond) in the same loop.
+        if group == "milk" and re.search(r"\b(oat|coconut|rice|soy|almond)\s+milk\b", text):
+            aliases = tuple(alias for alias in aliases if alias != "milk")
+        if group == "wheat" and re.fullmatch(r"(rice|millet) (noodles|pasta|bread|roti)", text):
+            aliases = tuple(alias for alias in aliases if alias not in ("noodle", "bread", "roti", "pasta"))
+        if any(alias in text for alias in aliases): return True
+    return False
+
+def _substitutes_for_ingredient(name, group):
+    ingredient = str(name or "").lower()
+    if group == "milk":
+        if "butter" in ingredient or "ghee" in ingredient: return ("olive oil", "coconut oil")
+        if "cheese" in ingredient: return ("nutritional yeast", "coconut yogurt")
+        if "paneer" in ingredient: return ("chickpea tofu", "mushrooms")
+        if any(term in ingredient for term in ("yogurt", "curd", "cream")): return ("coconut yogurt", "coconut cream")
+    if group == "egg" and any(term in ingredient for term in ("omelet", "bhurji", "scramble")):
+        return ("chickpea flour scramble", "tofu scramble")
+    if group == "wheat":
+        if any(term in ingredient for term in ("pasta", "noodle", "vermicelli")): return ("rice noodles", "rice pasta")
+        if any(term in ingredient for term in ("bread", "roti", "chapati", "naan")): return ("millet roti", "rice bread")
+    return ALLERGEN_SUBSTITUTES.get(group, ())
+
+def apply_allergy_substitutions(ingredients, allergies, dislikes):
+    """Shared generator safety gate; returns None when no verified substitute exists."""
+    restrictions = _restriction_list(allergies) + _restriction_list(dislikes)
+    result, substitutions = [], []
+    for ingredient in ingredients:
+        name = ingredient.get("name") if isinstance(ingredient, dict) else ingredient
+        if not _matches_restriction(name, restrictions):
+            result.append(ingredient); continue
+        group = _restriction_group(name)
+        replacement = next((candidate for candidate in _substitutes_for_ingredient(name, group) if not _matches_restriction(candidate, restrictions)), None)
+        if not replacement: return None, substitutions
+        substitutions.append((name, replacement))
+        result.append({**ingredient, "name": replacement} if isinstance(ingredient, dict) else replacement)
+    return result, substitutions
+
+def _recipe_is_safe(recipe, allergies, dislikes):
+    names = list(recipe.get("available_ingredients", [])) + list(recipe.get("additional_ingredients", [])) + [item.get("name", "") for item in recipe.get("ingredients", []) if isinstance(item, dict)]
+    return not any(_matches_restriction(name, _restriction_list(allergies) + _restriction_list(dislikes)) for name in names)
+
 def is_food_ingredient(value):
     terms = re.findall(r"[a-z]+", str(value).lower())
     return bool(terms) and not any(term in NON_FOOD_TERMS for term in terms) and any(term in FOOD_INGREDIENT_TERMS for term in terms)
@@ -279,6 +347,12 @@ def generate_recipes():
         if not clean: return jsonify({"message": "Each ingredient must be a valid name under 80 characters."}), 400
         if not is_food_ingredient(clean): return jsonify({"message": f"Remove non-food item before generating a recipe: {clean}."}), 400
         if clean.casefold() not in {existing.casefold() for existing in clean_ingredients}: clean_ingredients.append(clean)
+    allergies = _restriction_list(data.get("allergies", []))
+    dislikes = _restriction_list(data.get("food_dislikes", []))
+    substituted_ingredients, substitutions = apply_allergy_substitutions(clean_ingredients, allergies, dislikes)
+    if substituted_ingredients is None:
+        return jsonify({"message": "A safe substitute could not be verified for one of your allergies or food dislikes. No recipe was generated."}), 422
+    clean_ingredients = substituted_ingredients
     prefs = {}
     for key, allowed in RECIPE_OPTIONS.items():
         value = data.get(key, "Any")
@@ -289,7 +363,8 @@ def generate_recipes():
     excluded = data.get("exclude_names", [])
     excluded = [_clean_recipe_text(name, 120) for name in excluded[:5] if isinstance(name, str)] if isinstance(excluded, list) else []
     missing_instruction = "Use exactly and only the listed ingredients. Do not add, suggest, or list any other ingredient, including salt, oil, water, or spices unless it is in the user's list. additional_ingredients must be an empty array." if mode == "only" else "Use at most two extra ingredients. additional_ingredients must contain only ingredients that are not in the user's list; never repeat a user-provided ingredient there."
-    prompt = f'''Make one quick, concise recipe from {json.dumps(clean_ingredients, ensure_ascii=False)}. Preferences: {prefs['meal_type']}, {prefs['cuisine']}, {prefs['time']}, {prefs['difficulty']}. {missing_instruction}
+    safety_instruction = f"Never use or mention these restricted ingredients or aliases: {json.dumps(allergies + dislikes, ensure_ascii=False)}. Validate every generated ingredient against this restriction list." if (allergies or dislikes) else ""
+    prompt = f'''Make one quick, concise recipe from {json.dumps(clean_ingredients, ensure_ascii=False)}. Preferences: {prefs['meal_type']}, {prefs['cuisine']}, {prefs['time']}, {prefs['difficulty']}. {missing_instruction} {safety_instruction}
 Do not use these recipe names: {json.dumps(excluded, ensure_ascii=False)}. Return only compact JSON in this shape: {{"recipes":[{{"n":"Tomato rice","d":"A quick, filling meal.","a":["rice","tomato"],"x":[],"t":"15 min","i":[{{"n":"rice","q":"100 g"}}],"s":["Rinse the rice until the water runs mostly clear, then soak it for 10 minutes.","Heat oil in a pan over medium heat and cook the tomato with the spices until soft and jammy, about 4 minutes.","Add the drained rice and stir gently for 1 minute so every grain is coated.","Pour in the measured water, bring it to a boil, then cover and cook on low heat until the rice is tender and the water is absorbed.","Rest the pan, covered, for 5 minutes; fluff with a fork and serve warm."],"c":[300,8,50,8,4]}}]}}. Keys: n=name, d=one-sentence description, a=available ingredients, x=additional ingredients, t=prep time, i=up to 5 ingredient objects with n=name and q=metric quantity, s=5 to 8 clear, non-empty cooking steps. Each step must state the action and, where useful, heat level, timing, texture, or a visual cue. Include preparation, cooking, finishing, and serving; do not combine multiple stages into vague steps. c=numeric estimates [calories kcal, protein g, carbohydrates g, fat g, fiber g]. Keep JSON values concise.'''
     try:
         payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 500}}).encode("utf-8")
@@ -297,7 +372,7 @@ Do not use these recipe names: {json.dumps(excluded, ensure_ascii=False)}. Retur
         with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=RECIPE_OLLAMA_TIMEOUT_SECONDS) as response: result = json.loads(response.read().decode("utf-8"))
         decoded = json.loads(result.get("response", ""))
         recipes = [_apply_ingredient_mode(validated, clean_ingredients, mode) for recipe in decoded.get("recipes", [])[:1] if (validated := _validate_recipe(_expand_compact_recipe(recipe, prefs["difficulty"] if prefs["difficulty"] != "Any" else "Easy")))] if isinstance(decoded, dict) else []
-        recipes = [recipe for recipe in recipes if recipe]
+        recipes = [recipe for recipe in recipes if recipe and _recipe_is_safe(recipe, allergies, dislikes)]
         if not recipes: return jsonify({"message": "The recipe model returned incomplete details. Please try again; if this continues, check that your selected Ollama model is available."}), 502
         return jsonify({"recipes": recipes})
     except HTTPError as error:

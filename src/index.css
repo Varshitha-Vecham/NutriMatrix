@@ -43,14 +43,15 @@ img {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: #dcfce7;
 }
 ::-webkit-scrollbar-thumb {
   background: #22c55e;
-  border-radius: 6px;
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #15803d;

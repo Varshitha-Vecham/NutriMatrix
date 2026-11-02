@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { apiRequest } from '../api.js'
 import { getExpiryMeta } from '../utils/expiry.js'
+import { addUnique, loadReadItems, mergeUnique, sameReadItems, saveReadItems, sortPantryItems, subscribeToReadItems, withoutItem } from '../utils/pantryReadState.js'
 import './Notifications.css'
 
 const toneClass = {
@@ -17,14 +18,19 @@ const toneClass = {
 function Notifications() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
-  const [readItems, setReadItems] = useState([])
+  const [readItems, setReadItems] = useState(loadReadItems)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [remindersEnabled, setRemindersEnabled] = useState(true)
+
+  useEffect(() => { saveReadItems(readItems) }, [readItems])
+  useEffect(() => subscribeToReadItems((nextItems) => setReadItems((current) => sameReadItems(current, nextItems) ? current : nextItems)), [])
 
   useEffect(() => {
     apiRequest('/api/expiry-products')
       .then(({ products }) => {
-        setItems(products || [])
+        const read = loadReadItems()
+        setItems((products || []).filter((item) => !read.some((entry) => String(entry.id) === String(item.id))))
       })
       .catch((requestError) => {
         if (requestError.message === 'Not authenticated.') {
@@ -36,7 +42,14 @@ function Notifications() {
       .finally(() => setLoading(false))
   }, [navigate])
 
+  useEffect(() => {
+    apiRequest('/api/profile').then((result) => {
+      if (result?.hasProfile) setRemindersEnabled(Boolean(result.profile?.notifications) && Boolean(result.profile?.expiryReminders))
+    }).catch(() => {})
+  }, [])
+
   const notifications = useMemo(() => {
+    if (!remindersEnabled) return []
     return items
       .filter((item) => item.expiryDate && item.daysRemaining !== null && item.daysRemaining <= 7)
       .map((item) => ({ ...item, ...getExpiryMeta(item.expiryDate) }))
@@ -44,7 +57,7 @@ function Notifications() {
         const priority = { expired: 0, today: 1, tomorrow: 2, three: 3, seven: 4 }
         return (priority[a.statusKey] ?? 99) - (priority[b.statusKey] ?? 99)
       })
-  }, [items])
+  }, [items, remindersEnabled])
 
   const handleMarkRead = (id) => {
     setItems((current) => {
@@ -52,8 +65,7 @@ function Notifications() {
       if (!itemToRead) return current
 
       setReadItems((previousRead) => {
-        const alreadyStored = previousRead.some((item) => item.id === id)
-        return alreadyStored ? previousRead : [...previousRead, itemToRead]
+        return addUnique(previousRead, itemToRead)
       })
 
       return current.filter((item) => item.id !== id)
@@ -65,20 +77,20 @@ function Notifications() {
       const itemToRestore = current.find((item) => item.id === id)
       if (!itemToRestore) return current
 
-      setItems((existing) => [itemToRestore, ...existing])
-      return current.filter((item) => item.id !== id)
+      setItems((existing) => existing.some((item) => String(item.id) === String(id)) ? existing : sortPantryItems([...existing, itemToRestore]))
+      return withoutItem(current, id)
     })
   }
 
   const handleRestoreAll = () => {
     if (!readItems.length) return
-    setItems((current) => [...readItems, ...current])
+    setItems((current) => sortPantryItems(mergeUnique(current, readItems)))
     setReadItems([])
   }
 
   const handleMarkAllRead = () => {
     if (!items.length) return
-    setReadItems((current) => [...current, ...items])
+    setReadItems((current) => mergeUnique(current, items))
     setItems([])
   }
 
@@ -99,7 +111,9 @@ function Notifications() {
           <button type="button" className="notifications-mark-all" onClick={handleMarkAllRead}>Mark all as read</button>
         </div>
 
-        {loading ? (
+        {!remindersEnabled ? (
+          <p className="notifications-state">Expiry notifications are turned off in your Profile settings.</p>
+        ) : loading ? (
           <p className="notifications-state">Loading notifications...</p>
         ) : error ? (
           <p className="notifications-state error">{error}</p>

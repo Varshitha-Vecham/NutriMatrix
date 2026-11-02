@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Navbar from '../components/Navbar.jsx'
 import { apiRequest } from '../api.js'
+import { matchesRestriction, splitRestrictions } from '../utils/allergySubstitutions.js'
 import './Products.css'
 
 //const productImageFallback = (tags, id) => `https://loremflickr.com/700/500/${encodeURIComponent(tags.replaceAll(' ', ','))}/all?lock=${id}`
@@ -191,18 +192,18 @@ function nutritionQualityScore(product) {
     product.calories * 0.02 - product.fat * 0.5 - product.sugar * 0.75 - product.sodium * 0.01
 }
 
-function alternativesFor(product, products) {
+function alternativesFor(product, products, restrictions = []) {
   const savedAlternatives = product.healthierAlternatives
     .map((id) => products.find((candidate) => candidate.id === id))
     .filter(Boolean)
-  if (savedAlternatives.length) return savedAlternatives
+  if (savedAlternatives.length) return savedAlternatives.filter((candidate) => !matchesRestriction(candidate.name, restrictions))
 
   const sameCategory = products.filter((candidate) =>
     candidate.id !== product.id && candidate.category === product.category
   )
-  const candidates = sameCategory.length
+  const candidates = (sameCategory.length
     ? sameCategory
-    : products.filter((candidate) => candidate.id !== product.id)
+    : products.filter((candidate) => candidate.id !== product.id)).filter((candidate) => !matchesRestriction(candidate.name, restrictions))
   const healthier = candidates.filter((candidate) =>
     nutritionQualityScore(candidate) > nutritionQualityScore(product)
   )
@@ -251,6 +252,8 @@ function Products() {
   const [packageSelections, setPackageSelections] = useState({})
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState('')
+  const [foodRestrictions, setFoodRestrictions] = useState([])
+  const [aiRecommendationsEnabled, setAiRecommendationsEnabled] = useState(true)
   useEffect(() => {
     apiRequest('/api/products')
       .then(({ products: savedProducts }) => {
@@ -268,6 +271,14 @@ function Products() {
       })
       .catch((error) => setCatalogError(error.message))
       .finally(() => setCatalogLoading(false))
+  }, [])
+  useEffect(() => {
+    apiRequest('/api/profile').then((result) => {
+      if (result?.hasProfile) {
+        setFoodRestrictions([...splitRestrictions(result.profile?.allergies), ...splitRestrictions(result.profile?.foodDislikes)])
+        setAiRecommendationsEnabled(Boolean(result.profile?.aiRecommendations))
+      }
+    }).catch(() => {})
   }, [])
   const cartProducts = cart.map((item) => {
     const product = productCatalog.find((entry) => entry.id === item.id)
@@ -287,7 +298,7 @@ function Products() {
   if (catalogError) return <div className="products-page"><Navbar /><main className="products-main"><p className="catalog-error" role="alert">{catalogError}</p></main></div>
   if (selectedProduct) {
     const selectedPackageId = packageSelections[selectedProduct.id] || selectedProduct.packageOptions[0].id
-    const alternatives = alternativesFor(selectedProduct, productCatalog)
+    const alternatives = aiRecommendationsEnabled ? alternativesFor(selectedProduct, productCatalog, foodRestrictions) : []
     return <ProductAnalysis product={selectedProduct} alternatives={alternatives} onBack={() => setSelectedProduct(null)} onAdd={addToCart} onChangeQuantity={changeQuantity} quantity={cart.find((item) => item.id === selectedProduct.id && item.packageId === selectedPackageId)?.quantity} packageId={selectedPackageId} onChangePackage={changePackage} onSelect={setSelectedProduct} />
   }
   return <div className="products-page"><Navbar />
