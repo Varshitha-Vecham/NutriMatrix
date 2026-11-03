@@ -17,7 +17,7 @@ import numpy as np
 from smart_scanner import smart_scanner
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 CORS(app, origins=["http://localhost:5173", "http://localhost:5174"], supports_credentials=True)
 app.register_blueprint(smart_scanner)
 
