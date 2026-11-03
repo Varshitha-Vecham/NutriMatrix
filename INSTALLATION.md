@@ -52,4 +52,16 @@ These commands are for Windows PowerShell.
    npm run dev
    ```
 
-7. Open `http://localhost:5173` in your browser.
+7. **Enable AI recipe generation (recommended)**
+
+   Install Ollama, then in a separate PowerShell window run:
+   ```powershell
+   ollama serve
+   ollama pull qwen2.5:3b
+   ```
+
+   Keep the Ollama window open while demonstrating the project. If it is not
+   available, the Recipe Generator now returns a clearly labelled built-in demo
+   recipe rather than displaying a failed-generation error.
+
+8. Open `http://localhost:5173` in your browser.

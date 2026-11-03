@@ -166,7 +166,10 @@ RECIPE_OPTIONS = {
     "time": {"Under 15 minutes", "15–30 minutes", "30–60 minutes", "Any"},
     "difficulty": {"Easy", "Medium", "Any"},
 }
-RECIPE_OLLAMA_TIMEOUT_SECONDS = 40
+# qwen2.5:3b can need more than 40 seconds on a CPU-only laptop, especially
+# for its first request after startup.  Do not replace a real model recipe
+# with the local fallback just because model warm-up is still in progress.
+RECIPE_OLLAMA_TIMEOUT_SECONDS = 90
 FOOD_INGREDIENT_TERMS = set("rice wheat flour atta oats barley quinoa millet ragi bajra jowar maida suji pasta noodle vermicelli "
 "bread roti chapati bhakri bottlegourd bittergourd snakegourd paratha puri kulcha naan idli dosa appam upma khichdi pulao biryani tomato onion potato milk egg paneer cheese butter ghee yogurt curd cream tofu chicken fish mutton turkey pork beef dal lentil chickpea chana rajma bean pea soybean sprouts moong masoor urad lobia vatana chawli horsegram kulith moth apple banana mango orange grape guava papaya pineapple pear kiwi watermelon pomegranate lemon lime coconut avocado berry strawberry jamun litchi chikoo sitaphal amla carrot cabbage cauliflower broccoli spinach cucumber capsicum pumpkin beetroot corn mushroom garlic ginger coriander mint fenugreek methi okra bhindi brinjal eggplant bottle-gourd ridge-gourd bitter-gourd drumstick zucchini radish turnip colocasia arbi jackfruit plantain oil olive mustard sunflower sesame salt sugar jaggery honey spice turmeric cumin chilli pepper cinnamon cardamom clove masala hing asafoetida ajwain kasuri saffron tamarind vinegar ketchup sauce chutney pickle papad tea coffee peanut almond cashew walnut pistachio raisin date seed chia flax makhana poha cornflakes cereal biscuit chocolate namkeen sev chips wafer snack mixture juice buttermilk coconut water beverage drink squash syrup jam jelly mayonnaise oats muesli granola noodles maggi kurkure lays biscuits cookies rusk cake dal chawal sabzi curry korma kofta sambar rasam thali bhel vada pav pakora samosa chole halwa kheer payasam lassi shrikhand icecream frozen".split())
 NON_FOOD_TERMS = set("soap shampoo detergent dishwashing dishwash liquid plastic bag bags utensil utensils cleaner cleaning product products bleach disinfectant sponge scrubber tissue toilet sanitary toothpaste toothbrush lotion perfume candle battery paper foil mop broom clothes cloth shirt tshirt trouser pant saree dress footwear shoe slipper electronics charger cable bulb toy stationery notebook".split())
@@ -335,6 +338,82 @@ def _expand_compact_recipe(recipe, difficulty):
     }
 
 
+def _offline_recipe(ingredients, preferences):
+    """Create an ingredient-specific local recipe only when AI is unavailable."""
+    ingredient_keys = {_ingredient_key(item) for item in ingredients}
+    used = ingredients[:5]
+    ingredient_text = ", ".join(used)
+    meal = preferences.get("meal_type", "Any")
+    nutrition_data = {
+        "pav": (135, 4, 26, 2, 1), "potato": (130, 3, 30, 0, 3), "pea": (80, 5, 14, 0, 5),
+        "onion": (40, 1, 9, 0, 2), "tomato": (22, 1, 5, 0, 2), "bottlegourd": (25, 1, 6, 0, 1),
+        "bottle gourd": (25, 1, 6, 0, 1), "rice": (205, 4, 45, 0, 1), "paneer": (265, 18, 6, 20, 0),
+        "dal": (180, 12, 30, 1, 8), "egg": (78, 6, 1, 5, 0), "chicken": (165, 31, 0, 4, 0),
+    }
+    totals = [0, 0, 0, 0, 0]
+    for item in used:
+        values = nutrition_data.get(_ingredient_key(item), (45, 2, 8, 1, 2))
+        totals = [current + value for current, value in zip(totals, values)]
+
+    if {"pav", "potato"}.issubset(ingredient_keys):
+        name = "Quick Pav Bhaji"
+        steps = [
+            "Boil the potato until fork-tender, then mash it roughly with the peas.",
+            "Cook the onion and tomato in a pan over medium heat until soft and jammy.",
+            "Add the mashed potato and peas, then stir until the bhaji is thick and evenly mixed.",
+            "Warm the pav in a dry pan until lightly crisp at the edges.",
+            "Serve the hot bhaji with the warm pav.",
+        ]
+    elif "bottlegourd" in ingredient_keys or "bottle gourd" in ingredient_keys:
+        name = "Tomato Lauki Sabzi"
+        steps = [
+            "Peel the bottle gourd and cut it into small, even cubes.",
+            "Cook the onion over medium heat until soft, then add tomato and cook until pulpy.",
+            "Add the bottle gourd and stir so it is coated with the tomato mixture.",
+            "Cover and cook on low heat for 12 to 15 minutes until the bottle gourd is tender.",
+            "Stir gently, check that the vegetables are soft, and serve warm.",
+        ]
+    elif "rice" in ingredient_keys:
+        name = "Quick Vegetable Rice"
+        steps = [
+            "Rinse the rice and cook it until the grains are tender and separate.",
+            "Cook the onion and the firmer vegetables in a pan over medium heat until softened.",
+            "Add tomato and cook until it breaks down into a light coating.",
+            "Fold in the cooked rice and stir gently until heated through.",
+            "Rest for two minutes, fluff the rice, and serve warm.",
+        ]
+    elif "paneer" in ingredient_keys:
+        name = "Tomato Paneer Skillet"
+        steps = [
+            "Cut the paneer into bite-sized cubes and prepare the vegetables.",
+            "Cook onion over medium heat until soft, then add tomato until it turns saucy.",
+            "Add the paneer and remaining vegetables, stirring gently to avoid breaking the cubes.",
+            "Cook for 5 to 7 minutes until the paneer is hot and the vegetables are tender.",
+            "Serve warm when the tomato mixture coats the paneer evenly.",
+        ]
+    else:
+        name = f"{'Quick' if meal == 'Any' else meal} {ingredients[0].replace('-', ' ').title()} Skillet"
+        steps = [
+            f"Wash and prepare the {ingredient_text}; cut larger items into even pieces.",
+            "Heat a pan over medium heat and cook the firmest ingredients first until they begin to soften.",
+            "Add the remaining ingredients gradually and stir until everything is evenly heated.",
+            "Cover and cook on low heat until the vegetables are tender and any liquid has reduced.",
+            "Check that the ingredients are cooked through, then serve warm.",
+        ]
+    return {
+        "name": name,
+        "description": f"A simple, adaptable dish using {ingredient_text}.",
+        "available_ingredients": ingredients,
+        "additional_ingredients": [],
+        "preparation_time": "20 minutes",
+        "difficulty": preferences.get("difficulty") if preferences.get("difficulty") in {"Easy", "Medium"} else "Easy",
+        "ingredients": [{"name": item, "quantity": "1 portion" if index == 0 else "As needed"} for index, item in enumerate(used)],
+        "steps": steps,
+        "nutrition": {"calories": f"{totals[0]} kcal", "protein": f"{totals[1]} g", "carbohydrates": f"{totals[2]} g", "fat": f"{totals[3]} g", "fiber": f"{totals[4]} g"},
+        "healthier_swaps": ["Use less oil and add herbs or spices for extra flavour."],
+    }
+
+
 @app.post("/api/generate-recipes")
 def generate_recipes():
     data = request.get_json(silent=True)
@@ -366,29 +445,38 @@ def generate_recipes():
     safety_instruction = f"Never use or mention these restricted ingredients or aliases: {json.dumps(allergies + dislikes, ensure_ascii=False)}. Validate every generated ingredient against this restriction list." if (allergies or dislikes) else ""
     prompt = f'''Make one quick, concise recipe from {json.dumps(clean_ingredients, ensure_ascii=False)}. Preferences: {prefs['meal_type']}, {prefs['cuisine']}, {prefs['time']}, {prefs['difficulty']}. {missing_instruction} {safety_instruction}
 Do not use these recipe names: {json.dumps(excluded, ensure_ascii=False)}. Return only compact JSON in this shape: {{"recipes":[{{"n":"Tomato rice","d":"A quick, filling meal.","a":["rice","tomato"],"x":[],"t":"15 min","i":[{{"n":"rice","q":"100 g"}}],"s":["Rinse the rice until the water runs mostly clear, then soak it for 10 minutes.","Heat oil in a pan over medium heat and cook the tomato with the spices until soft and jammy, about 4 minutes.","Add the drained rice and stir gently for 1 minute so every grain is coated.","Pour in the measured water, bring it to a boil, then cover and cook on low heat until the rice is tender and the water is absorbed.","Rest the pan, covered, for 5 minutes; fluff with a fork and serve warm."],"c":[300,8,50,8,4]}}]}}. Keys: n=name, d=one-sentence description, a=available ingredients, x=additional ingredients, t=prep time, i=up to 5 ingredient objects with n=name and q=metric quantity, s=5 to 8 clear, non-empty cooking steps. Each step must state the action and, where useful, heat level, timing, texture, or a visual cue. Include preparation, cooking, finishing, and serving; do not combine multiple stages into vague steps. c=numeric estimates [calories kcal, protein g, carbohydrates g, fat g, fiber g]. Keep JSON values concise.'''
+    def fallback_response():
+        recipe = _apply_ingredient_mode(_offline_recipe(clean_ingredients, prefs), clean_ingredients, mode)
+        if recipe and _recipe_is_safe(recipe, allergies, dislikes):
+            return jsonify({"recipes": [recipe], "fallback": True})
+        return jsonify({"message": "A safe recipe could not be created from these ingredients."}), 422
+
     try:
-        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 500}}).encode("utf-8")
+        payload = json.dumps({"model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"), "prompt": prompt, "format": "json", "stream": False, "keep_alive": "15m", "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": 350}}).encode("utf-8")
         url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/generate"
         with urlopen(Request(url, data=payload, headers={"Content-Type": "application/json"}, method="POST"), timeout=RECIPE_OLLAMA_TIMEOUT_SECONDS) as response: result = json.loads(response.read().decode("utf-8"))
         decoded = json.loads(result.get("response", ""))
         recipes = [_apply_ingredient_mode(validated, clean_ingredients, mode) for recipe in decoded.get("recipes", [])[:1] if (validated := _validate_recipe(_expand_compact_recipe(recipe, prefs["difficulty"] if prefs["difficulty"] != "Any" else "Easy")))] if isinstance(decoded, dict) else []
         recipes = [recipe for recipe in recipes if recipe and _recipe_is_safe(recipe, allergies, dislikes)]
-        if not recipes: return jsonify({"message": "The recipe model returned incomplete details. Please try again; if this continues, check that your selected Ollama model is available."}), 502
+        if not recipes:
+            app.logger.warning("Ollama returned incomplete recipe details; using recipe fallback")
+            return fallback_response()
         return jsonify({"recipes": recipes})
     except HTTPError as error:
-        if error.code == 404: return jsonify({"message": "The selected recipe model is unavailable. Please check your Ollama model installation."}), 503
-        return jsonify({"message": "Recipe generation is temporarily unavailable. Please make sure Ollama is running and try again."}), 503
+        app.logger.warning("Ollama returned HTTP %s; using recipe fallback", error.code)
+        return fallback_response()
     except TimeoutError:
-        app.logger.warning("Ollama recipe generation exceeded %s seconds", RECIPE_OLLAMA_TIMEOUT_SECONDS)
-        return jsonify({"message": "Recipe generation took too long. Try again, or use a smaller Ollama model."}), 504
+        app.logger.warning("Ollama recipe generation exceeded %s seconds; using recipe fallback", RECIPE_OLLAMA_TIMEOUT_SECONDS)
+        return fallback_response()
     except (URLError, ConnectionError):
-        app.logger.warning("Ollama is unavailable at %s", url)
-        return jsonify({"message": "Ollama is not running or cannot be reached. Start Ollama and try again."}), 503
+        app.logger.warning("Ollama is unavailable at %s; using recipe fallback", url)
+        return fallback_response()
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-        return jsonify({"message": "The recipe model returned an invalid response. Please try again; if this continues, check that your selected Ollama model is available."}), 502
+        app.logger.warning("Ollama returned an invalid recipe; using recipe fallback")
+        return fallback_response()
     except Exception:
-        app.logger.exception("Recipe generation failed")
-        return jsonify({"message": "Recipe generation is temporarily unavailable. Please try again."}), 502
+        app.logger.exception("Recipe generation failed; using recipe fallback")
+        return fallback_response()
 
 def normalize_country(country):
     value = (country or "India").strip()
