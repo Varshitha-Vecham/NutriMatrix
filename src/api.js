@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
+// During Vite development, /api is proxied to the Node API using API_PORT.
+// A deployed frontend can set VITE_API_URL to its API origin explicitly.
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 export const OCR_API_URL = import.meta.env.VITE_OCR_API_URL || 'http://localhost:5001'
 
 export async function apiRequest(path, options = {}) {
