@@ -13,7 +13,6 @@ from flask_cors import CORS
 from PIL import Image, ImageOps
 import cv2
 import numpy as np
-
 from smart_scanner import smart_scanner
 
 app = Flask(__name__)
@@ -635,6 +634,37 @@ def expiry_detect():
     except Exception as error:
         app.logger.exception("Expiry OCR failed")
         return jsonify({"message": f"Unable to read the expiry image: {error}"}), 500
+
+
+@app.post("/api/scan-product")
+def scan_product():
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"message": "Product image is required."}), 400
+    if not uploaded.mimetype or not uploaded.mimetype.startswith("image/"):
+        return jsonify({"message": "Only product images are supported."}), 400
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(uploaded.stream)).convert("RGB")
+        image = image.resize((image.width * 2, image.height * 2))
+        texts = [
+            pytesseract.image_to_string(image, config="--psm 6"),
+            pytesseract.image_to_string(image, config="--psm 11"),
+        ]
+        detected_text = max(texts, key=len).strip()
+        if not detected_text:
+            return jsonify({"message": "Product text could not be detected. Try a clearer package-front image."}), 422
+
+        quantity_match = re.search(
+            r"\b(\d+(?:\.\d+)?)\s*(kg|g|mg|l|ml|cl|oz|lb)\b",
+            detected_text,
+            flags=re.IGNORECASE,
+        )
+        quantity = f"{quantity_match.group(1)} {quantity_match.group(2).lower()}" if quantity_match else ""
+        return jsonify({"success": True, "detected_text": detected_text, "quantity": quantity})
+    except Exception as error:
+        app.logger.exception("Product OCR failed")
+        return jsonify({"message": f"Unable to read the product image: {error}"}), 500
 
 
 @app.post("/api/scanner/receipt")

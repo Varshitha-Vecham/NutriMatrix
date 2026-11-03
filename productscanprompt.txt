@@ -1,0 +1,646 @@
+Implement a **Two-Step Product & Expiry Scanner** in the existing NutriMatrix application.
+
+## IMPORTANT: DO NOT BREAK EXISTING FUNCTIONALITY
+
+Before making any changes, inspect the existing NutriMatrix frontend, backend, scanner component/page, routes, APIs, database structure, Digital Pantry integration, and CSS.
+
+### Strict requirements
+
+* Do NOT remove or modify any existing functionality except the **Barcode Scan** feature.
+* Remove **only Barcode Scan** from the existing scanner UI and its related functionality.
+* Do NOT remove Receipt Scan, Voice Input, Manual Entry, Digital Pantry, Expiry Reminders, Product Analysis, or any other existing feature.
+* Do NOT redesign the entire scanner page.
+* Do NOT replace the existing CSS.
+* Do NOT remove existing CSS classes unnecessarily.
+* Preserve the existing colors, fonts, spacing, buttons, cards, responsive design, navigation, header, footer, and layout.
+* Reuse the existing scanner page/card design wherever possible.
+* Do NOT create a completely new page if an existing scanner page already exists.
+* Do NOT change unrelated files.
+* Do NOT change existing database tables unless required.
+* Do NOT change existing authentication or routing.
+* Do NOT change existing API endpoints unless absolutely necessary.
+* Do NOT use barcode or QR scanning anywhere in this new feature.
+
+The only scanner change should be:
+
+**Remove Barcode Scan → Replace it with a Product Scan Card containing a 2-step process.**
+
+---
+
+# NEW PRODUCT SCAN CARD
+
+Inside the existing scanner UI, create/modify the **Product Scan Card**.
+
+The Product Scan Card must contain exactly **2 steps**.
+
+### STEP 1 — FRONT PRODUCT IMAGE
+
+Title:
+
+**Step 1: Scan Product**
+
+Purpose:
+
+Capture or upload an image of the **front of the grocery product package**.
+
+The user should have two choices:
+
+**📷 Scan**
+
+and
+
+**⬆ Upload Image**
+
+### Scan
+
+When the user clicks Scan:
+
+1. Open the device/browser camera.
+2. Display the camera preview.
+3. Allow the user to capture the front image.
+4. Show the captured image preview.
+5. Provide:
+
+   * Retake
+   * Use Image
+6. Process the image.
+
+### Upload Image
+
+When the user clicks Upload Image:
+
+1. Open the file picker.
+2. Allow the user to select an existing product image.
+3. Display the selected image preview.
+4. Allow the user to replace the image.
+5. Process the image.
+
+The image should preferably show the **front of the product package**, because this is used for product identification.
+
+---
+
+# PRODUCT IMAGE DETECTION
+
+Use appropriate image-processing and OCR technologies to identify the product.
+
+### Technologies
+
+Use the existing NutriMatrix technology stack wherever possible:
+
+**Frontend**
+
+* HTML5
+* CSS3
+* JavaScript
+
+**Backend**
+
+* Python
+* Flask
+
+**Image Processing**
+
+* OpenCV
+* NumPy
+* Pillow where required
+
+**Text Recognition**
+
+* Tesseract OCR
+
+**Database**
+
+* MySQL
+
+Do not add unnecessary paid services.
+
+Do not require barcode APIs.
+
+Do not require a barcode number.
+
+---
+
+# HOW STEP 1 SHOULD PROCESS THE IMAGE
+
+After the user captures/uploads the front product image:
+
+```text
+Product Image
+      ↓
+Frontend
+      ↓
+Flask API
+      ↓
+Image Preprocessing
+      ↓
+OpenCV / Pillow / NumPy
+      ↓
+Image Enhancement
+      ↓
+Tesseract OCR
+      ↓
+Extract Visible Product Text
+      ↓
+Product Identification
+      ↓
+Search Existing MySQL Product Database
+      ↓
+Return Product Information
+```
+
+Image preprocessing can include, when useful:
+
+* Resize
+* Crop
+* Noise reduction
+* Grayscale conversion
+* Contrast enhancement
+* Thresholding
+* Perspective correction
+
+Do not apply unnecessary processing if the original image is already clear.
+
+---
+
+# PRODUCT INFORMATION
+
+From the front product image, attempt to detect:
+
+* Product name
+* Brand name, if visible
+* Product category
+* Quantity/pack size, if visible
+
+The system should use the detected product name/text to match an existing product in the NutriMatrix MySQL database.
+
+If the product exists:
+
+```text
+Product Found ✓
+
+Product Name: Milk
+Category: Dairy
+Quantity: 1 L
+```
+
+If a product cannot be confidently identified:
+
+```text
+Product could not be identified.
+
+Please upload a clearer image of the front
+of the product package.
+```
+
+Provide:
+
+**Try Again**
+
+and
+
+**Upload Another Image**
+
+Do not invent a product.
+
+---
+
+# STEP 2 — EXPIRY SCAN
+
+After Step 1 successfully identifies the product, automatically move/show:
+
+**Step 2: Scan Expiry**
+
+Purpose:
+
+Detect the expiry/best-before information printed anywhere on the package.
+
+The user should again have exactly two choices:
+
+**📷 Scan**
+
+and
+
+**⬆ Upload Image**
+
+The user should NOT be required to photograph the entire product again.
+
+They should take/upload a **close-up image of the area where the expiry information is printed**.
+
+The expiry can be located on:
+
+* Top
+* Bottom
+* Back
+* Side
+* Seal
+* Cap
+* Label
+* Package edge
+* Any other location
+
+---
+
+# EXPIRY IMAGE PROCESSING
+
+Process the expiry image using:
+
+**OpenCV + NumPy/Pillow + Tesseract OCR + Python/Flask**
+
+Processing flow:
+
+```text
+Expiry Image
+      ↓
+Frontend
+      ↓
+Flask API
+      ↓
+Image Preprocessing
+      ↓
+OpenCV / NumPy / Pillow
+      ↓
+Tesseract OCR
+      ↓
+Extract Text
+      ↓
+Detect Date / Expiry Pattern
+      ↓
+Validate Date
+      ↓
+Return Expiry Date
+```
+
+The system should recognize common formats such as:
+
+```text
+EXP 25/10/2026
+EXP: 25-10-2026
+EXP 25.10.2026
+EXP DATE 25/10/26
+Expiry: 25/10/2026
+Best Before 12 Months
+```
+
+It should also handle common variations in spacing and punctuation.
+
+---
+
+# IMPORTANT EXPIRY RULE
+
+NEVER assume an expiry date.
+
+Do not automatically assign:
+
+* 3 days
+* 5 days
+* 7 days
+* 30 days
+* Any generic expiry period
+
+The actual date must come from the package/OCR whenever possible.
+
+For example:
+
+```text
+Detected:
+EXP 25/10/2026
+
+Save:
+25/10/2026
+```
+
+If the package only says:
+
+```text
+Best Before 6 Months
+```
+
+do not blindly calculate the expiry date unless a reliable manufacturing/packing date is also detected.
+
+If the required information is missing, tell the user that the expiry date could not be reliably determined.
+
+---
+
+# STEP 2 RESULT
+
+After successful OCR:
+
+```text
+Expiry Detected ✓
+
+Product:
+Milk
+
+Expiry Date:
+25 October 2026
+```
+
+Show:
+
+**✓ Confirm & Add to Digital Pantry**
+
+and
+
+**↻ Scan Again**
+
+The user must be able to verify the detected date before saving.
+
+---
+
+# FINAL TWO-STEP FLOW
+
+The complete flow must be:
+
+```text
+PRODUCT SCAN CARD
+        │
+        ▼
+┌─────────────────────────────┐
+│ STEP 1                      │
+│ FRONT PRODUCT IMAGE         │
+│                             │
+│ [ 📷 Scan ] [ ⬆ Upload ]   │
+└─────────────────────────────┘
+        │
+        ▼
+ Product Identified
+        │
+        ▼
+┌─────────────────────────────┐
+│ STEP 2                      │
+│ EXPIRY SCAN                 │
+│                             │
+│ [ 📷 Scan ] [ ⬆ Upload ]   │
+└─────────────────────────────┘
+        │
+        ▼
+ Expiry Date Detected
+        │
+        ▼
+┌─────────────────────────────┐
+│ CONFIRM                     │
+│                             │
+│ Product: Milk               │
+│ Expiry: 25/10/2026          │
+│                             │
+│ [ Add to Digital Pantry ]   │
+└─────────────────────────────┘
+```
+
+---
+
+# CONNECT WITH EXISTING DIGITAL PANTRY
+
+After confirmation, use the existing Digital Pantry functionality.
+
+Save:
+
+* User ID
+* Product ID/name
+* Category
+* Expiry date
+* Product image if the existing system supports it
+* Date added
+
+Do not create a separate pantry system.
+
+Do not create duplicate records if an existing Digital Pantry table/API already handles this.
+
+The detected expiry date must be available to the existing **Expiry Reminder** functionality.
+
+---
+
+# CAMERA REQUIREMENTS
+
+Use browser camera access for the Scan option.
+
+Use appropriate browser APIs such as:
+
+```text
+navigator.mediaDevices.getUserMedia()
+```
+
+where supported.
+
+The implementation should:
+
+* Request camera permission.
+* Show camera preview.
+* Capture image.
+* Allow retake.
+* Allow confirmation.
+* Send the confirmed image to Flask.
+
+If camera permission is denied:
+
+```text
+Camera access is unavailable.
+Please use Upload Image instead.
+```
+
+Do not cause the page to crash.
+
+---
+
+# UPLOAD REQUIREMENTS
+
+The Upload option should support:
+
+* JPG
+* JPEG
+* PNG
+* WEBP
+
+Validate the selected file before sending it to the backend.
+
+Show a preview before processing.
+
+Do not upload unsupported files.
+
+Show a clear error message if the image cannot be processed.
+
+---
+
+# BACKEND
+
+Use Flask for image processing APIs.
+
+If the existing backend already has scanner/image-processing routes, extend those routes instead of creating duplicate systems.
+
+Possible API structure:
+
+```text
+POST /api/scan-product
+```
+
+for Step 1.
+
+```text
+POST /api/scan-expiry
+```
+
+for Step 2.
+
+Follow the existing NutriMatrix API naming and architecture if different.
+
+Example Step 1 response:
+
+```json
+{
+  "success": true,
+  "product_name": "Milk",
+  "category": "Dairy",
+  "quantity": "1 L"
+}
+```
+
+Example Step 2 response:
+
+```json
+{
+  "success": true,
+  "expiry_date": "2026-10-25",
+  "detected_text": "EXP 25/10/2026"
+}
+```
+
+Do not expose unnecessary internal OCR data to the frontend.
+
+---
+
+# ERROR HANDLING
+
+### Product scan failure
+
+Show:
+
+```text
+Unable to identify the product.
+
+Please make sure the front of the package
+is clearly visible and try again.
+```
+
+Buttons:
+
+**Try Again**
+
+**Upload Image**
+
+### Expiry scan failure
+
+Show:
+
+```text
+Expiry date could not be detected.
+
+Please take a clear close-up image of the
+expiry information and try again.
+```
+
+Buttons:
+
+**Try Again**
+
+**Upload Image**
+
+Never silently save uncertain information.
+
+---
+
+# UI/CSS REQUIREMENT
+
+This is extremely important.
+
+**DO NOT redesign the existing NutriMatrix scanner page.**
+
+Keep:
+
+* Existing CSS
+* Existing colors
+* Existing typography
+* Existing card design
+* Existing spacing
+* Existing buttons
+* Existing navigation
+* Existing responsive behavior
+* Existing animations, if already present
+* Existing page structure
+
+Only modify the existing scanner content necessary to:
+
+1. Remove Barcode Scan.
+2. Add/modify the Product Scan Card.
+3. Add Step 1: Front Product Image.
+4. Add Step 2: Expiry Scan.
+5. Add Scan and Upload options for both steps.
+
+Reuse existing CSS classes wherever possible.
+
+Do not duplicate large amounts of CSS.
+
+Do not create a second conflicting stylesheet.
+
+---
+
+# FUNCTIONALITY PRESERVATION
+
+Before coding:
+
+1. Inspect the current project structure.
+2. Identify the existing scanner page/component.
+3. Identify existing scanner CSS.
+4. Identify existing Flask APIs.
+5. Identify existing MySQL tables.
+6. Identify existing Digital Pantry functionality.
+7. Identify existing Expiry Reminder functionality.
+
+Then make the smallest possible changes.
+
+After implementation, verify that:
+
+* Login still works.
+* Registration still works.
+* Home still works.
+* Product Analysis still works.
+* Receipt Scan still works.
+* Voice Input still works.
+* Manual Entry still works.
+* Digital Pantry still works.
+* Expiry Reminders still work.
+* Existing navigation still works.
+* Existing CSS/layout remains intact.
+* Existing backend APIs continue working.
+* Existing MySQL functionality continues working.
+
+Only **Barcode Scan** should be removed.
+
+---
+
+# FINAL REQUIREMENT
+
+The final NutriMatrix scanner must have this structure:
+
+### Product Scan Card
+
+**Step 1 — Front Product Image**
+
+* 📷 Scan
+* ⬆ Upload Image
+* Detect product using image processing + OCR
+* Match product with MySQL
+
+**Step 2 — Expiry Scan**
+
+* 📷 Scan
+* ⬆ Upload Image
+* Detect expiry using OpenCV/image preprocessing + Tesseract OCR
+* Validate detected date
+
+Then:
+
+**Confirm → Add to existing Digital Pantry → Existing expiry reminder system**
+
+Do not remove or break any existing NutriMatrix functionality or CSS.
+
+Make the implementation modular, reliable, and compatible with the existing project architecture.
