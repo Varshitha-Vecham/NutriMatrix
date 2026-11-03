@@ -22,6 +22,8 @@ function ReceiptScanner() {
   const [products, setProducts] = useState([])
   const [trackedProducts, setTrackedProducts] = useState([])
   const [currentReceiptSaved, setCurrentReceiptSaved] = useState(false)
+  const [editingProductIndex, setEditingProductIndex] = useState(null)
+  const [editingProductName, setEditingProductName] = useState('')
   const [editingHistoryId, setEditingHistoryId] = useState(null)
   const [editingExpiry, setEditingExpiry] = useState('')
   const [expandedReceipt, setExpandedReceipt] = useState(null)
@@ -92,12 +94,15 @@ function ReceiptScanner() {
 
   function removeProduct(index) {
     setProducts((current) => current.filter((_, productIndex) => productIndex !== index))
+    setEditingProductIndex((current) => current === index ? null : current != null && current > index ? current - 1 : current)
   }
 
   function uploadAnotherReceipt() {
     setFileName('')
     setScanned(false)
     setProducts([])
+    setEditingProductIndex(null)
+    setEditingProductName('')
     setCurrentReceiptSaved(false)
     setError('')
     setMessage('')
