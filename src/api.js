@@ -47,6 +47,14 @@ export async function apiRequest(path, options = {}) {
       throw new Error(message)
     }
   }
-  if (!response.ok) throw new Error(data?.message || 'Something went wrong.')
+  if (!response.ok) {
+    // Preserve structured API details so callers can recover from expected
+    // states such as an OTP that was already sent while a previous request
+    // was still completing.
+    const error = new Error(data?.message || 'Something went wrong.')
+    error.status = response.status
+    if (data && typeof data === 'object') Object.assign(error, data)
+    throw error
+  }
   return data
 }

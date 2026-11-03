@@ -58,17 +58,35 @@ function Register() {
       const response = await apiRequest('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name, email, password }),
-        timeout: 15000
+        // Registration verifies the mailbox and sends an email.  Those two
+        // external services can legitimately take longer than a normal API
+        // call, so do not abandon a request that is still succeeding.
+        timeout: 30000
       })
       navigate('/verify-email', {
         state: {
           email: email.trim().toLowerCase(),
           codeSent: true,
           resendAfterSeconds: response.resendAfterSeconds,
-          message: 'Email verified. Please check your inbox for the OTP.'
+          message: 'Verification code sent. Please check your inbox for the OTP.'
         }
       })
     } catch (requestError) {
+      // The first request may have finished on the server after a browser
+      // timeout or a double-click.  In that case the cooldown proves there is
+      // already a valid code, so take the user to the code-entry screen
+      // instead of asking them to wait on the registration form.
+      if (requestError.status === 429 && requestError.resendAfterSeconds) {
+        navigate('/verify-email', {
+          state: {
+            email: email.trim().toLowerCase(),
+            codeSent: true,
+            resendAfterSeconds: requestError.resendAfterSeconds,
+            message: 'A verification code was already sent. Please check your inbox.'
+          }
+        })
+        return
+      }
       setError(requestError.message)
     } finally { setLoading(false) }
   }

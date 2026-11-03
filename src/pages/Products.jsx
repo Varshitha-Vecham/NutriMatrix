@@ -81,7 +81,7 @@ export const products = groups.flatMap(([category, items], categoryIndex) => ite
   const product = { id, name, category, image: productImage(name, imageTags, id), brand: 'Nutrition Library', serving: packageOptions[0].label, packageOptions, calories, protein, carbs, fat, fiber, saturatedFat, sugar, sodium }
   return { ...product, retailers: defaultRetailerPricesFor(product) }
 }))
-const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages', 'Pantry']
+const categories = ['All items', 'Grains', 'Pulses', 'Dairy', 'Nuts & Seeds', 'Fruits', 'Vegetables', 'Breakfast Foods', 'Beverages']
 const catalog = products
 export const defaultRetailerPriceFor = (product, retailerName) => {
   const matchingProduct = catalog.find((entry) => entry.name === product.productName || entry.name === product.name)
