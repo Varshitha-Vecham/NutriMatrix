@@ -37,6 +37,7 @@ function parseAlternativeIds(value) {
 const nav = [
   ['Dashboard', '▦'],
   ['Product Management', '◈'],
+  ['Price Management', '₹'],
   ['Deleted Products', '↶'],
   ['User Management', '♙'],
   ['User Feedback', '★'],
@@ -329,6 +330,7 @@ export default function AdminDashboard() {
 
         {page === 'Dashboard' && <Overview stats={stats} activity={activity} onProducts={() => go('Product Management')} />}
         {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} onDeletedProducts={() => go('Deleted Products')} />}
+        {page === 'Price Management' && <Prices products={products.filter((product) => product.isActive)} edit={edit} />}
         {page === 'Deleted Products' && <DeletedProducts products={products} restore={restore} restoreAll={restoreAll} deleteAll={deleteAll} />}
         {page === 'Add Product' && <Form form={form} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
@@ -470,6 +472,60 @@ function DeletedProducts({ products, restore, restoreAll, deleteAll }) {
           ))}
         </Table>
       ) : <p className="muted empty">There are no deleted products.</p>}
+    </section>
+  )
+}
+
+function Prices({ products, edit }) {
+  const [search, setSearch] = useState('')
+  const query = search.trim().toLowerCase()
+  const filteredProducts = products.filter((product) =>
+    `${product.productName} ${product.category}`.toLowerCase().includes(query)
+  )
+
+  return (
+    <section className="panel">
+      <div className="heading">
+        <div>
+          <h2>Price management</h2>
+          <p>Edit any product to update its retailer prices.</p>
+        </div>
+        <label className="price-search">
+          <span>Search</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Product or category"
+          />
+        </label>
+      </div>
+
+      <Table heads={['Product', 'Retailer prices', 'Action']}>
+        {filteredProducts.map((product) => (
+          <tr key={product.id}>
+            <td>
+              <strong>{product.productName}</strong>
+              <small>{product.category}</small>
+            </td>
+            <td>
+              {product.prices?.length
+                ? product.prices.map((entry) => `${entry.retailer}: ₹${Number(entry.price).toLocaleString('en-IN')}`).join(' · ')
+                : 'No prices entered'}
+            </td>
+            <td className="actions">
+              <button type="button" onClick={() => edit(product)}>Edit prices</button>
+            </td>
+          </tr>
+        ))}
+        {!filteredProducts.length && (
+          <tr>
+            <td colSpan="3" className="empty">
+              {products.length ? 'No matching products.' : 'No products available.'}
+            </td>
+          </tr>
+        )}
+      </Table>
     </section>
   )
 }
@@ -621,15 +677,22 @@ function Profile({ admin, setAdmin, notify, fail }) {
   const [mode, setMode] = useState('')
   const [name, setName] = useState(admin.name)
   const [email, setEmail] = useState(admin.email)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
 
   async function submit(e) {
     e.preventDefault()
 
     try {
-      const data = await apiRequest('/api/admin/profile', {
-        method: 'PUT',
-        body: JSON.stringify({ name, email }),
-      })
+      const data = mode === 'edit'
+        ? await apiRequest('/api/admin/profile', {
+            method: 'PUT',
+            body: JSON.stringify({ name, email }),
+          })
+        : await apiRequest('/api/admin/password', {
+            method: 'PUT',
+            body: JSON.stringify({ currentPassword, newPassword }),
+          })
 
       if (data.user) {
         setAdmin(data.user)
@@ -638,6 +701,8 @@ function Profile({ admin, setAdmin, notify, fail }) {
       }
       notify(data.message)
       setMode('')
+      setCurrentPassword('')
+      setNewPassword('')
     } catch (e) {
       fail(e.message)
     }
@@ -662,16 +727,32 @@ function Profile({ admin, setAdmin, notify, fail }) {
 
       {!mode ? (
         <div className="form-actions">
-          <button onClick={() => setMode('edit')}>Edit Profile</button>
+          <button type="button" onClick={() => setMode('edit')}>Edit Profile</button>
+          <button type="button" className="primary" onClick={() => setMode('password')}>Change Password</button>
         </div>
       ) : (
         <form className="profile-form" onSubmit={submit}>
-          <label>
-            Name <input required value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label>
-            Email <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
+          {mode === 'edit' ? (
+            <>
+              <label>
+                Name <input required value={name} onChange={(e) => setName(e.target.value)} />
+              </label>
+              <label>
+                Email <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </label>
+            </>
+          ) : (
+            <>
+              <label>
+                Current password
+                <input required type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+              </label>
+              <label>
+                New password
+                <input required minLength="8" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              </label>
+            </>
+          )}
 
           <div className="form-actions">
             <button type="button" onClick={() => setMode('')}>Cancel</button>
