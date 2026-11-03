@@ -332,17 +332,6 @@ const additionalRecipes = {
       dietary: ['Vegetarian'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Lunch', 'North Indian', 'Vegetarian'],
       image: '/images/recipes/paneer-butter-masala.jpg', source: 'Local recipe image'
     },
-    {
-      name: 'South Indian Lemon Rice',
-      description: 'Bright, nutty lemon rice with peanuts, curry leaves, and turmeric.',
-      ingredients: ['cooked rice', 'lemon juice', 'peanuts', 'curry leaves', 'turmeric', 'green chilli'],
-      ingredientQuantities: ['2 cups', '2 tbsp', '2 tbsp', '10 leaves', '1/4 tsp', '1 sliced'],
-      calories: 430, protein: 10, carbs: 68, fat: 14, vitamins: 'Vitamin C, Iron, Fiber', prepTime: 10, cookingTime: 8,
-      instructions: 'Temper spices and peanuts, fold in cooked rice, and finish with fresh lemon juice.',
-      steps: ['Warm oil and toast peanuts until golden.', 'Add curry leaves, chilli, and turmeric.', 'Fold in cooked rice and toss gently.', 'Turn off the heat, add lemon juice, and serve.'],
-      dietary: ['Vegetarian', 'Vegan'], goal: ['Balanced Diet', 'Maintenance', 'Weight Gain'], categories: ['Lunch', 'South Indian', 'Quick Meals'],
-      image: '/images/recipes/south-indian-lemon-rice.jpg', source: 'Local recipe image'
-    }
   ],
   Dinner: [
     {

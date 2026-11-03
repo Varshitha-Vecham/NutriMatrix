@@ -1,0 +1,596 @@
+Create and implement the **Voice Input feature for NutriMatrix**, an AI-powered nutrition and smart grocery platform.
+
+### 1. Purpose
+
+The Voice Input feature allows users to add grocery products to NutriMatrix by speaking naturally instead of typing manually.
+
+The feature must:
+
+**Voice → Speech-to-Text → Extract Grocery Details → Review/Edit → Add to Pantry → Store in MySQL**
+
+The Voice Input feature must be integrated into the **existing Scanner page** as one of the four scanner options:
+
+1. Receipt Scan
+2. Barcode Scan
+3. Voice Input
+4. Manual Entry
+
+Do NOT create a completely separate major module for Voice Input.
+
+---
+
+### 2. Technology Requirements
+
+Use the existing NutriMatrix technology stack:
+
+* HTML5
+* CSS3
+* JavaScript (ES6+)
+* Python
+* Flask
+* MySQL
+
+For speech recognition, use the browser's **Web Speech API / SpeechRecognition API**.
+
+Do NOT require a paid speech-to-text API.
+
+Do NOT require a separate speech-recognition software installation for the basic implementation.
+
+The feature should work in a modern browser such as Google Chrome using the laptop's microphone.
+
+---
+
+### 3. Voice Input Interface
+
+When the user selects **Voice Input** from the Scanner page, display a clean NutriMatrix-themed interface.
+
+Show:
+
+**🎤 Voice Grocery Input**
+
+Subtitle:
+
+**"Add groceries quickly using your voice."**
+
+Display a prominent microphone button:
+
+**🎙 Start Speaking**
+
+When recording is active, change the button/state to:
+
+**🔴 Listening...**
+
+Provide a **Stop Speaking** option.
+
+Also provide a clear instruction:
+
+**"Speak the product name, quantity, and expiry date."**
+
+Example:
+
+> "Add 2 packets of Aashirvaad Atta, expiry date 25 September 2026."
+
+Show another example:
+
+> "Add 1 litre of Amul Milk, expires on 20 September 2026."
+
+---
+
+### 4. Speech Recognition
+
+Use the browser SpeechRecognition/Web Speech API.
+
+Set the default Indian English language:
+
+`en-IN`
+
+The implementation should be designed so that additional languages can be supported later, such as:
+
+* English — en-IN
+* Hindi — hi-IN
+* Kannada — kn-IN
+
+The interface may include a language selector if practical.
+
+The microphone must request permission properly.
+
+If microphone permission is denied, display a friendly message:
+
+**"Microphone access is required for Voice Input. Please allow microphone access in your browser settings."**
+
+If speech recognition is unavailable, display:
+
+**"Voice recognition is not supported in this browser. Please use Google Chrome or enter the product manually."**
+
+Handle:
+
+* microphone permission errors
+* no speech detected
+* network/speech recognition errors
+* unsupported browser
+* user stopping the recording
+
+without crashing the page.
+
+---
+
+### 5. Natural Voice Commands
+
+The user should not be forced to speak one rigid sentence.
+
+Support natural phrases such as:
+
+> "Add 2 packets of rice, expiry date 25 September 2026."
+
+> "I bought 3 packets of biscuits. They expire on 10 October 2026."
+
+> "Add one litre of Amul milk, expiry is 20 September 2026."
+
+> "I bought 5 apples and their expiry date is 22 September 2026."
+
+> "Add 2 kg of Aashirvaad atta, best before 25 September 2026."
+
+The system should identify the relevant grocery information from the sentence.
+
+---
+
+### 6. Information to Extract
+
+From the recognized speech, extract the following fields whenever available:
+
+#### Required/important fields
+
+* Product Name
+* Brand Name
+* Quantity
+* Unit
+* Expiry Date
+
+#### Optional fields
+
+* Category
+* Purchase Date
+* Price
+* Size/Weight
+* Additional description
+
+For example, from:
+
+> "Add 2 packets of Aashirvaad Atta, 5 kg each, expiry date 25 September 2026."
+
+Extract:
+
+```text
+Product Name: Atta
+Brand Name: Aashirvaad
+Quantity: 2
+Unit: Packets
+Size/Weight: 5 kg each
+Expiry Date: 25-09-2026
+```
+
+Do not invent information that the user did not provide.
+
+---
+
+### 7. Expiry Date Handling
+
+Expiry date is an important part of the Voice Input feature.
+
+The user should be able to speak expiry information naturally.
+
+Support phrases such as:
+
+* "expiry date 25 September 2026"
+* "expires on 25 September 2026"
+* "expiry is 25/09/2026"
+* "best before 25 September 2026"
+* "expires tomorrow"
+* "expires in 3 days"
+
+Convert recognized dates into a consistent database format:
+
+`YYYY-MM-DD`
+
+For example:
+
+Speech:
+
+> "Expiry date 25 September 2026"
+
+Store:
+
+`2026-09-25`
+
+If the user says:
+
+> "expires tomorrow"
+
+calculate tomorrow's actual date based on the current date.
+
+If the user says:
+
+> "expires in 3 days"
+
+calculate the corresponding calendar date.
+
+Do NOT assume a generic expiry period such as 3 days, 5 days, 7 days, etc.
+
+If no expiry date is spoken, do not invent one.
+
+Instead, show:
+
+**"Expiry date not detected. Please enter the expiry date before adding this item to the pantry."**
+
+Provide an expiry-date field that the user can manually correct if speech recognition misunderstood the date.
+
+---
+
+### 8. "You Said" Section
+
+After speech recognition finishes, display the exact recognized speech.
+
+Example:
+
+**You Said:**
+
+> "Add 2 packets of Aashirvaad Atta, expiry date 25 September 2026."
+
+This allows the user to verify what the microphone recognized.
+
+---
+
+### 9. Detected Information Section
+
+Below "You Said", display structured information.
+
+Example:
+
+**Detected Grocery Details**
+
+| Field        | Detected Value |
+| ------------ | -------------- |
+| Product Name | Atta           |
+| Brand Name   | Aashirvaad     |
+| Quantity     | 2              |
+| Unit         | Packets        |
+| Expiry Date  | 25-09-2026     |
+
+Every detected value should be editable.
+
+Provide:
+
+**[ Edit ]**
+
+or allow inline editing directly in the fields.
+
+---
+
+### 10. Validation
+
+Before adding the item to the pantry, validate the information.
+
+At minimum:
+
+* Product Name must be available.
+* Quantity must be valid.
+* Expiry Date should be available for pantry expiry tracking.
+* Expiry Date must be a valid date.
+* Expiry Date should not be accepted in an invalid format.
+* Clearly show missing information.
+
+For example:
+
+If the user says:
+
+> "Add 2 packets of rice."
+
+Display:
+
+**Expiry date not detected. Please provide the expiry date.**
+
+Then allow the user to either:
+
+* speak the expiry date again, or
+* enter the expiry date manually.
+
+Do not automatically guess the expiry date.
+
+---
+
+### 11. Multiple Grocery Items
+
+The feature must support multiple products in one voice command.
+
+Example:
+
+> "Add 2 packets of rice, 1 litre of milk, and 5 apples. Rice expires on 25 September, milk expires on 20 September, and apples expire on 22 September 2026."
+
+Extract the items separately.
+
+Display:
+
+| Product | Quantity | Unit    | Expiry Date |
+| ------- | -------: | ------- | ----------- |
+| Rice    |        2 | Packets | 25-09-2026  |
+| Milk    |        1 | Litre   | 20-09-2026  |
+| Apples  |        5 | Pieces  | 22-09-2026  |
+
+Each item should be editable before saving.
+
+If the speech is ambiguous, do not silently guess. Highlight the uncertain field and ask the user to correct it.
+
+---
+
+### 12. Add to Pantry
+
+After verification, provide:
+
+**[ Add to Pantry ]**
+
+When clicked:
+
+1. Validate the data.
+2. Send the structured information to the Flask backend.
+3. Flask processes the request.
+4. Store the grocery information in MySQL.
+5. Associate the item with the logged-in user.
+6. Return a success response.
+7. Display:
+
+**"Grocery added successfully to your Digital Pantry."**
+
+Then provide an option:
+
+**[ View Digital Pantry ]**
+
+---
+
+### 13. MySQL Storage
+
+Store the voice-input grocery data in the existing NutriMatrix MySQL database.
+
+Use the existing pantry/product database structure if available.
+
+The stored information should include appropriate fields such as:
+
+```text
+user_id
+product_name
+brand_name
+category
+quantity
+unit
+expiry_date
+purchase_date
+price
+source
+created_at
+```
+
+The `source` field can identify how the grocery was added:
+
+```text
+voice
+```
+
+This allows NutriMatrix to distinguish Voice Input from:
+
+```text
+receipt
+barcode
+manual
+```
+
+Do not create duplicate tables if an existing Digital Pantry table can be reused.
+
+---
+
+### 14. Digital Pantry Integration
+
+Items added through Voice Input must appear in the existing **Digital Pantry**.
+
+Example:
+
+| Product         |  Quantity | Expiry Date | Status        |
+| --------------- | --------: | ----------- | ------------- |
+| Aashirvaad Atta | 2 packets | 25-09-2026  | Fresh         |
+| Amul Milk       |   1 litre | 20-09-2026  | Expiring Soon |
+
+The Digital Pantry should use the stored expiry date for expiry calculations and reminders.
+
+Voice Input must NOT create a separate pantry.
+
+It should add data to the same Digital Pantry used by Receipt Scan, Barcode Scan, and Manual Entry.
+
+---
+
+### 15. Expiry Reminder Integration
+
+The expiry date captured through Voice Input must work with the existing NutriMatrix expiry reminder system.
+
+For example:
+
+If:
+
+```text
+Product: Milk
+Expiry Date: 2026-09-20
+```
+
+the Digital Pantry/Expiry Reminder system should calculate the remaining days and display the appropriate status.
+
+Possible statuses:
+
+* Fresh
+* Expiring Soon
+* Expires Today
+* Expired
+
+Use the actual stored expiry date.
+
+Do not use generic product shelf-life assumptions when an actual expiry date has been provided.
+
+---
+
+### 16. Nutrition Integration
+
+After the product is successfully added, the product should be available for NutriMatrix's nutrition analysis.
+
+For example:
+
+Voice input:
+
+> "Add 2 packets of Aashirvaad Atta."
+
+After adding:
+
+* Product identification can be performed.
+* Nutrition information can be displayed where available.
+* Healthy alternatives can be suggested where applicable.
+
+Do not claim nutrition information that is unavailable or incorrectly identified.
+
+---
+
+### 17. User Experience
+
+The page should feel like part of the existing NutriMatrix application.
+
+Use the existing NutriMatrix visual theme.
+
+Design requirements:
+
+* Clean
+* Modern
+* Premium
+* Healthy/nutrition-focused
+* Green-themed where consistent with the existing design
+* Responsive
+* Easy to understand
+* Suitable for a college project demonstration
+
+Do not make the interface unnecessarily complicated.
+
+The main action should be obvious:
+
+**🎙 Start Speaking**
+
+---
+
+### 18. Complete User Flow
+
+Implement this complete flow:
+
+```text
+Scanner Page
+      ↓
+Voice Input
+      ↓
+Start Speaking
+      ↓
+Microphone Permission
+      ↓
+Speech Recognition
+      ↓
+"You Said" Text
+      ↓
+Extract Grocery Details
+      ↓
+Product Name
+Brand
+Quantity
+Unit
+Expiry Date
+      ↓
+Display Detected Information
+      ↓
+User Reviews / Edits
+      ↓
+Validation
+      ↓
+Add to Pantry
+      ↓
+Flask Backend
+      ↓
+MySQL
+      ↓
+Digital Pantry
+      ↓
+Expiry Reminder
+      ↓
+Nutrition Analysis / Healthy Alternatives
+```
+
+---
+
+### 19. Important Rules
+
+Follow these rules strictly:
+
+1. Do not require a paid speech API.
+2. Use browser-based SpeechRecognition/Web Speech API for the basic implementation.
+3. Do not invent product details.
+4. Do not invent expiry dates.
+5. The user should be able to speak the expiry date.
+6. Support natural expiry phrases.
+7. Convert expiry dates into a consistent database format.
+8. Allow the user to edit incorrectly recognized information.
+9. Support multiple grocery items in one voice command.
+10. Save the data in the existing MySQL database.
+11. Add voice-entered products to the existing Digital Pantry.
+12. Use the actual expiry date for expiry reminders.
+13. Associate saved products with the logged-in user.
+14. Handle microphone and speech-recognition errors gracefully.
+15. Keep Voice Input as one option within the existing Scanner page.
+16. Do not create a separate Digital Pantry specifically for voice input.
+17. Do not use MongoDB.
+18. Do not require Node.js for the Voice Input backend.
+19. Keep the implementation suitable for a free college project/demo.
+20. Make the feature easy to demonstrate live using a laptop microphone.
+
+---
+
+### 20. Example Final Demo
+
+The complete live demonstration should work like this:
+
+User opens:
+
+**Scanner → Voice Input**
+
+Clicks:
+
+**🎙 Start Speaking**
+
+User says:
+
+> "Add 2 packets of Aashirvaad Atta, expiry date 25 September 2026."
+
+System displays:
+
+**You Said:**
+
+> Add 2 packets of Aashirvaad Atta, expiry date 25 September 2026.
+
+Then:
+
+```text
+Product Name: Atta
+Brand Name: Aashirvaad
+Quantity: 2
+Unit: Packets
+Expiry Date: 25-09-2026
+```
+
+User clicks:
+
+**Add to Pantry**
+
+System saves the data through Flask into MySQL.
+
+Then:
+
+**"Aashirvaad Atta added successfully to your Digital Pantry."**
+
+When the user opens Digital Pantry, the product appears with its quantity and expiry date, and the same expiry date is used by the NutriMatrix reminder system.

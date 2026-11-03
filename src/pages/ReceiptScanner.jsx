@@ -22,6 +22,8 @@ function ReceiptScanner() {
   const [products, setProducts] = useState([])
   const [trackedProducts, setTrackedProducts] = useState([])
   const [currentReceiptSaved, setCurrentReceiptSaved] = useState(false)
+  const [editingProductIndex, setEditingProductIndex] = useState(null)
+  const [editingProductName, setEditingProductName] = useState('')
   const [editingHistoryId, setEditingHistoryId] = useState(null)
   const [editingExpiry, setEditingExpiry] = useState('')
   const [expandedReceipt, setExpandedReceipt] = useState(null)
@@ -29,6 +31,7 @@ function ReceiptScanner() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [historyLoadError, setHistoryLoadError] = useState(false)
   const saveInProgress = useRef(false)
 
   useEffect(() => {
@@ -36,13 +39,26 @@ function ReceiptScanner() {
       try {
         const result = await apiRequest('/api/expiry-products')
         setTrackedProducts(result.products.filter(isReceiptScanProduct))
+        setHistoryLoadError(false)
       } catch (historyError) {
-        if (historyError.message !== 'Not authenticated.') setError(historyError.message)
+        if (historyError.message !== 'Not authenticated.') {
+          setHistoryLoadError(true)
+        }
       }
     }
 
     loadReceiptHistory()
   }, [])
+
+  async function retryLoadHistory() {
+    try {
+      const result = await apiRequest('/api/expiry-products')
+      setTrackedProducts(result.products.filter(isReceiptScanProduct))
+      setHistoryLoadError(false)
+    } catch {
+      setHistoryLoadError(true)
+    }
+  }
 
   async function handleUpload(event) {
     const file = event.target.files?.[0]
@@ -92,12 +108,15 @@ function ReceiptScanner() {
 
   function removeProduct(index) {
     setProducts((current) => current.filter((_, productIndex) => productIndex !== index))
+    setEditingProductIndex((current) => current === index ? null : current != null && current > index ? current - 1 : current)
   }
 
   function uploadAnotherReceipt() {
     setFileName('')
     setScanned(false)
     setProducts([])
+    setEditingProductIndex(null)
+    setEditingProductName('')
     setCurrentReceiptSaved(false)
     setError('')
     setMessage('')
@@ -229,6 +248,13 @@ function ReceiptScanner() {
         </section>
         {error && <p className="receipt-error" role="alert">{error}</p>}
         {message && <p className="receipt-message" role="status">{message}</p>}
+        {historyLoadError && <div className="receipt-error-card" role="alert">
+          <div className="receipt-error-content">
+            <strong>Unable to load receipt history</strong>
+            <p>We encountered a network error while loading your saved receipts. Please check your connection and try again.</p>
+            <button className="receipt-error-retry" onClick={retryLoadHistory}>Retry</button>
+          </div>
+        </div>}
         {scanned && <section className="receipt-products" aria-labelledby="receipt-products-title">
           <div className="receipt-section-heading"><span className="method-kicker">Review before saving</span><h2 id="receipt-products-title">Products detected</h2><p>Check every field before saving. Expiry dates are optional and are never guessed.</p></div>
           <div className="receipt-product-list">
