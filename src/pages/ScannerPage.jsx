@@ -197,6 +197,7 @@ function ScannerPage() {
           }
         }
       }
+
     } catch (lookupError) {
       setProduct(null)
       setError(lookupError.message || 'Unable to identify this product.')

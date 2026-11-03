@@ -1,0 +1,1226 @@
+# NutriMatrix — Barcode Product Detection + Open Food Facts + Expiry Detection + Digital Pantry
+
+Implement the following complete feature in the existing **NutriMatrix** project.
+
+The goal is to identify products dynamically using **Open Food Facts**, detect the expiry date from an uploaded/scanned image using **OpenCV + Tesseract OCR**, and then add the verified item to the user's **Digital Pantry**.
+
+---
+
+# 1. VERY IMPORTANT — DO NOT BREAK EXISTING FUNCTIONALITY
+
+Before making any changes:
+
+* Inspect the existing NutriMatrix project structure.
+* Understand the current frontend, backend, routes, components, CSS, database tables, and Digital Pantry implementation.
+* Do NOT create a separate project.
+* Do NOT remove existing functionality.
+* Do NOT remove existing pages.
+* Do NOT remove existing CSS.
+* Do NOT redesign unrelated pages.
+* Do NOT replace the existing authentication system.
+* Do NOT remove Product Analysis.
+* Do NOT remove Digital Pantry.
+* Do NOT remove expiry notifications.
+* Do NOT remove Meal Planner.
+* Do NOT remove Profile.
+* Do NOT remove Home/About/other existing modules.
+* Reuse existing components and routes wherever possible.
+* If equivalent functionality already exists, extend it instead of creating duplicate functionality.
+
+Use the existing architecture:
+
+```text
+Frontend
+HTML5 + CSS3 + JavaScript
+
+Backend
+Python + Flask
+
+Database
+MySQL
+```
+
+Do NOT use MongoDB.
+
+---
+
+# 2. CORE REQUIREMENT
+
+NutriMatrix should NOT maintain its own product catalog.
+
+Do NOT create a database containing:
+
+```text
+Milk
+Rice
+Bread
+Biscuits
+Juice
+...
+```
+
+Do NOT preload 80–100 products.
+
+Do NOT manually enter product information into MySQL for product identification.
+
+Instead:
+
+```text
+User
+ ↓
+Barcode / Product Search
+ ↓
+Open Food Facts API
+ ↓
+Product Information
+ ↓
+Expiry Detection
+ ↓
+User Confirmation
+ ↓
+Digital Pantry
+ ↓
+MySQL
+```
+
+Open Food Facts is the external product source.
+
+MySQL should primarily store the **user's pantry/application data**, not a master product catalog.
+
+---
+
+# 3. COMPLETE USER WORKFLOW
+
+The scanner should follow exactly this logical workflow:
+
+```text
+                    NUTRIMATRIX SCANNER
+                            |
+                            ↓
+                   COUNTRY SELECTION
+                         INDIA
+                            |
+                            ↓
+                  PRODUCT DETECTION
+                            |
+          +-----------------+-----------------+
+          |                 |                 |
+          ↓                 ↓                 ↓
+     Scan Barcode     Enter Barcode      Search Product
+          |                 |                 |
+          +-----------------+-----------------+
+                            |
+                            ↓
+                   OPEN FOOD FACTS
+                            |
+                            ↓
+                     PRODUCT FOUND?
+                       /         \
+                     YES          NO
+                      |            |
+                      ↓            ↓
+              Show Product     Show Not Found
+              Information      + Retry/Search
+                      |
+                      ↓
+                  EXPIRY DETECTION
+                      |
+              +-------+-------+
+              |               |
+              ↓               ↓
+        Scan Expiry      Upload Image
+              |               |
+              +-------+-------+
+                      |
+                      ↓
+                  OpenCV
+                      |
+                      ↓
+               Tesseract OCR
+                      |
+                      ↓
+                 Expiry Date
+                      |
+                      ↓
+                Confirmation
+                      |
+                      ↓
+              DIGITAL PANTRY
+                      |
+                      ↓
+                   MySQL
+```
+
+---
+
+# 4. COUNTRY SELECTION
+
+At the beginning of Product Detection, provide:
+
+```text
+Country
+[ India ▼ ]
+```
+
+Set **India as the default country**.
+
+The country selection should be designed so other countries can be added later.
+
+Example:
+
+```text
+India
+United States
+United Kingdom
+Australia
+Canada
+...
+```
+
+But India should be selected by default for the NutriMatrix college project.
+
+---
+
+# 5. IMPORTANT COUNTRY FILTER BEHAVIOR
+
+This distinction is critical.
+
+## Product-name search
+
+When the user selects:
+
+```text
+Country = India
+```
+
+and searches:
+
+```text
+Product = Milk
+```
+
+the Flask backend should pass the country information to the Open Food Facts **search/filter request**.
+
+Conceptually:
+
+```text
+Country = India
+Product = Milk
+       ↓
+Flask
+       ↓
+Open Food Facts search
+       ↓
+countries_tags_en = india
+       ↓
+Indian-associated matching products
+```
+
+Use the appropriate Open Food Facts country search/filter parameter documented by the API, such as:
+
+```text
+countries_tags_en=india
+```
+
+Do NOT simply show the country dropdown in the UI without actually using it in the product-name search request.
+
+---
+
+# 6. IMPORTANT — BARCODE LOOKUP IS DIFFERENT
+
+Do NOT incorrectly treat the country dropdown as an India-only filter for barcode lookup.
+
+When the user scans:
+
+```text
+8901234567890
+```
+
+the barcode itself is the primary product identifier.
+
+The workflow is:
+
+```text
+Barcode
+ ↓
+Barcode Decoder
+ ↓
+8901234567890
+ ↓
+Open Food Facts product-by-code lookup
+ ↓
+Product information
+```
+
+The country selection should NOT be used as though it guarantees:
+
+```text
+"Search this barcode only in India"
+```
+
+because barcode lookup is an exact product-code lookup.
+
+The country information can be used where appropriate for localization/search behavior, but the barcode itself remains the primary identifier.
+
+This distinction must be implemented correctly.
+
+---
+
+# 7. PRODUCT DETECTION OPTIONS
+
+Provide three product detection methods:
+
+## OPTION 1 — Scan Barcode
+
+Display:
+
+```text
+📷 Scan Barcode
+```
+
+When clicked:
+
+* Request camera permission.
+* Open camera.
+* Detect barcode.
+* Decode barcode into its numeric value.
+* Display the detected barcode number.
+* Send the number to Flask.
+* Query Open Food Facts.
+* Display the product.
+
+---
+
+## OPTION 2 — Enter Barcode Number
+
+Display:
+
+```text
+Enter Barcode Number
+
+[______________________]
+
+[Search Product]
+```
+
+The user can type a barcode manually.
+
+Validate:
+
+* Not empty.
+* Valid characters.
+* Remove accidental spaces.
+* Reject obviously invalid values.
+* Never crash if the input is malformed.
+
+Then send it to the same Flask product lookup endpoint used by barcode scanning.
+
+Therefore:
+
+```text
+Scan Barcode
+       |
+       +----> barcode number
+                         |
+Manual Barcode ---------+
+                         ↓
+                  Same Flask API
+                         ↓
+                 Open Food Facts
+```
+
+Do NOT create separate product lookup logic for these two methods.
+
+---
+
+# 8. BARCODE IMAGE/CAMERA TECHNOLOGY
+
+Do NOT use Tesseract OCR to read the barcode.
+
+Barcode detection should use a dedicated barcode decoder.
+
+Recommended technology:
+
+```text
+ZXing
+```
+
+or another reliable browser-compatible barcode decoding library.
+
+The purpose is:
+
+```text
+Visual Barcode
+      ↓
+ZXing / Barcode Decoder
+      ↓
+Barcode Number
+      ↓
+Open Food Facts
+```
+
+For example:
+
+```text
+Camera
+ ↓
+|||| |||| || |||||
+ ↓
+ZXing
+ ↓
+8901234567890
+```
+
+The user should NOT need to manually type the number when camera scanning succeeds.
+
+---
+
+# 9. OPTIONAL — PRODUCT NAME SEARCH
+
+Provide a fallback:
+
+```text
+Search Product Name
+
+[________________________]
+
+[Search Product]
+```
+
+This is especially important if a barcode is not found.
+
+Example:
+
+```text
+Country:
+India
+
+Product:
+Milk
+```
+
+Then:
+
+```text
+Flask
+ ↓
+Open Food Facts search
+ ↓
+Country filter = India
+ ↓
+Product name search = Milk
+ ↓
+Results
+```
+
+Display matching products for the user to select.
+
+---
+
+# 10. OPEN FOOD FACTS INTEGRATION
+
+Use the current Open Food Facts API documentation.
+
+For new integrations, prefer the currently recommended API version for product retrieval.
+
+The backend should make the API request rather than exposing unnecessary API logic directly in the frontend.
+
+Use a proper application `User-Agent` when required/recommended by Open Food Facts.
+
+Handle:
+
+* Successful response.
+* Product not found.
+* API timeout.
+* Internet failure.
+* Invalid response.
+* Missing product fields.
+
+Do NOT hardcode products.
+
+---
+
+# 11. PRODUCT RESPONSE
+
+When Open Food Facts returns a product, extract available fields such as:
+
+```text
+Product Name
+Brand
+Category
+Barcode
+Product Image
+Nutrition Information
+Nutriments
+Other useful product fields
+```
+
+Do NOT assume every product contains every field.
+
+Safely handle:
+
+```text
+null
+missing
+empty
+```
+
+values.
+
+Example:
+
+```text
+Product Detected ✓
+
+Product Name:
+XXXXXX
+
+Brand:
+XXXXXX
+
+Category:
+XXXXXX
+
+Barcode:
+8901234567890
+
+Nutrition:
+Calories: XXXX
+Protein: XXXX
+Carbohydrates: XXXX
+Fat: XXXX
+```
+
+Reuse the existing NutriMatrix Product Analysis/Nutrition UI wherever appropriate.
+
+---
+
+# 12. PRODUCT NOT FOUND
+
+If the barcode does not exist in Open Food Facts:
+
+Do NOT create fake product data.
+
+Do NOT insert it into a local product catalog.
+
+Show:
+
+```text
+Product not found in Open Food Facts.
+
+Please check the barcode or search by product name.
+```
+
+Provide:
+
+```text
+[Try Again]
+
+[Search Product Name]
+```
+
+This is especially important because Open Food Facts does not contain every product available in India.
+
+---
+
+# 13. EXPIRY DETECTION
+
+After a product is successfully detected, proceed to:
+
+```text
+STEP 2
+EXPIRY DETECTION
+```
+
+Provide exactly two options:
+
+```text
+📷 Scan Expiry
+```
+
+and
+
+```text
+📤 Upload Expiry Image
+```
+
+The expiry date can be located anywhere on the package:
+
+* Front
+* Back
+* Side
+* Top
+* Bottom
+* Near the cap
+* Near the seal
+* Other printed areas
+
+Do NOT assume that expiry is always in one fixed position.
+
+---
+
+# 14. SCAN EXPIRY
+
+When the user clicks:
+
+```text
+📷 Scan Expiry
+```
+
+open the camera.
+
+The user points the camera at the expiry text.
+
+Capture the image.
+
+Process it:
+
+```text
+Camera Image
+ ↓
+OpenCV
+ ↓
+Image Preprocessing
+ ↓
+Tesseract OCR
+ ↓
+Extract Text
+ ↓
+Detect Date
+```
+
+---
+
+# 15. UPLOAD EXPIRY IMAGE
+
+When the user clicks:
+
+```text
+📤 Upload Expiry Image
+```
+
+allow the user to upload an image.
+
+Supported formats should include common formats such as:
+
+```text
+JPG
+JPEG
+PNG
+```
+
+Then:
+
+```text
+Uploaded Image
+ ↓
+OpenCV
+ ↓
+Image Preprocessing
+ ↓
+Tesseract OCR
+ ↓
+Date Detection
+```
+
+---
+
+# 16. OPENCV IMAGE PROCESSING
+
+Use OpenCV where useful for:
+
+* Image reading
+* Resizing
+* Grayscale conversion
+* Contrast improvement
+* Noise reduction
+* Thresholding
+* Sharpening
+* Cropping
+* Improving OCR readability
+
+Do not blindly apply every preprocessing technique.
+
+The implementation should use suitable preprocessing based on the image.
+
+---
+
+# 17. TESSERACT OCR
+
+Use:
+
+```text
+Tesseract OCR
+Pytesseract
+```
+
+to extract expiry text.
+
+Example image:
+
+```text
+EXP: 08/10/2026
+```
+
+OCR result:
+
+```text
+EXP: 08/10/2026
+```
+
+Extract:
+
+```text
+08/10/2026
+```
+
+---
+
+# 18. DATE DETECTION
+
+Support common expiry date formats such as:
+
+```text
+08/10/2026
+08-10-2026
+08.10.2026
+10/2026
+OCT 2026
+OCT 08 2026
+```
+
+The system should detect date-like values from OCR text.
+
+Do NOT simply save the entire OCR result as the expiry date.
+
+Validate that the extracted value is actually a valid date or recognized month/year expiry format.
+
+---
+
+# 19. OCR ERROR HANDLING
+
+OCR can incorrectly recognize characters.
+
+For example:
+
+```text
+O → 0
+I → 1
+S → 5
+```
+
+The implementation should carefully normalize obvious OCR mistakes where safe.
+
+Do NOT blindly modify every character.
+
+If the date cannot be reliably determined:
+
+```text
+Expiry date could not be detected clearly.
+
+Please scan again or upload a clearer image.
+```
+
+Do NOT automatically save an uncertain date.
+
+---
+
+# 20. EXPIRY CONFIRMATION
+
+After successful detection:
+
+```text
+Expiry Date Detected ✓
+
+08/10/2026
+```
+
+Then show a confirmation screen:
+
+```text
+Product Details
+----------------------------
+
+Product:
+XXXXX
+
+Brand:
+XXXXX
+
+Barcode:
+8901234567890
+
+Expiry:
+08/10/2026
+
+----------------------------
+
+[Add to Digital Pantry]
+```
+
+The user must be able to review the information before saving.
+
+---
+
+# 21. DIGITAL PANTRY
+
+After the user clicks:
+
+```text
+Add to Digital Pantry
+```
+
+save the user's pantry item in MySQL.
+
+The database record should represent the user's item, NOT a global product catalog.
+
+For example:
+
+```text
+user_id
+barcode
+product_name
+brand
+category
+expiry_date
+added_at
+```
+
+Use the existing Digital Pantry database/table if it already supports these fields.
+
+Do NOT create duplicate tables unnecessarily.
+
+---
+
+# 22. DATABASE PRINCIPLE
+
+The architecture must remain:
+
+```text
+OPEN FOOD FACTS
+      ↓
+External product information
+      ↓
+NutriMatrix
+      ↓
+User scans product
+      ↓
+Expiry detected
+      ↓
+User confirms
+      ↓
+DIGITAL PANTRY
+      ↓
+MYSQL
+```
+
+NOT:
+
+```text
+NutriMatrix
+ ↓
+Own product catalog
+ ↓
+100 manually entered products
+```
+
+The product information should be dynamically retrieved.
+
+---
+
+# 23. FLASK BACKEND
+
+Create or reuse suitable endpoints.
+
+For barcode:
+
+```text
+POST /api/product/barcode
+```
+
+Responsibilities:
+
+1. Receive barcode.
+2. Validate barcode.
+3. Call Open Food Facts.
+4. Parse response.
+5. Return product information.
+
+For product-name search:
+
+```text
+GET/POST /api/product/search
+```
+
+Responsibilities:
+
+1. Receive product name.
+2. Receive selected country.
+3. Apply Open Food Facts country filter.
+4. Search products.
+5. Return matching results.
+
+For expiry:
+
+```text
+POST /api/expiry/detect
+```
+
+Responsibilities:
+
+1. Receive image.
+2. Validate image.
+3. Process image with OpenCV.
+4. Run Tesseract OCR.
+5. Extract expiry date.
+6. Validate date.
+7. Return detected expiry date.
+
+For pantry:
+
+```text
+POST /api/pantry
+```
+
+Responsibilities:
+
+1. Receive confirmed product.
+2. Receive confirmed expiry.
+3. Associate item with logged-in user.
+4. Store pantry record in MySQL.
+
+Reuse existing endpoints if equivalent routes already exist.
+
+---
+
+# 24. FRONTEND UI
+
+Do not unnecessarily redesign the existing Scanner page.
+
+Add the workflow into the existing design.
+
+Suggested structure:
+
+```text
+┌─────────────────────────────────────────┐
+│          STEP 1                         │
+│      PRODUCT DETECTION                  │
+│                                         │
+│ Country                                 │
+│ [ India ▼ ]                             │
+│                                         │
+│ [ 📷 Scan Barcode ]                     │
+│                                         │
+│ OR                                      │
+│                                         │
+│ Barcode Number                          │
+│ [________________________]              │
+│ [ Search Product ]                      │
+│                                         │
+│ OR                                      │
+│                                         │
+│ Product Name                            │
+│ [________________________]              │
+│ [ Search Product ]                      │
+└─────────────────────────────────────────┘
+
+                    ↓
+
+┌─────────────────────────────────────────┐
+│          STEP 2                         │
+│       EXPIRY DETECTION                  │
+│                                         │
+│ [ 📷 Scan Expiry ]                      │
+│                                         │
+│ OR                                      │
+│                                         │
+│ [ 📤 Upload Expiry Image ]              │
+└─────────────────────────────────────────┘
+
+                    ↓
+
+┌─────────────────────────────────────────┐
+│          CONFIRM DETAILS                │
+│                                         │
+│ Product: XXXXX                          │
+│ Brand: XXXXX                            │
+│ Barcode: XXXXX                          │
+│ Expiry: 08/10/2026                      │
+│                                         │
+│ [ Add to Digital Pantry ]               │
+└─────────────────────────────────────────┘
+```
+
+Keep the existing NutriMatrix green/premium/healthy visual style.
+
+Do not introduce unrelated visual changes.
+
+---
+
+# 25. ERROR HANDLING
+
+Handle all cases gracefully.
+
+## Camera permission denied
+
+```text
+Camera permission is required for scanning.
+
+You can enter the barcode manually instead.
+```
+
+## Barcode not detected
+
+```text
+Barcode could not be detected.
+
+Please try again or enter the barcode manually.
+```
+
+## Barcode not found
+
+```text
+This barcode was not found in Open Food Facts.
+
+Try searching by product name.
+```
+
+## Product-name search returns nothing
+
+```text
+No matching product was found.
+
+Try another product name.
+```
+
+## Open Food Facts API unavailable
+
+```text
+Unable to connect to Open Food Facts.
+
+Please check your internet connection and try again.
+```
+
+## Expiry not detected
+
+```text
+Expiry date could not be detected clearly.
+
+Please scan again or upload a clearer image.
+```
+
+## Invalid expiry date
+
+Do not save the record.
+
+Ask the user to retry.
+
+---
+
+# 26. TECHNOLOGY STACK
+
+Use the following technologies:
+
+```text
+Frontend
+HTML5
+CSS3
+JavaScript ES6+
+
+Backend
+Python
+Flask
+
+Database
+MySQL
+
+Barcode Detection
+ZXing or reliable browser-compatible barcode decoder
+
+Product Information
+Open Food Facts API
+
+Image Processing
+OpenCV
+
+OCR
+Tesseract OCR
+Pytesseract
+
+Pantry Storage
+MySQL
+```
+
+Do NOT use:
+
+```text
+MongoDB
+Manual product catalog
+Hardcoded product list
+Tesseract for barcode decoding
+```
+
+---
+
+# 27. SECURITY AND VALIDATION
+
+Implement:
+
+* Input validation.
+* Barcode validation.
+* Image type validation.
+* Image size validation.
+* API timeout handling.
+* API error handling.
+* OCR validation.
+* Date validation.
+* User authentication checks before saving pantry data.
+* Prevent users from saving pantry records for another user.
+* Do not expose internal Flask errors to the frontend.
+* Do not expose unnecessary API configuration in frontend code.
+
+Use an appropriate Open Food Facts `User-Agent`.
+
+---
+
+# 28. FINAL LOGIC
+
+The final implementation must follow this logic:
+
+```text
+USER OPENS SCANNER
+        ↓
+SELECT COUNTRY
+        ↓
+INDIA DEFAULT
+        ↓
+PRODUCT DETECTION
+        ↓
+ ┌───────────────┬────────────────┬─────────────────┐
+ │               │                │
+ ↓               ↓                ↓
+Scan Barcode   Enter Barcode   Search Product
+ │               │                │
+ ↓               ↓                ↓
+ZXing           Number           Country Filter
+ │               │                │
+ └───────────────┴────────────────┘
+                 ↓
+          OPEN FOOD FACTS
+                 ↓
+          PRODUCT FOUND?
+             /       \
+           YES        NO
+            │          │
+            ↓          ↓
+     Product details   Retry/Search
+            │
+            ↓
+     EXPIRY DETECTION
+            │
+       ┌────┴────┐
+       │         │
+       ↓         ↓
+   Scan Image  Upload Image
+       │         │
+       └────┬────┘
+            ↓
+         OpenCV
+            ↓
+      Tesseract OCR
+            ↓
+       Expiry Date
+            ↓
+        Validation
+            ↓
+       User confirms
+            ↓
+      Digital Pantry
+            ↓
+          MySQL
+```
+
+---
+
+# 29. MOST IMPORTANT API BEHAVIOR
+
+Implement the Open Food Facts integration correctly:
+
+### Barcode lookup
+
+```text
+Barcode
+ ↓
+Open Food Facts product-by-code lookup
+ ↓
+Product
+```
+
+The barcode is the primary identifier.
+
+Do NOT incorrectly assume that:
+
+```text
+Country = India
+```
+
+means:
+
+```text
+Search barcode only inside India
+```
+
+### Product-name search
+
+```text
+Country = India
+Product Name = Milk
+ ↓
+Open Food Facts search
+ ↓
+Country filter = India
+ ↓
+Matching products
+```
+
+The selected country must actually be passed into the Open Food Facts search/filter request.
+
+---
+
+# 30. FINAL EXPECTED USER EXPERIENCE
+
+A user should be able to do this without manually entering product information:
+
+```text
+1. Open Scanner
+        ↓
+2. India is selected
+        ↓
+3. Scan barcode
+        ↓
+4. Barcode automatically becomes a number
+        ↓
+5. Open Food Facts finds the product
+        ↓
+6. Product information appears
+        ↓
+7. User scans expiry OR uploads expiry image
+        ↓
+8. OpenCV processes image
+        ↓
+9. Tesseract detects expiry text
+        ↓
+10. System extracts expiry date
+        ↓
+11. User confirms
+        ↓
+12. Product + expiry added to Digital Pantry
+        ↓
+13. MySQL stores the user's pantry record
+```
+
+The key principle is:
+
+**Open Food Facts handles dynamic product identification. ZXing handles barcode-to-number decoding. OpenCV + Tesseract handles expiry detection. MySQL stores the user's Digital Pantry records — not a manually maintained product database.**
+
+Before modifying code, inspect the existing NutriMatrix implementation and integrate this feature without breaking any existing functionality or CSS.
