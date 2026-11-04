@@ -55,7 +55,6 @@ function App() {
         <Route path="/admin/products/add" element={<AdminDashboard />} />
         <Route path="/admin/products/edit" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminDashboard />} />
-        <Route path="/admin/prices" element={<AdminDashboard />} />
         <Route path="/admin/profile" element={<AdminDashboard />} />
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/admin/feedback" element={<AdminFeedback />} />

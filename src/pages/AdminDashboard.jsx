@@ -37,7 +37,6 @@ function parseAlternativeIds(value) {
 const nav = [
   ['Dashboard', '▦'],
   ['Product Management', '◈'],
-  ['Price Management', '₹'],
   ['Deleted Products', '↶'],
   ['User Management', '♙'],
   ['User Feedback', '★'],
@@ -330,7 +329,6 @@ export default function AdminDashboard() {
 
         {page === 'Dashboard' && <Overview stats={stats} activity={activity} onProducts={() => go('Product Management')} />}
         {page === 'Product Management' && <ProductList products={products} add={add} edit={edit} remove={remove} onDeletedProducts={() => go('Deleted Products')} />}
-        {page === 'Price Management' && <Prices products={products.filter((product) => product.isActive)} edit={edit} />}
         {page === 'Deleted Products' && <DeletedProducts products={products} restore={restore} restoreAll={restoreAll} deleteAll={deleteAll} />}
         {page === 'Add Product' && <Form form={form} editing={editing} change={change} price={price} image={image} save={save} back={() => go('Product Management')} />}
         {page === 'User Management' && <Users users={users} />}
@@ -472,60 +470,6 @@ function DeletedProducts({ products, restore, restoreAll, deleteAll }) {
           ))}
         </Table>
       ) : <p className="muted empty">There are no deleted products.</p>}
-    </section>
-  )
-}
-
-function Prices({ products, edit }) {
-  const [search, setSearch] = useState('')
-  const query = search.trim().toLowerCase()
-  const filteredProducts = products.filter((product) =>
-    `${product.productName} ${product.category}`.toLowerCase().includes(query)
-  )
-
-  return (
-    <section className="panel">
-      <div className="heading">
-        <div>
-          <h2>Price management</h2>
-          <p>Edit any product to update its retailer prices.</p>
-        </div>
-        <label className="price-search">
-          <span>Search</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Product or category"
-          />
-        </label>
-      </div>
-
-      <Table heads={['Product', 'Retailer prices', 'Action']}>
-        {filteredProducts.map((product) => (
-          <tr key={product.id}>
-            <td>
-              <strong>{product.productName}</strong>
-              <small>{product.category}</small>
-            </td>
-            <td>
-              {product.prices?.length
-                ? product.prices.map((entry) => `${entry.retailer}: ₹${Number(entry.price).toLocaleString('en-IN')}`).join(' · ')
-                : 'No prices entered'}
-            </td>
-            <td className="actions">
-              <button type="button" onClick={() => edit(product)}>Edit prices</button>
-            </td>
-          </tr>
-        ))}
-        {!filteredProducts.length && (
-          <tr>
-            <td colSpan="3" className="empty">
-              {products.length ? 'No matching products.' : 'No products available.'}
-            </td>
-          </tr>
-        )}
-      </Table>
     </section>
   )
 }
