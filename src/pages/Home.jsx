@@ -131,7 +131,11 @@ function Home() {
 
         <div className="features-grid">
           {features
-            .filter(({ title }) => title !== 'Nutrition Analysis' && title !== 'Healthy Alternatives')
+            .filter(({ title }, index, allFeatures) =>
+              title !== 'Nutrition Analysis' &&
+              title !== 'Healthy Alternatives' &&
+              allFeatures.findIndex((feature) => feature.title === title) === index
+            )
             .map((f, i) => (
             <FeatureCard
               key={i}
